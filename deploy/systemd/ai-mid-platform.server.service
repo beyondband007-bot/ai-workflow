@@ -1,0 +1,17 @@
+[Unit]
+Description=AI Mid Platform Service
+After=network.target mysql.service mysqld.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/zzq/workspace/ai-workflow/ai-mid-platform
+EnvironmentFile=/home/zzq/workspace/ai-workflow/ai-mid-platform/.env
+ExecStart=/usr/bin/npm run start:prod
+Restart=always
+RestartSec=5
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

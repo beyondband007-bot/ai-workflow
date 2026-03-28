@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WF-001 图生图</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      .wf-page {
+        min-height: 100vh;
+        padding: 28px 18px 40px;
+      }
+
+      .wf-wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        display: grid;
+        gap: 20px;
+      }
+
+      .wf-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+      }
+
+      .wf-head h1 {
+        margin: 6px 0 10px;
+        color: #f3f8ff;
+        font-size: clamp(32px, 5vw, 56px);
+      }
+
+      .wf-head p {
+        margin: 0;
+        max-width: 760px;
+        color: #94aac7;
+        line-height: 1.7;
+      }
+
+      .wf-panel {
+        background: rgba(10, 20, 36, 0.9);
+        border: 1px solid rgba(106, 150, 214, 0.18);
+        border-radius: 28px;
+        box-shadow: 0 24px 60px rgba(3, 8, 20, 0.35);
+        padding: 24px;
+      }
+
+      .wf-form {
+        display: grid;
+        gap: 14px;
+      }
+
+      .wf-form label {
+        display: grid;
+        gap: 10px;
+        color: #d7e4f4;
+        font-weight: 600;
+      }
+
+      .wf-form textarea {
+        width: 100%;
+        min-height: 170px;
+        resize: vertical;
+        border: 1px solid rgba(109, 155, 226, 0.26);
+        border-radius: 18px;
+        background: rgba(7, 15, 30, 0.96);
+        color: #f3f8ff;
+        padding: 16px 18px;
+        font: inherit;
+      }
+
+      .wf-form textarea:focus {
+        outline: none;
+        border-color: rgba(123, 204, 255, 0.82);
+        box-shadow: 0 0 0 4px rgba(82, 183, 255, 0.14);
+      }
+
+      .wf-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .wf-status {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .wf-status-card {
+        border-radius: 18px;
+        background: rgba(12, 24, 44, 0.88);
+        border: 1px solid rgba(91, 139, 208, 0.18);
+        padding: 16px;
+      }
+
+      .wf-status-card span {
+        color: #89a3c7;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .wf-status-card strong {
+        display: block;
+        margin-top: 8px;
+        color: #f3f8ff;
+        font-size: 20px;
+        word-break: break-word;
+      }
+
+      .wf-summary {
+        color: #c8d8ea;
+        margin: 0 0 16px;
+      }
+
+      .wf-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 18px;
+        margin-top: 22px;
+      }
+
+      .wf-gallery-item {
+        overflow: hidden;
+        border-radius: 24px;
+        border: 1px solid rgba(86, 134, 204, 0.18);
+        background: rgba(8, 18, 32, 0.88);
+      }
+
+      .wf-gallery-item img {
+        width: 100%;
+        aspect-ratio: 4 / 5;
+        object-fit: cover;
+        display: block;
+      }
+
+      .wf-gallery-item a {
+        display: block;
+        padding: 12px;
+        color: #7cd6ff;
+        text-decoration: none;
+      }
+
+      .wf-empty {
+        margin-top: 18px;
+        padding: 56px 24px;
+        border-radius: 18px;
+        border: 1px dashed rgba(109, 154, 224, 0.28);
+        color: #89a1c2;
+        text-align: center;
+      }
+
+      @media (max-width: 860px) {
+        .wf-head {
+          flex-direction: column;
+        }
+
+        .wf-status {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 520px) {
+        .wf-status {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+
+    <main class="wf-page">
+      <div class="wf-wrap">
+        <header class="wf-head">
+          <div>
+            <p class="eyebrow">WF-001</p>
+            <h1>图生图工作流</h1>
+            <p>这个页面只保留最小闭环：输入提示词，观察中台执行日志，等待图片生成并确认本次积分结算结果。</p>
+          </div>
+          <a class="secondary-button" id="backLink" href="./index.html">返回门户</a>
+        </header>
+
+        <section class="wf-panel">
+          <form class="wf-form" id="wf001Form">
+            <label for="promptInput">
+              提示词
+              <textarea id="promptInput" placeholder="例如：生成一张电影感很强的中国美女写真，柔光，细节清晰，时尚杂志风格。"></textarea>
+            </label>
+            <div class="wf-actions">
+              <button class="primary-button" id="submitButton" type="submit">开始生成</button>
+              <button class="secondary-button" id="fillDemoPrompt" type="button">填入示例</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="wf-panel">
+          <div class="wf-status">
+            <article class="wf-status-card">
+              <span>run id</span>
+              <strong id="runIdValue">-</strong>
+            </article>
+            <article class="wf-status-card">
+              <span>status</span>
+              <strong id="runStatusValue">未开始</strong>
+            </article>
+            <article class="wf-status-card">
+              <span>billing</span>
+              <strong id="billingStatusValue">-</strong>
+            </article>
+            <article class="wf-status-card">
+              <span>charge points</span>
+              <strong id="chargePointsValue">0</strong>
+            </article>
+          </div>
+
+          <p class="wf-summary" id="summaryText">提交任务后，这里会显示执行摘要。</p>
+          <div class="wf-gallery" id="resultGallery"></div>
+          <div class="wf-empty" id="resultEmpty">图片生成完成后会显示在这里。</div>
+        </section>
+      </div>
+    </main>
+
+    <script src="./wf001.js"></script>
+  </body>
+</html>

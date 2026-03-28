@@ -1,0 +1,54 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+coverage/
+build/
+!demo/case-前端页面设计/login-app/build/
+!demo/case-前端页面设计/login-app/build/**
+
+# Virtual environments
+.venv/
+.venv*/
+venv/
+
+# Logs
+*.log
+logs/
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# Local database / temp files
+*.sqlite
+*.sqlite3
+tmp/
+temp/
+
+# Nested repos that should not be committed as part of this repo
+demo/.git/
+
+# Docker / local overrides
+.env.local
+.env.*.local

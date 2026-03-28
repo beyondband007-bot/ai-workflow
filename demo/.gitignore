@@ -1,0 +1,11 @@
+.env
+.venv/
+.venv312/
+__pycache__/
+*.pyc
+
+case-前端页面设计/login-app/node_modules/
+case-前端页面设计/login-app/build/
+
+.DS_Store
+Thumbs.db

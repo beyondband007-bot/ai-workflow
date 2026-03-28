@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>鲸创智能工作流平台 - 积分系统客户端</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<div class="ambient ambient-a"></div>
+<div class="ambient ambient-b"></div>
+
+<div class="page-shell">
+	<div class="overflow-auto sidebar1">
+		<aside class="sidebar">
+			<div class="brand-block">
+				<div class="brand-mark">WP</div>
+				<div>
+					<p class="eyebrow">Workflow Points</p>
+					<h1>积分系统客户端</h1>
+				</div>
+			</div>
+		
+			<section class="account-panel">
+				<div class="account-head">
+				<div class="avatar"><img src="./DefaultAvatar.jpg" alt="" /></div>
+					<div>
+						<h2>用户昵称</h2>
+						<p class="account-role">会员用户</p>
+					</div>
+				</div>
+				<div class="mobile-account-inline">
+					<div class="mobile-inline-item">
+						<span>可用积分</span>
+						<strong id="mobileAvailablePoints">0</strong>
+					</div>
+					<div class="mobile-inline-item">
+						<span>今日调用</span>
+						<strong id="mobileTodayRuns">0</strong>
+					</div>
+					<div class="mobile-inline-item">
+						<span>今日消耗</span>
+						<strong id="mobileTodaySpent">0</strong>
+					</div>
+				</div>
+		
+				<div class="account-balance">
+					<span>当前可用积分</span>
+					<strong id="sidebarAvailablePoints">0</strong>
+					<em>冻结积分 <span id="sidebarFrozenPoints">0</span></em>
+				</div>
+		
+				<div class="account-list">
+					<div class="account-item">
+						<span>账户折扣</span>
+						<strong id="userId">0</strong>
+					</div>
+					<div class="account-item">
+						<span>套餐状态</span>
+						<strong id="accountDiscount">0</strong>
+					</div>
+					<!--<div class="account-item">-->
+					<!--	<span>最近补积分</span>-->
+					<!--	<strong id="lastRechargeAt">0</strong>-->
+					<!--</div>-->
+				</div>
+			</section>
+		
+			<nav class="side-nav">
+				<a href="#overview" class="nav-item is-active">总览</a>
+				<a href="#workflows" class="nav-item">工作流</a>
+				<a href="#records" class="nav-item">调用记录</a>
+				<a href="#ledger" class="nav-item">积分流水</a>
+				<a href="#rules" class="nav-item">结算规则</a>
+			</nav>
+		
+			<section class="quick-panel">
+				<p class="quick-label mt-0">快捷入口</p>
+				<button class="ghost-button" type="button">进入图生图工作流</button>
+				<button class="ghost-button" type="button">查看账户流水</button>
+				<button class="ghost-button" type="button">联系运营支持</button>
+			</section>
+		</aside>
+	</div>
+	<div class="overflow-auto">
+		<main class="content">
+			<header class="hero-card" id="overview">
+				<div class="hero-copy">
+					<p class="eyebrow">Client Console</p>
+					<h2>鲸创智能工作流平台 积分系统客户端</h2>
+					<p class="hero-text">
+						登录后先看账户状态，再进入具体业务工作流。调用记录、积分流水和结果状态统一沉淀在这里，
+						让客户端首页更像业务控制台，而不是普通后台列表页。
+					</p>
+		
+					<div class="hero-actions">
+						<button class="primary-button" type="button">立即开始工作流</button>
+						<button class="secondary-button" type="button">查看今日任务</button>
+					</div>
+				</div>
+		
+				<div class="hero-panel">
+					<p class="panel-label">本日概览</p>
+					<div class="balance-row">
+						<strong id="availablePoints">0</strong>
+						<span>积分</span>
+					</div>
+					<div class="hero-metrics">
+						<div>
+							<span>冻结积分</span>
+							<strong id="frozenPoints">0</strong>
+						</div>
+						<div>
+							<span>今日调用</span>
+							<strong id="todayRuns">0</strong>
+						</div>
+						<div>
+							<span>今日消耗</span>
+							<strong id="todaySpent">0</strong>
+						</div>
+					</div>
+				</div>
+			</header>
+		
+			<section class="mobile-quick-entry">
+				<button class="primary-button" type="button">进入图生图工作流</button>
+				<button class="secondary-button" type="button">查看调用记录</button>
+			</section>
+		
+			<section class="stats-grid">
+				<article class="stat-card warm">
+					<span>账户状态</span>
+					<strong>稳定可用</strong>
+					<p>当前余额充足，能够继续触发固定积分和按结果计量的工作流任务。</p>
+				</article>
+				<article class="stat-card cool">
+					<span>回写成功率</span>
+					<strong>92%</strong>
+					<p>最近 24 小时大多数任务已经正常回写，可从记录区快速复查异常。</p>
+				</article>
+				<article class="stat-card slate">
+					<span>当前计量模型</span>
+					<strong>固定 + 按结果</strong>
+					<p>同时兼容固定扣分工作流和按图片产出张数结算的工作流。</p>
+				</article>
+			</section>
+		
+			<section class="section-head" id="workflows">
+				<div>
+					<p class="eyebrow">Workflow Access</p>
+					<h3>工作流入口</h3>
+					<p class="section-note">先看账户，再选工作流，最后统一在记录区追踪状态和积分变化。</p>
+				</div>
+				<button class="text-button" type="button">查看全部工作流</button>
+			</section>
+		
+			<section class="workflow-grid" id="workflowGrid"></section>
+		
+			<section class="double-grid" id="records">
+				<article class="surface-card wide-card">
+					<div class="section-head inside">
+						<div>
+							<p class="eyebrow">Run Center</p>
+							<h3>最近调用记录</h3>
+						</div>
+						<div class="chip-group" id="recordFilters">
+							<button class="chip is-active" data-filter="all" type="button">全部</button>
+							<button class="chip" data-filter="success" type="button">成功</button>
+							<button class="chip" data-filter="running" type="button">执行中</button>
+							<button class="chip" data-filter="failed" type="button">失败</button>
+						</div>
+					</div>
+		
+					<div class="table-wrap">
+						<table>
+							<thead>
+								<tr>
+									<th>ID</th>
+									<th>工作流</th>
+									<th>任务状态</th>
+									<!-- <th>扣费状态</th> -->
+									<th>冻结积分</th>
+									<th>最终扣除积分</th>
+									<!-- <th>结果摘要</th> -->
+									<th>时间</th>
+								</tr>
+							</thead>
+							<tbody id="recordsBody"></tbody>
+						</table>
+					</div>
+		
+					<div class="mobile-records" id="mobileRecords"></div>
+				</article>
+		
+				<article class="surface-card">
+					<div class="section-head inside">
+						<div>
+							<p class="eyebrow">Account Summary</p>
+							<h3>我的积分账户</h3>
+						</div>
+					</div>
+		
+					<div class="account-stack">
+						<div class="account-row">
+							<span>累计入账积分</span>
+							<strong id="totalRechargedPoints">0</strong>
+						</div>
+						<div class="account-row">
+							<span>累计消费积分</span>
+							<strong id="totalConsumedPoints">0</strong>
+						</div>
+						<div class="account-row">
+							<span>累计调用次数</span>
+							<strong id="availablePointsMirror">0</strong>
+						</div>
+						<div class="account-row">
+							<span>最近回滚任务</span>
+							<strong id="frozenPointsMirror">0</strong>
+						</div>
+					</div>
+		
+					<div class="mini-notice">
+						<p class="notice-title">结算提醒</p>
+						<p>图生图工作流会先按预估张数冻结积分，任务结束后按实际完成数量结算，多余积分自动解冻。</p>
+					</div>
+				</article>
+			</section>
+		
+			<section class="double-grid" id="ledger">
+				<article class="surface-card">
+					<div class="section-head inside">
+						<div>
+							<p class="eyebrow">Points Ledger</p>
+							<h3>积分流水</h3>
+						</div>
+					</div>
+		
+					<div class="ledger-list" id="ledgerList"></div>
+				</article>
+		
+				<article class="surface-card" id="rules">
+					<div class="section-head inside">
+						<div>
+							<p class="eyebrow">Rules</p>
+							<h3>积分与结算规则</h3>
+						</div>
+					</div>
+		
+					<div class="rule-list">
+						<div class="rule-item">
+							<strong>WF-001</strong>
+							<p>固定积分模式，每次执行扣减 10 积分。</p>
+						</div>
+						<div class="rule-item">
+							<strong>WF-002</strong>
+							<p>固定积分模式，每次执行扣减 100 积分。</p>
+						</div>
+						<div class="rule-item">
+							<strong>WF-003</strong>
+							<p>按结果数量计量，每生成 1 张图扣减 30 积分，先冻结后结算。</p>
+						</div>
+						<div class="rule-item">
+							<strong>失败回滚</strong>
+							<p>任务失败必须全额回滚本次冻结积分，并保留回写记录。</p>
+						</div>
+					</div>
+				</article>
+			</section>
+		</main>
+	</div>
+</div>
+<script src="./app.js"></script>
+</body>
+</html>

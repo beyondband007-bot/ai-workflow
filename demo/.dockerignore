@@ -1,0 +1,10 @@
+.git
+.gitignore
+.venv
+.venv312
+.vscode
+__pycache__
+*.pyc
+node_modules
+case-前端页面设计/login-app/node_modules
+case-前端页面设计/login-app/build

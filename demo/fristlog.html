@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>寒冰科技 - 首页</title>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <style>
+    :root {
+      --bg: #040813;
+      --text: #eaf3ff;
+      --gold: #7fdfff;
+      --line: rgba(92, 199, 255, 0.32);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Serif SC", serif;
+      color: var(--text);
+      background: var(--bg);
+      overflow-x: hidden;
+    }
+
+    .page {
+      min-height: 100vh;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background:
+        radial-gradient(circle at 50% 47%, rgba(19, 38, 74, 0.48) 0%, rgba(6, 11, 24, 0.72) 22%, rgba(4, 8, 19, 1) 62%),
+        radial-gradient(900px 420px at 16% -8%, rgba(53, 136, 255, 0.24), transparent 60%),
+        radial-gradient(780px 360px at 88% 108%, rgba(45, 241, 255, 0.2), transparent 62%),
+        #040813;
+      overflow: hidden;
+    }
+
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(114, 166, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(114, 166, 255, 0.06) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 86%);
+      z-index: 0;
+    }
+
+    .terrain-wrap {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    #terrain {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .terrain-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(4, 8, 19, 0) 55%, rgba(4, 8, 19, 0.74) 100%);
+    }
+
+    .nav {
+      width: min(1450px, 92%);
+      margin: 28px auto 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      z-index: 3;
+    }
+
+    .brand {
+      letter-spacing: 1px;
+    }
+
+    .brand h2 {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .brand p {
+      margin-top: 6px;
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .nav-btn {
+      border: 1px solid rgba(100, 214, 255, 0.55);
+      background: linear-gradient(140deg, #93f4ff 0%, #5aa7ff 100%);
+      color: #071a33;
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 8px 26px rgba(58, 180, 255, 0.32);
+      transition: transform .2s, box-shadow .2s, border-color .2s;
+    }
+
+    .nav-btn.login {
+      background: rgba(7, 16, 34, 0.46);
+      color: rgba(229, 240, 255, 0.92);
+      border-color: rgba(106, 205, 255, 0.34);
+      box-shadow: none;
+    }
+
+    .nav-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 26px rgba(58, 180, 255, 0.36);
+    }
+
+    .hero {
+      min-height: calc(100vh - 132px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      position: relative;
+      z-index: 2;
+      padding: 20px 20px 30px;
+    }
+
+    .hero-inner {
+      width: min(1120px, 95%);
+    }
+
+    .badge {
+      margin: 0 auto 15px;
+      width: fit-content;
+      padding: 8px 20px;
+      border: 1px solid rgba(89, 195, 255, 0.34);
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: rgba(197, 236, 255, 0.9);
+      background: rgba(10, 26, 47, 0.38);
+      backdrop-filter: blur(6px);
+    }
+
+    .logo-title {
+      font-size: clamp(34px, 4.2vw, 74px);
+      color: #c9f2ff;
+      line-height: 1.06;
+      letter-spacing: 1px;
+      font-weight: 600;
+      margin-bottom: 32px;
+      text-shadow: 0 0 18px rgba(69, 210, 255, 0.32);
+    }
+
+    .sub-logo {
+      font-size: clamp(10px, 0.78vw, 14px);
+      color: rgba(255, 255, 255, 0.55);
+      letter-spacing: 4px;
+      margin-bottom: 30px;
+    }
+
+    .main-title {
+      font-size: clamp(30px, 3.8vw, 60px);
+      letter-spacing: 1px;
+      line-height: 1.18;
+      margin-bottom: 32px;
+      color: #eaf5ff;
+      font-weight: 600;
+    }
+
+    .en-title {
+      font-size: clamp(10px, 0.78vw, 14px);
+      letter-spacing: 3px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-bottom: 36px;
+      text-transform: uppercase;
+    }
+
+    .desc {
+      max-width: 600px;
+      margin: 0 auto;
+      color: rgba(255, 255, 255, 0.58);
+      font-size: clamp(16px, 1.15vw, 22px);
+      line-height: 1.72;
+    }
+
+    .actions {
+      margin-top: 48px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      min-width: 120px;
+      padding: 14px 26px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid var(--line);
+      transition: all 0.24s;
+    }
+
+    .btn.primary {
+      background: linear-gradient(140deg, #86efff 0%, #4ba8ff 100%);
+      color: #061a31;
+      box-shadow: 0 8px 24px rgba(59, 186, 255, 0.32);
+    }
+
+    .btn.secondary {
+      color: rgba(226, 237, 255, 0.9);
+      background: rgba(7, 17, 36, 0.58);
+      border-color: rgba(92, 191, 255, 0.3);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(59, 186, 255, 0.34);
+    }
+
+    .discover {
+      margin-top: 64px;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.43);
+      text-transform: uppercase;
+    }
+
+    .arrow {
+      margin-top: 5px;
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.5);
+      animation: bounce 1.6s infinite ease-in-out;
+      display: inline-block;
+    }
+
+    @keyframes bounce {
+      0%,
+      100% {
+        transform: translateY(0) rotate(90deg);
+      }
+      50% {
+        transform: translateY(6px) rotate(90deg);
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .brand h2 {
+        font-size: 22px;
+      }
+      .nav-btn {
+        font-size: 14px;
+        padding: 10px 20px;
+      }
+      .desc {
+        font-size: 16px;
+      }
+      .btn {
+        font-size: 18px;
+      }
+    }
+
+    @media (max-width: 820px) {
+      .nav {
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+      .nav-actions {
+        margin-left: auto;
+      }
+      .hero {
+        min-height: calc(100vh - 170px);
+      }
+      .sub-logo {
+        letter-spacing: 3px;
+        margin-bottom: 22px;
+      }
+      .main-title {
+        font-size: clamp(30px, 8.2vw, 48px);
+      }
+      .desc {
+        font-size: 15px;
+        line-height: 1.6;
+      }
+      .btn {
+        min-width: 144px;
+        font-size: 16px;
+        padding: 12px 20px;
+      }
+      .discover {
+        margin-top: 48px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="terrain-wrap">
+      <canvas id="terrain"></canvas>
+    </div>
+
+    <header class="nav">
+      <div class="brand">
+        <h2>寒冰科技</h2>
+      </div>
+      <div class="nav-actions">
+        <a class="nav-btn" href="/auth/?mode=register">立即注册</a>
+        <a class="nav-btn login" href="/auth/?mode=login">立即登录</a>
+      </div>
+    </header>
+
+    <main class="hero">
+      <div class="hero-inner">
+        <div class="badge">Hanbing Technology</div>
+        <h1 class="logo-title">寒冰科技</h1>
+        <h2 class="main-title">精准AI赋能，定义极致增效</h2>
+        <p class="desc">精准AI赋能，定义极致增效，驱动选题创作转化全链路协同，<br />让每次决策更快更准更稳，持续放大品牌增长势能。</p>
+        <div class="actions">
+          <a href="/auth/?mode=register" class="btn primary">立刻体验</a>
+          <a href="/auth/?mode=login" class="btn secondary">了解详情</a>
+        </div>
+        <div class="discover">Read More</div>
+        <div class="arrow">➜</div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    $(function () {
+      var canvas = document.getElementById("terrain");
+      var ctx = canvas.getContext("2d");
+      var dpr = window.devicePixelRatio || 1;
+      var width = 0;
+      var height = 0;
+
+      function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function draw(ts) {
+        var t = ts * 0.001;
+        ctx.clearRect(0, 0, width, height);
+
+        var cols = Math.max(120, Math.floor(width / 10));
+        var rows = Math.max(52, Math.floor(height / 11));
+        var cx = width / 2;
+        var horizon = height * 0.56;
+        var nearGap = 15;
+        var farGap = 5.8;
+
+        for (var r = 0; r < rows; r++) {
+          var depth = r / (rows - 1);
+          var inv = 1 - depth;
+          var spread = farGap + (nearGap - farGap) * Math.pow(depth, 1.35);
+          var baseY = horizon + Math.pow(depth, 1.75) * (height * 0.46);
+          var perspective = 0.5 + depth * 1.95;
+          var ridge = Math.exp(-Math.pow((depth - 0.22) / 0.16, 2));
+
+          for (var c = 0; c < cols; c++) {
+            var xNorm = (c - cols / 2);
+            var px = cx + xNorm * spread * perspective;
+            if (px < -20 || px > width + 20) {
+              continue;
+            }
+
+            var wave =
+              Math.sin(c * 0.19 + t * 1.05 + r * 0.13) * (8 + inv * 10) +
+              Math.sin(c * 0.065 - t * 1.28 + r * 0.1) * (6 + inv * 8);
+            var peak = ridge * (26 + 16 * Math.sin(c * 0.055 + t * 0.8));
+            var py = baseY - wave - peak;
+
+            var alpha = 0.08 + depth * 0.42 + ridge * 0.2;
+            var radius = 0.58 + depth * 1.05;
+            ctx.fillStyle = "rgba(37, 166, 255," + alpha.toFixed(3) + ")";
+            ctx.beginPath();
+            ctx.arc(px, py, radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      resize();
+      window.addEventListener("resize", resize);
+      requestAnimationFrame(draw);
+    });
+  </script>
+</body>
+</html>

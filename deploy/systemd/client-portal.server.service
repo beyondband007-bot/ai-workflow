@@ -1,0 +1,16 @@
+[Unit]
+Description=AI Workflow Client Portal Static Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/zzq/workspace/ai-workflow/client-portal
+ExecStart=/usr/bin/python3 -m http.server 3003 --bind 0.0.0.0 --directory /home/zzq/workspace/ai-workflow/client-portal
+Restart=always
+RestartSec=5
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
