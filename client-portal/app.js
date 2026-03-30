@@ -79,7 +79,7 @@ function formatNumber(value) {
 }
 
 function formatPoints(value) {
-  return `${formatNumber(value)} 积分`;
+  return `${formatNumber(value)}`;
 }
 
 function formatDateTime(value) {
@@ -371,11 +371,12 @@ function attachWorkflowButtons() {
     button.textContent = "处理中...";
 
     try {
-      if (workflowCode === "WF-001") {
+      if (workflowCode === "WF-001" || workflowCode === "WF-002") {
         const token = getToken();
+        const pageName = workflowCode === "WF-001" ? "wf001.html" : "wf002.html";
         const targetUrl = token
-          ? `./wf001.html?token=${encodeURIComponent(token)}`
-          : "./wf001.html";
+          ? `./${pageName}?token=${encodeURIComponent(token)}`
+          : `./${pageName}`;
         window.open(targetUrl, "_blank", "noopener,noreferrer");
         button.disabled = false;
         button.textContent = originalText;

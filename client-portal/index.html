@@ -20,10 +20,10 @@
 					<h1>积分系统客户端</h1>
 				</div>
 			</div>
-		
+
 			<section class="account-panel">
 				<div class="account-head">
-				<div class="avatar"><img src="./DefaultAvatar.jpg" alt="" /></div>
+					<div class="avatar"><img src="./DefaultAvatar.jpg" alt="" /></div>
 					<div>
 						<h2>用户昵称</h2>
 						<p class="account-role">会员用户</p>
@@ -35,21 +35,21 @@
 						<strong id="mobileAvailablePoints">0</strong>
 					</div>
 					<div class="mobile-inline-item">
-						<span>今日调用</span>
+						<span>今日调用次数</span>
 						<strong id="mobileTodayRuns">0</strong>
 					</div>
 					<div class="mobile-inline-item">
-						<span>今日消耗</span>
+						<span>今日消耗积分</span>
 						<strong id="mobileTodaySpent">0</strong>
 					</div>
 				</div>
-		
+
 				<div class="account-balance">
 					<span>当前可用积分</span>
 					<strong id="sidebarAvailablePoints">0</strong>
 					<em>冻结积分 <span id="sidebarFrozenPoints">0</span></em>
 				</div>
-		
+
 				<div class="account-list">
 					<div class="account-item">
 						<span>账户折扣</span>
@@ -65,7 +65,7 @@
 					<!--</div>-->
 				</div>
 			</section>
-		
+
 			<nav class="side-nav">
 				<a href="#overview" class="nav-item is-active">总览</a>
 				<a href="#workflows" class="nav-item">工作流</a>
@@ -73,7 +73,7 @@
 				<a href="#ledger" class="nav-item">积分流水</a>
 				<a href="#rules" class="nav-item">结算规则</a>
 			</nav>
-		
+
 			<section class="quick-panel">
 				<p class="quick-label mt-0">快捷入口</p>
 				<button class="ghost-button" type="button">进入图生图工作流</button>
@@ -87,20 +87,20 @@
 			<header class="hero-card" id="overview">
 				<div class="hero-copy">
 					<p class="eyebrow">Client Console</p>
-					<h2>鲸创智能工作流平台 积分系统客户端</h2>
+					<h2>鲸创智能工作流平台<br><span class="secondary">积分系统客户端</span></h2>
 					<p class="hero-text">
 						登录后先看账户状态，再进入具体业务工作流。调用记录、积分流水和结果状态统一沉淀在这里，
 						让客户端首页更像业务控制台，而不是普通后台列表页。
 					</p>
-		
+
 					<div class="hero-actions">
 						<button class="primary-button" type="button">立即开始工作流</button>
 						<button class="secondary-button" type="button">查看今日任务</button>
 					</div>
 				</div>
-		
+
 				<div class="hero-panel">
-					<p class="panel-label">本日概览</p>
+					<p class="panel-label mt-0">本日概览</p>
 					<div class="balance-row">
 						<strong id="availablePoints">0</strong>
 						<span>积分</span>
@@ -111,22 +111,22 @@
 							<strong id="frozenPoints">0</strong>
 						</div>
 						<div>
-							<span>今日调用</span>
+							<span>今日调用次数</span>
 							<strong id="todayRuns">0</strong>
 						</div>
 						<div>
-							<span>今日消耗</span>
+							<span>今日消耗积分</span>
 							<strong id="todaySpent">0</strong>
 						</div>
 					</div>
 				</div>
 			</header>
-		
+
 			<section class="mobile-quick-entry">
 				<button class="primary-button" type="button">进入图生图工作流</button>
 				<button class="secondary-button" type="button">查看调用记录</button>
 			</section>
-		
+
 			<section class="stats-grid">
 				<article class="stat-card warm">
 					<span>账户状态</span>
@@ -144,7 +144,7 @@
 					<p>同时兼容固定扣分工作流和按图片产出张数结算的工作流。</p>
 				</article>
 			</section>
-		
+
 			<section class="section-head" id="workflows">
 				<div>
 					<p class="eyebrow">Workflow Access</p>
@@ -153,9 +153,9 @@
 				</div>
 				<button class="text-button" type="button">查看全部工作流</button>
 			</section>
-		
+
 			<section class="workflow-grid" id="workflowGrid"></section>
-		
+
 			<section class="double-grid" id="records">
 				<article class="surface-card wide-card">
 					<div class="section-head inside">
@@ -170,7 +170,7 @@
 							<button class="chip" data-filter="failed" type="button">失败</button>
 						</div>
 					</div>
-		
+
 					<div class="table-wrap">
 						<table>
 							<thead>
@@ -188,10 +188,10 @@
 							<tbody id="recordsBody"></tbody>
 						</table>
 					</div>
-		
+
 					<div class="mobile-records" id="mobileRecords"></div>
 				</article>
-		
+
 				<article class="surface-card">
 					<div class="section-head inside">
 						<div>
@@ -199,7 +199,7 @@
 							<h3>我的积分账户</h3>
 						</div>
 					</div>
-		
+
 					<div class="account-stack">
 						<div class="account-row">
 							<span>累计入账积分</span>
@@ -218,14 +218,14 @@
 							<strong id="frozenPointsMirror">0</strong>
 						</div>
 					</div>
-		
+
 					<div class="mini-notice">
 						<p class="notice-title">结算提醒</p>
 						<p>图生图工作流会先按预估张数冻结积分，任务结束后按实际完成数量结算，多余积分自动解冻。</p>
 					</div>
 				</article>
 			</section>
-		
+
 			<section class="double-grid" id="ledger">
 				<article class="surface-card">
 					<div class="section-head inside">
@@ -234,10 +234,10 @@
 							<h3>积分流水</h3>
 						</div>
 					</div>
-		
+
 					<div class="ledger-list" id="ledgerList"></div>
 				</article>
-		
+
 				<article class="surface-card" id="rules">
 					<div class="section-head inside">
 						<div>
@@ -245,7 +245,7 @@
 							<h3>积分与结算规则</h3>
 						</div>
 					</div>
-		
+
 					<div class="rule-list">
 						<div class="rule-item">
 							<strong>WF-001</strong>
