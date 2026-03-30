@@ -15,8 +15,9 @@
 ### 1. 克隆仓库
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/beyondband007-bot/ai-workflow.git
 cd ai-workflow
+git checkout dev
 ```
 
 ### 2. 准备环境变量

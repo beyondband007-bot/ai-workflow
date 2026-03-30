@@ -42,4 +42,18 @@ export class WorkflowsController {
       body,
     );
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':workflowCode/webhook-execute')
+  executeWebhookWorkflow(
+    @Param('workflowCode') workflowCode: string,
+    @CurrentUser() currentUser: AuthUser,
+    @Body() body: { prompt?: string },
+  ) {
+    return this.workflowExecutionService.executeWebhook(
+      workflowCode,
+      currentUser,
+      body,
+    );
+  }
 }
