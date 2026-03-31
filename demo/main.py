@@ -78,7 +78,7 @@ def register(body: schemas.RegisterRequest, db: Session = Depends(get_db)):
                 frozen_points,
                 total_recharged_points,
                 total_consumed_points
-            ) VALUES (:user_id, 1000, 0, 1000, 0)
+            ) VALUES (:user_id, 100, 0, 100, 0)
             """
         ),
         {"user_id": user.id},
@@ -94,7 +94,7 @@ def register(body: schemas.RegisterRequest, db: Session = Depends(get_db)):
                     points,
                     balance_after,
                     remark
-                ) VALUES (:user_id, 'manual_adjust', 1000, 1000, :remark)
+                ) VALUES (:user_id, 'manual_adjust', 100, 100, :remark)
                 """
             ),
             {

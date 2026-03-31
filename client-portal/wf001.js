@@ -43,6 +43,36 @@ function buildHeaders() {
   };
 }
 
+async function requestJson(path, options = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      ...(options.auth === false ? {} : buildHeaders()),
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
+
+  const text = await response.text();
+  let data = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      const preview = text.slice(0, 160).replace(/\s+/g, " ").trim();
+      throw new Error(
+        preview ? `接口返回了非 JSON 内容：${preview}` : "接口返回了空响应",
+      );
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.message || data?.detail || `请求失败: ${response.status}`);
+  }
+
+  return data;
+}
+
 async function executeWorkflow(payload) {
   const response = await fetch(`${API_BASE}/api/v1/workflows/WF-001/execute`, {
     method: "POST",
@@ -65,6 +95,19 @@ function setText(id, value) {
   if (element) {
     element.textContent = value;
   }
+}
+
+async function executeWorkflowRequest(payload) {
+  return requestJson("/api/v1/workflows/WF-001/execute", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+async function loadLatestWf001Run() {
+  const runs = await requestJson("/api/v1/workflow-runs");
+  const workflowRuns = Array.isArray(runs) ? runs : [];
+  return workflowRuns.find((run) => run?.workflow_code === "WF-001") || null;
 }
 
 function renderGallery(urls) {
@@ -116,6 +159,16 @@ function renderResult(result) {
   renderGallery(run.result_urls || []);
 }
 
+async function recoverLatestWf001Result() {
+  const latestRun = await loadLatestWf001Run();
+  if (!latestRun) {
+    return false;
+  }
+
+  renderResult({ run: latestRun });
+  return true;
+}
+
 function buildBackLink() {
   const backLink = document.getElementById("backLink");
   if (!backLink) {
@@ -161,11 +214,64 @@ function bindForm() {
     renderRunning(prompt);
 
     try {
-      const result = await executeWorkflow({ prompt });
+      const result = await executeWorkflowRequest({ prompt });
       renderResult(result);
     } catch (error) {
       setText("runStatusValue", "失败");
       setText("billingStatusValue", "回滚中");
+      setText("summaryText", error.message);
+      renderGallery([]);
+      window.alert(`WF-001 执行失败：${error.message}`);
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = "开始生成";
+    }
+  });
+}
+
+function bindFormSafe() {
+  const form = document.getElementById("wf001Form");
+  const promptInput = document.getElementById("promptInput");
+  const submitButton = document.getElementById("submitButton");
+
+  if (!form || !promptInput || !submitButton) {
+    return;
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const prompt = promptInput.value.trim();
+    if (!prompt) {
+      window.alert("请先输入提示词。");
+      promptInput.focus();
+      return;
+    }
+
+    submitButton.disabled = true;
+    submitButton.textContent = "生成中...";
+    renderRunning(prompt);
+
+    try {
+      const result = await executeWorkflowRequest({ prompt });
+      renderResult(result);
+    } catch (error) {
+      try {
+        const recovered = await recoverLatestWf001Result();
+        if (recovered) {
+          setText(
+            "summaryText",
+            `执行接口返回异常，但已从中台恢复最近一次 WF-001 结果。原始错误：${error.message}`,
+          );
+          window.alert(`WF-001 接口返回异常，但结果已从中台恢复显示。\n${error.message}`);
+          return;
+        }
+      } catch (recoveryError) {
+        console.error("recover latest wf001 result failed", recoveryError);
+      }
+
+      setText("runStatusValue", "失败");
+      setText("billingStatusValue", "异常");
       setText("summaryText", error.message);
       renderGallery([]);
       window.alert(`WF-001 执行失败：${error.message}`);
@@ -181,7 +287,7 @@ function bootstrap() {
     getToken();
     buildBackLink();
     bindDemoPrompt();
-    bindForm();
+    bindFormSafe();
   } catch (error) {
     window.alert(error.message);
   }

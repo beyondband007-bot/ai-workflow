@@ -1,0 +1,14 @@
+{
+  "name": "car-export-portal",
+  "version": "1.0.0",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "busboy": "^1.6.0",
+    "form-data": "^4.0.1"
+  }
+}

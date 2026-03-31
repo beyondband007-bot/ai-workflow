@@ -27,6 +27,7 @@ RUN npm ci
 WORKDIR /app
 COPY ai-mid-platform ./ai-mid-platform
 COPY WF_001 ./WF_001
+COPY WF-003 ./WF-003
 
 WORKDIR /app/ai-mid-platform
 RUN npm run build

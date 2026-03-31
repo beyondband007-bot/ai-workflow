@@ -5,8 +5,11 @@ import {
   Param,
   Post,
   Req,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/auth-user.interface';
@@ -54,6 +57,46 @@ export class WorkflowsController {
       workflowCode,
       currentUser,
       body,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':workflowCode/upload-execute')
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'exterior_images', maxCount: 5 },
+      { name: 'interior_images', maxCount: 5 },
+      { name: 'logo', maxCount: 1 },
+    ]),
+  )
+  executeUploadWorkflow(
+    @Param('workflowCode') workflowCode: string,
+    @CurrentUser() currentUser: AuthUser,
+    @Body() body: { car_name?: string },
+    @UploadedFiles()
+    files: {
+      exterior_images?: Array<{
+        buffer: Buffer;
+        originalname: string;
+        mimetype: string;
+      }>;
+      interior_images?: Array<{
+        buffer: Buffer;
+        originalname: string;
+        mimetype: string;
+      }>;
+      logo?: Array<{
+        buffer: Buffer;
+        originalname: string;
+        mimetype: string;
+      }>;
+    },
+  ) {
+    return this.workflowExecutionService.executeUploadWorkflow(
+      workflowCode,
+      currentUser,
+      body,
+      files,
     );
   }
 }
