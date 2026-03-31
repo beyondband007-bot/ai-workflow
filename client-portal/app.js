@@ -33,6 +33,20 @@ function resolveWf003PortalUrl() {
   return "https://mycar.deepsix.store/";
 }
 
+function resolveAuthEntryUrl() {
+  const { protocol, hostname, port } = window.location;
+
+  if (protocol === "file:") {
+    return "http://127.0.0.1:8080/auth/?mode=login";
+  }
+
+  if (port === "3003") {
+    return `${protocol}//${hostname}:8000/auth/?mode=login`;
+  }
+
+  return `${window.location.origin}/auth/?mode=login`;
+}
+
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = "auth_demo_token";
 let latestWorkflowRuns = [];
@@ -150,6 +164,11 @@ function getAuthHeaders() {
   return {
     Authorization: `Bearer ${token}`,
   };
+}
+
+function logout() {
+  window.localStorage.removeItem(TOKEN_KEY);
+  window.location.href = resolveAuthEntryUrl();
 }
 
 async function requestJson(path, options = {}) {
@@ -451,6 +470,15 @@ function attachWorkflowButtons() {
   });
 }
 
+function attachLogoutButton() {
+  const logoutButton = document.getElementById("logoutButton");
+  if (!logoutButton) {
+    return;
+  }
+
+  logoutButton.addEventListener("click", logout);
+}
+
 async function refreshDashboardData() {
   const [pointAccount, workflowRuns] = await Promise.all([
     requestJson("/api/v1/point-accounts/me"),
@@ -486,6 +514,7 @@ async function bootstrap() {
   syncAccountView(fallbackPointAccount);
   renderRecords([]);
   renderLedgers([]);
+  attachLogoutButton();
 
   try {
     const [pointAccount, workflows, workflowRuns] = await Promise.all([
