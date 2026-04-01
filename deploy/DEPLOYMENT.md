@@ -160,13 +160,28 @@ cp /srv/ai-workflow/WF-003/car-export-portal/.env.production.example /srv/ai-wor
 - 必须从积分门户进入，页面会携带登录 token
 - `car-export-portal` 服务收到 token 后，会转发到积分中台执行冻结和结算
 
-### 4.2 中台补充 `WF-003` 环境变量
+### 4.2 中台补充工作流环境变量
 
 推荐直接复制模板：
 
 ```bash
 cp /srv/ai-workflow/ai-mid-platform/.env.wf003.example /srv/ai-workflow/ai-mid-platform/.env
 ```
+
+`WF-002` 相关关键项：
+
+```env
+WF_002_WEBHOOK_URL=https://n8n.deepsix.store/webhook/simple-prompt
+WF_002_WEBHOOK_TIMEOUT_MS=90000
+```
+
+如果 `WF-002` 页面提交时报：
+
+```json
+{"error":"WF_002_WEBHOOK_URL is not set"}
+```
+
+说明当前运行中的中台进程没有读到 `WF_002_WEBHOOK_URL`。优先检查实际启动实例使用的 `.env`，确认不是只配置了 `WF_003`。
 
 `WF-003` 相关关键项：
 

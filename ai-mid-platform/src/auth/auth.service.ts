@@ -131,7 +131,7 @@ export class AuthService {
       secret,
       {
         algorithm: 'HS256',
-        expiresIn: '60m',
+        expiresIn: '1d',
       },
     );
   }
