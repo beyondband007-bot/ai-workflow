@@ -223,7 +223,12 @@ input[type="text"]::placeholder {
 
 input[type="text"]:focus {
   border-color: rgba(255, 90, 85, 0.45);
-  box-shadow: 0 0 0 4px rgba(255, 76, 72, 0.14);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
+}
+
+input:-webkit-autofill {
+  -webkit-text-fill-color: #fff;
+  box-shadow: 0 0 0px 50px #292c2f inset !important;
 }
 
 .upload-section {
@@ -295,6 +300,7 @@ input[type="text"]:focus {
   border-radius: 18px;
   display: grid;
   place-items: center;
+  text-align: center;
   padding: 12px;
   color: var(--muted-soft);
   background: rgba(255, 255, 255, 0.03);

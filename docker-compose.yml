@@ -45,5 +45,24 @@ services:
     ports:
       - "8080:80"
 
+  wf003:
+    build:
+      context: .
+      dockerfile: WF-003/car-export-portal/Dockerfile
+      args:
+        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-docker.m.daocloud.io/library/node:20.20.0-bookworm}
+    container_name: ai-workflow-wf003
+    restart: unless-stopped
+    depends_on:
+      - app
+    env_file:
+      - .env.docker
+    environment:
+      PORT: 3001
+      WF_003_MIDDLE_PLATFORM_URL: http://app:3002/api/v1/workflows/WF-003/upload-execute
+      CAR_EXPORT_WEBHOOK_URL: ${CAR_EXPORT_WEBHOOK_URL:-https://n8n.deepsix.store/webhook/bda7b6ac-10b6-4467-b6fd-83dd68c0bbd9}
+    ports:
+      - "3001:3001"
+
 volumes:
   mysql_data:

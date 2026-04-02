@@ -10,6 +10,20 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 export class CallbackSignatureService {
   constructor(private readonly configService: ConfigService) {}
 
+  verifyWf003CallbackToken(token: string) {
+    const expectedToken = this.configService
+      .get<string>('WF_003_CALLBACK_TOKEN')
+      ?.trim();
+
+    if (!expectedToken) {
+      return;
+    }
+
+    if (!token || token.trim() !== expectedToken) {
+      throw new UnauthorizedException('Invalid WF-003 callback token');
+    }
+  }
+
   verify(payload: Record<string, unknown>, timestamp: string, signature: string) {
     const secret = this.configService.get<string>('CALLBACK_SIGNING_SECRET')?.trim();
     if (!secret) {

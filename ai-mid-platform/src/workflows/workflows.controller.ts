@@ -99,4 +99,26 @@ export class WorkflowsController {
       files,
     );
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':workflowCode/json-execute')
+  executeJsonWorkflow(
+    @Param('workflowCode') workflowCode: string,
+    @CurrentUser() currentUser: AuthUser,
+    @Body()
+    body: {
+      car_name?: string;
+      exterior_images?: string[];
+      interior_images?: string[];
+      logo?: string;
+      source?: string;
+      submitted_at?: string;
+    },
+  ) {
+    return this.workflowExecutionService.executeJsonWorkflow(
+      workflowCode,
+      currentUser,
+      body,
+    );
+  }
 }

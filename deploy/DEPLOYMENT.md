@@ -186,7 +186,7 @@ WF_002_WEBHOOK_TIMEOUT_MS=90000
 `WF-003` 相关关键项：
 
 ```env
-WF_003_WEBHOOK_URL=https://n8n.deepsix.store/webhook/bda7b6ac-10b6-4467-b6fd-83dd68c0bbd9
+WF_003_WEBHOOK_URL=https://n8n.deepsix.store/webhook/wf003-kie-submit
 WF_003_CALLBACK_BASE_URL=https://你的中台公网域名
 MIDDLE_PLATFORM_PUBLIC_BASE_URL=https://你的中台公网域名
 ```

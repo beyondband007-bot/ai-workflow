@@ -301,7 +301,7 @@ export class WorkflowExecutionService {
 
     const webhookUrl =
       this.configService.get<string>('WF_003_WEBHOOK_URL')?.trim() ||
-      'https://n8n.deepsix.store/webhook/bda7b6ac-10b6-4467-b6fd-83dd68c0bbd9';
+      'https://n8n.deepsix.store/webhook/wf003-kie-submit';
     const callbackBaseUrl =
       this.configService.get<string>('WF_003_CALLBACK_BASE_URL')?.trim() ||
       this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim();
@@ -517,6 +517,215 @@ export class WorkflowExecutionService {
           finished_at: this.formatDateTime(new Date()),
           actual_completed_count: 0,
           result_summary: 'WF-003 failed before completion',
+          result_urls: [],
+          external_task_id: clientRequestId,
+          error_message: normalizedMessage.slice(0, 500),
+        });
+      }
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(normalizedMessage);
+    }
+  }
+
+  async executeJsonWorkflow(
+    workflowCode: string,
+    currentUser: AuthUser,
+    payload: {
+      car_name?: string;
+      exterior_images?: string[];
+      interior_images?: string[];
+      logo?: string;
+      source?: string;
+      submitted_at?: string;
+    },
+  ) {
+    if (workflowCode !== 'WF-003') {
+      throw new BadRequestException(
+        'JSON execution endpoint currently supports WF-003 only',
+      );
+    }
+
+    this.workflowsService.getByCodeOrThrow(workflowCode);
+
+    const carName = payload.car_name?.trim();
+    if (!carName) {
+      throw new BadRequestException('car_name is required');
+    }
+
+    const exteriorImages = (payload.exterior_images ?? [])
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const interiorImages = (payload.interior_images ?? [])
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const logoUrl = payload.logo?.trim() || '';
+
+    if (exteriorImages.length === 0) {
+      throw new BadRequestException('At least one exterior image is required');
+    }
+
+    if (interiorImages.length === 0) {
+      throw new BadRequestException('At least one interior image is required');
+    }
+
+    if (exteriorImages.length > 5 || interiorImages.length > 5) {
+      throw new BadRequestException(
+        'exterior_images and interior_images support up to 5 items each',
+      );
+    }
+
+    const webhookUrl =
+      this.configService.get<string>('WF_003_WEBHOOK_URL')?.trim() ||
+      'https://n8n.deepsix.store/webhook/wf003-kie-submit';
+    const callbackBaseUrl =
+      this.configService.get<string>('WF_003_CALLBACK_BASE_URL')?.trim() ||
+      this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim();
+    const callbackToken =
+      this.configService.get<string>('WF_003_CALLBACK_TOKEN')?.trim() || '';
+    const webhookTimeoutMs = Number(
+      this.configService.get<string>('WF_003_WEBHOOK_TIMEOUT_MS') || '60000',
+    );
+    const clientRequestId = `wf003_json_${Date.now()}`;
+    const callbackUrl = callbackBaseUrl
+      ? `${callbackBaseUrl.replace(/\/$/, '')}/api/v1/workflow-runs/wf003-callback`
+      : null;
+
+    if (!webhookUrl) {
+      throw new InternalServerErrorException('WF_003_WEBHOOK_URL is not set');
+    }
+
+    if (!callbackUrl) {
+      throw new InternalServerErrorException(
+        'WF_003_CALLBACK_BASE_URL or MIDDLE_PLATFORM_PUBLIC_BASE_URL is not set',
+      );
+    }
+
+    const requestPayloadSummary = {
+      workflow_code: workflowCode,
+      car_name: carName.slice(0, 120),
+      exterior_image_count: exteriorImages.length,
+      interior_image_count: interiorImages.length,
+      executor_type: 'wf003_json_webhook',
+      billing_mode: 'result_count',
+      webhook_url: webhookUrl,
+      callback_url: callbackUrl,
+      source: payload.source?.trim() || 'wf003_frontend_direct_to_kie',
+    };
+
+    const registerData = await this.workflowRunsService.register(currentUser, {
+      workflow_code: workflowCode,
+      client_request_id: clientRequestId,
+      request_payload_summary: requestPayloadSummary,
+    });
+    const runId = registerData.run_id;
+
+    try {
+      const abortController = new AbortController();
+      const timeoutHandle = setTimeout(() => {
+        abortController.abort();
+      }, webhookTimeoutMs);
+
+      const upstreamResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          car_name: carName,
+          exterior_images: exteriorImages,
+          interior_images: interiorImages,
+          logo: logoUrl,
+          source: payload.source?.trim() || 'wf003_frontend_direct_to_kie',
+          submitted_at: payload.submitted_at?.trim() || new Date().toISOString(),
+          run_id: runId,
+          client_request_id: clientRequestId,
+          workflow_code: workflowCode,
+          user_id: currentUser.userId,
+          callback_url: callbackUrl,
+          callback_token: callbackToken || undefined,
+        }),
+        signal: abortController.signal,
+      });
+      clearTimeout(timeoutHandle);
+
+      const rawText = await upstreamResponse.text();
+      const rawResponse = this.tryParseJson(rawText);
+      const upstreamStatus = upstreamResponse.status;
+      const hasResponseBody = rawText.trim().length > 0;
+
+      if (!upstreamResponse.ok) {
+        await this.workflowRunsService.callback({
+          run_id: runId,
+          workflow_code: workflowCode,
+          status: 'failed',
+          finished_at: this.formatDateTime(new Date()),
+          actual_completed_count: 0,
+          result_summary: `WF-003 JSON request failed with status=${upstreamStatus}`,
+          result_urls: [],
+          external_task_id: clientRequestId,
+          error_message: hasResponseBody
+            ? rawText.slice(0, 500)
+            : `HTTP ${upstreamStatus}`,
+        });
+
+        throw new InternalServerErrorException(
+          `WF-003 json request failed: HTTP ${upstreamStatus}`,
+        );
+      }
+
+      const workflowRun = await this.findWorkflowRun(
+        currentUser.userId,
+        workflowCode,
+        clientRequestId,
+      );
+
+      return {
+        workflow_code: workflowCode,
+        client_request_id: clientRequestId,
+        estimated_count: registerData.estimated_count,
+        estimated_frozen_points: registerData.estimated_frozen_points,
+        run: workflowRun,
+        message: 'WF-003 已受理，积分已冻结，等待工作流完成后回调结算。',
+        upstream_status: upstreamStatus,
+        has_response_body: hasResponseBody,
+        raw_response: rawResponse,
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'WF-003 JSON execution failed';
+      const normalizedMessage =
+        error instanceof Error && error.name === 'AbortError'
+          ? `WF-003 json request timeout after ${webhookTimeoutMs}ms`
+          : message;
+
+      const [workflowRun] = await this.dataSource.query(
+        `
+          SELECT billing_status
+          FROM workflow_runs
+          WHERE run_id = ?
+          LIMIT 1
+        `,
+        [runId],
+      );
+
+      if (workflowRun?.billing_status === 'frozen') {
+        await this.workflowRunsService.callback({
+          run_id: runId,
+          workflow_code: workflowCode,
+          status: 'failed',
+          finished_at: this.formatDateTime(new Date()),
+          actual_completed_count: 0,
+          result_summary: 'WF-003 JSON execution failed before completion',
           result_urls: [],
           external_task_id: clientRequestId,
           error_message: normalizedMessage.slice(0, 500),
