@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="300" viewBox="0 0 1240 300" role="img" aria-labelledby="title desc">
+  <title id="title">Huichi Zhilian Global Auto Trade</title>
+  <desc id="desc">Huichi Zhilian Global Auto Trade logo lockup.</desc>
+  <rect width="1240" height="300" fill="#ffffff"/>
+  <g transform="translate(35 28)">
+    <path d="M22 20h42v78h54V20h42v212h-42v-91H64v91H22V20Z" fill="#111111"/>
+    <path d="M173 20h114c34 0 56 22 56 52v108c0 32-22 52-56 52H173v-43h95c20 0 32-11 32-29V82c0-17-12-28-32-28h-95V20Z" fill="#111111"/>
+    <path d="M173 20h42v212h-42V20Z" fill="#111111"/>
+    <path d="M91 83 151 52l-11 34 52-13-55 45 6-34-36-1Z" fill="#f23d44"/>
+  </g>
+  <g fill="#111111">
+    <text x="430" y="124" font-family="Georgia, 'Times New Roman', serif" font-size="88" font-weight="700">Huichi Zhilian</text>
+    <text x="560" y="214" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="600">Global Auto Trade</text>
+  </g>
+</svg>

@@ -1,0 +1,16 @@
+[Unit]
+Description=WF-003 Car Export Portal
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/ai-workflow/WF-003/car-export-portal
+EnvironmentFile=/srv/ai-workflow/WF-003/car-export-portal/.env.production
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target

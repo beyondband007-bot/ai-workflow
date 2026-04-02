@@ -1,0 +1,36 @@
+{
+  "projectRoot": "C:/Users/27256/Documents/Codex/项目测试/car-export-portal",
+  "entry": {
+    "html": "C:/Users/27256/Documents/Codex/项目测试/car-export-portal/index.html",
+    "css": "C:/Users/27256/Documents/Codex/项目测试/car-export-portal/style.css",
+    "js": "C:/Users/27256/Documents/Codex/项目测试/car-export-portal/script.js",
+    "server": "C:/Users/27256/Documents/Codex/项目测试/car-export-portal/server.js"
+  },
+  "logo": {
+    "path": "C:/Users/27256/Documents/Codex/项目测试/car-export-portal/logo/logo.png",
+    "usage": [
+      "hero-brand",
+      "workflow form field: logo"
+    ]
+  },
+  "uiAssets": [
+    {
+      "name": "scene-grid.svg",
+      "path": "C:/Users/27256/Documents/Codex/项目测试/car-export-portal/ui-assets/scene-grid.svg",
+      "usage": "background grid",
+      "referencedIn": "style.css .scene-grid"
+    },
+    {
+      "name": "scene-wave.svg",
+      "path": "C:/Users/27256/Documents/Codex/项目测试/car-export-portal/ui-assets/scene-wave.svg",
+      "usage": "background wave",
+      "referencedIn": "style.css .scene-wave"
+    },
+    {
+      "name": "upload-plus.svg",
+      "path": "C:/Users/27256/Documents/Codex/项目测试/car-export-portal/ui-assets/upload-plus.svg",
+      "usage": "upload icon",
+      "referencedIn": "index.html upload buttons"
+    }
+  ]
+}

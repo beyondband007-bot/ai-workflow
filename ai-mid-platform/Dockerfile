@@ -1,8 +1,13 @@
-FROM python:3.12.3-bookworm
+ARG PYTHON_BASE_IMAGE=docker.m.daocloud.io/library/python:3.12.3-bookworm
+FROM ${PYTHON_BASE_IMAGE}
+
+ARG DEBIAN_APT_MIRROR=deb.debian.org
+ARG NODEJS_DIST_MIRROR=https://npmmirror.com/mirrors/node
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+RUN sed -i "s|http://deb.debian.org|http://${DEBIAN_APT_MIRROR}|g; s|http://security.debian.org|http://${DEBIAN_APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y \
     curl \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
@@ -14,7 +19,7 @@ RUN ARCH="$(dpkg --print-architecture)" \
       armhf) NODE_ARCH='armv7l' ;; \
       *) echo "Unsupported architecture: ${ARCH}" && exit 1 ;; \
     esac \
-    && curl -fsSLO "https://nodejs.org/dist/v20.20.0/node-v20.20.0-linux-${NODE_ARCH}.tar.xz" \
+    && curl -fsSLO "${NODEJS_DIST_MIRROR}/v20.20.0/node-v20.20.0-linux-${NODE_ARCH}.tar.xz" \
     && tar -xJf "node-v20.20.0-linux-${NODE_ARCH}.tar.xz" -C /usr/local --strip-components=1 \
     && rm "node-v20.20.0-linux-${NODE_ARCH}.tar.xz" \
     && node -v \
@@ -27,6 +32,7 @@ RUN npm ci
 WORKDIR /app
 COPY ai-mid-platform ./ai-mid-platform
 COPY WF_001 ./WF_001
+COPY WF-003 ./WF-003
 
 WORKDIR /app/ai-mid-platform
 RUN npm run build

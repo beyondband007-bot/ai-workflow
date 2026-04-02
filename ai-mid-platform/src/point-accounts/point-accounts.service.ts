@@ -79,7 +79,7 @@ export class PointAccountsService {
           frozen_points,
           total_recharged_points,
           total_consumed_points
-        ) VALUES (?, 1000, 0, 1000, 0)
+        ) VALUES (?, 100, 0, 100, 0)
       `,
       [userId],
     );
@@ -93,7 +93,7 @@ export class PointAccountsService {
             points,
             balance_after,
             remark
-          ) VALUES (?, 'manual_adjust', 1000, 1000, 'Initial default points for new account')
+          ) VALUES (?, 'manual_adjust', 100, 100, 'Initial default points for new account')
         `,
         [userId],
       );

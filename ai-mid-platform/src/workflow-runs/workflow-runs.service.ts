@@ -371,7 +371,7 @@ export class WorkflowRunsService {
           `,
           [
             Number(run.user_id),
-            0,
+            -finalChargePoints,
             nextAvailablePoints,
             `${workflow.workflow_code} final charge ${finalChargePoints} for run ${runId}`,
           ],

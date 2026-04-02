@@ -52,3 +52,6 @@ demo/.git/
 # Docker / local overrides
 .env.local
 .env.*.local
+
+# WF-003 local generated assets
+WF-003/car-export-portal/uploads/

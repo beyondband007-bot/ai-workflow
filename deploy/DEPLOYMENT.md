@@ -129,6 +129,82 @@ sudo systemctl start ai-mid-platform
 sudo systemctl status ai-mid-platform
 ```
 
+### 4.1 安装 `WF-003` 前端服务
+
+`mycar.deepsix.store` 对应的是 `WF-003/car-export-portal/server.js`。如果要正式接入积分中台，必须部署这个服务的最新代码，并配置：
+
+```bash
+sudo cp /srv/ai-workflow/deploy/systemd/wf003-car-export.service /etc/systemd/system/wf003-car-export.service
+sudo systemctl daemon-reload
+sudo systemctl enable wf003-car-export
+sudo systemctl restart wf003-car-export
+sudo systemctl status wf003-car-export
+```
+
+关键环境变量：
+
+```env
+PORT=3001
+WF_003_MIDDLE_PLATFORM_URL=http://127.0.0.1:3002/api/v1/workflows/WF-003/upload-execute
+```
+
+推荐直接复制模板：
+
+```bash
+cp /srv/ai-workflow/WF-003/car-export-portal/.env.production.example /srv/ai-workflow/WF-003/car-export-portal/.env.production
+```
+
+说明：
+
+- `WF-003` 页面提交后不再直接走旧 n8n webhook
+- 必须从积分门户进入，页面会携带登录 token
+- `car-export-portal` 服务收到 token 后，会转发到积分中台执行冻结和结算
+
+### 4.2 中台补充工作流环境变量
+
+推荐直接复制模板：
+
+```bash
+cp /srv/ai-workflow/ai-mid-platform/.env.wf003.example /srv/ai-workflow/ai-mid-platform/.env
+```
+
+`WF-002` 相关关键项：
+
+```env
+WF_002_WEBHOOK_URL=https://n8n.deepsix.store/webhook/simple-prompt
+WF_002_WEBHOOK_TIMEOUT_MS=90000
+```
+
+如果 `WF-002` 页面提交时报：
+
+```json
+{"error":"WF_002_WEBHOOK_URL is not set"}
+```
+
+说明当前运行中的中台进程没有读到 `WF_002_WEBHOOK_URL`。优先检查实际启动实例使用的 `.env`，确认不是只配置了 `WF_003`。
+
+`WF-003` 相关关键项：
+
+```env
+WF_003_WEBHOOK_URL=https://n8n.deepsix.store/webhook/bda7b6ac-10b6-4467-b6fd-83dd68c0bbd9
+WF_003_CALLBACK_BASE_URL=https://你的中台公网域名
+MIDDLE_PLATFORM_PUBLIC_BASE_URL=https://你的中台公网域名
+```
+
+这样中台在触发 `WF-003` 时会：
+
+- 先登记 `workflow_runs` 并冻结积分
+- 把 `run_id/client_request_id/callback_url` 一起发给上游工作流
+- 等待工作流完成后，由上游回调中台结算
+
+### 4.3 一键部署脚本
+
+仓库里提供了脚本：
+
+```bash
+bash /srv/ai-workflow/deploy/scripts/deploy-wf003.sh
+```
+
 ### 5. 部署静态前端和 Nginx
 
 仓库里已有样板文件：[deploy/nginx/ai-workflow.conf](/home/zzq/workspace/ai-workflow/deploy/nginx/ai-workflow.conf)

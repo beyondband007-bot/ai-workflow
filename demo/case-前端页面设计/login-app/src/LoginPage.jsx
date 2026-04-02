@@ -638,7 +638,7 @@ export default function LoginPage() {
           <p style={S.sub}>
             {mode === 'login'
               ? '请输入账户信息登录系统，登录成功后将自动跳转到个人积分工作台。'
-              : '创建新账户后将初始化 1000 积分，并可直接进入工作流系统。'}
+              : '创建新账户后将初始化 100 积分，并可直接进入工作流系统。'}
           </p>
 
           <div style={S.modeSwitch}>

@@ -12,8 +12,46 @@ function resolveApiBase() {
   return "";
 }
 
+function resolveWf003PortalUrl() {
+  const { protocol, hostname, port } = window.location;
+
+  if (protocol === "file:") {
+    return "http://127.0.0.1:3001/";
+  }
+
+  const normalizedHost = String(hostname || "").toLowerCase();
+  if (
+    normalizedHost === "127.0.0.1" ||
+    normalizedHost === "localhost" ||
+    normalizedHost === "0.0.0.0" ||
+    port === "8080" ||
+    port === "3003"
+  ) {
+    return `${protocol}//${hostname || "127.0.0.1"}:3001/`;
+  }
+
+  return "https://mycar.deepsix.store/";
+}
+
+function resolveAuthEntryUrl() {
+  const { protocol, hostname, port } = window.location;
+
+  if (protocol === "file:") {
+    return "http://127.0.0.1:8080/auth/?mode=login";
+  }
+
+  if (port === "3003") {
+    return `${protocol}//${hostname}:8000/auth/?mode=login`;
+  }
+
+  return `${window.location.origin}/auth/?mode=login`;
+}
+
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = "auth_demo_token";
+let latestWorkflowRuns = [];
+let latestRecordFilter = "all";
+let refreshTimer = null;
 
 const fallbackPointAccount = {
   user_id: "-",
@@ -128,6 +166,11 @@ function getAuthHeaders() {
   };
 }
 
+function logout() {
+  window.localStorage.removeItem(TOKEN_KEY);
+  window.location.href = resolveAuthEntryUrl();
+}
+
 async function requestJson(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -189,7 +232,13 @@ function renderWorkflows(workflows) {
           </div>
           <div class="workflow-footer">
             <p class="status-line">
-              ${workflow.workflow_code === "WF-001" ? "进入表单页填写提示词，执行完成后展示图片结果。" : "先 register 预冻结，再由工作流 callback 结算。"}
+              ${
+                workflow.workflow_code === "WF-001"
+                  ? "进入表单页填写提示词，执行完成后展示图片结果。"
+                  : workflow.workflow_code === "WF-003"
+                    ? "上传外观图和内饰图，先按预估张数冻结，再按实际完成张数结算。"
+                    : "先 register 预冻结，再由工作流 callback 结算。"
+              }
             </p>
             <button class="primary-button" type="button" data-workflow-code="${workflow.workflow_code}">
               进入
@@ -202,9 +251,11 @@ function renderWorkflows(workflows) {
 }
 
 function renderRecords(workflowRuns, filter = "all") {
+  latestRecordFilter = filter;
   const rows = workflowRuns.filter((record) => filter === "all" || record.status === filter);
   const recordsBody = document.getElementById("recordsBody");
   const mobileRecords = document.getElementById("mobileRecords");
+  const resolveRecordTime = (record) => record.finished_at || record.started_at || record.created_at;
 
   recordsBody.innerHTML = rows
     .map(
@@ -215,7 +266,7 @@ function renderRecords(workflowRuns, filter = "all") {
           <td><span class="status-pill status-${record.status}">${statusTextMap[record.status] ?? record.status}</span></td>
           <td>${formatNumber(record.estimated_frozen_points)}</td>
           <td>${formatNumber(record.final_charge_points)}</td>
-          <td>${formatDateTime(record.finished_at)}</td>
+          <td>${formatDateTime(resolveRecordTime(record))}</td>
         </tr>
       `,
     )
@@ -238,7 +289,7 @@ function renderRecords(workflowRuns, filter = "all") {
             <span><strong>estimated_frozen_points</strong> ${formatNumber(record.estimated_frozen_points)}</span>
             <span><strong>final_charge_points</strong> ${formatNumber(record.final_charge_points)}</span>
           </div>
-          <span class="mobile-record-time">${formatDateTime(record.finished_at)}</span>
+          <span class="mobile-record-time">${formatDateTime(resolveRecordTime(record))}</span>
         </article>
       `,
     )
@@ -349,7 +400,7 @@ function attachRecordFilter(workflowRuns) {
 
     document.querySelectorAll(".chip").forEach((chip) => chip.classList.remove("is-active"));
     button.classList.add("is-active");
-    renderRecords(workflowRuns, button.dataset.filter);
+    renderRecords(latestWorkflowRuns, button.dataset.filter);
   });
 }
 
@@ -371,9 +422,24 @@ function attachWorkflowButtons() {
     button.textContent = "处理中...";
 
     try {
+      if (workflowCode === "WF-003") {
+        const token = getToken();
+        const wf003Url = new URL(resolveWf003PortalUrl());
+        if (token) {
+          wf003Url.searchParams.set("token", token);
+        }
+        window.open(wf003Url.toString(), "_blank", "noopener,noreferrer");
+        button.disabled = false;
+        button.textContent = originalText;
+        return;
+      }
+
       if (workflowCode === "WF-001" || workflowCode === "WF-002") {
         const token = getToken();
-        const pageName = workflowCode === "WF-001" ? "wf001.html" : "wf002.html";
+        const pageName =
+          workflowCode === "WF-001"
+            ? "wf001.html"
+            : "wf002.html";
         const targetUrl = token
           ? `./${pageName}?token=${encodeURIComponent(token)}`
           : `./${pageName}`;
@@ -404,11 +470,51 @@ function attachWorkflowButtons() {
   });
 }
 
+function attachLogoutButton() {
+  const logoutButton = document.getElementById("logoutButton");
+  if (!logoutButton) {
+    return;
+  }
+
+  logoutButton.addEventListener("click", logout);
+}
+
+async function refreshDashboardData() {
+  const [pointAccount, workflowRuns] = await Promise.all([
+    requestJson("/api/v1/point-accounts/me"),
+    requestJson("/api/v1/workflow-runs"),
+  ]);
+
+  latestWorkflowRuns = workflowRuns;
+  syncAccountView(pointAccount);
+  renderRecords(workflowRuns, latestRecordFilter);
+  renderLedgers(workflowRuns);
+}
+
+function startAutoRefresh() {
+  if (refreshTimer) {
+    window.clearInterval(refreshTimer);
+  }
+
+  refreshTimer = window.setInterval(async () => {
+    if (document.hidden) {
+      return;
+    }
+
+    try {
+      await refreshDashboardData();
+    } catch (error) {
+      console.error("refresh dashboard failed", error);
+    }
+  }, 10000);
+}
+
 async function bootstrap() {
   // renderApiContracts();
   syncAccountView(fallbackPointAccount);
   renderRecords([]);
   renderLedgers([]);
+  attachLogoutButton();
 
   try {
     const [pointAccount, workflows, workflowRuns] = await Promise.all([
@@ -417,6 +523,7 @@ async function bootstrap() {
       requestJson("/api/v1/workflow-runs"),
     ]);
 
+    latestWorkflowRuns = workflowRuns;
     syncAccountView(pointAccount);
     renderWorkflows(workflows);
     renderRecords(workflowRuns);
@@ -424,6 +531,7 @@ async function bootstrap() {
     renderConnectionState(`账号 ${pointAccount.username || pointAccount.user_id} 已连接中台`, false);
     attachRecordFilter(workflowRuns);
     attachWorkflowButtons();
+    startAutoRefresh();
   } catch (error) {
     renderWorkflows([]);
     renderConnectionState(error.message, true);
