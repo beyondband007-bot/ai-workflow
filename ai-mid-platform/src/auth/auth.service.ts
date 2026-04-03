@@ -117,7 +117,10 @@ export class AuthService {
       throw new NotFoundException('用户不存在');
     }
 
-    return this.serializeUser(user);
+    return this.serializeUser(
+      user,
+      await this.getWf003FeishuBinding(user.id),
+    );
   }
 
   private createAccessToken(userId: number, email: string) {
@@ -136,11 +139,36 @@ export class AuthService {
     );
   }
 
-  private serializeUser(user: User) {
+  private async getWf003FeishuBinding(userId: number) {
+    const [binding] = await this.usersRepository.query(
+      `
+        SELECT feishu_app_id, feishu_id
+        FROM wf_003_feishu
+        WHERE user_id = ?
+        LIMIT 1
+      `,
+      [userId],
+    );
+
+    return {
+      feishu_app_id: binding?.feishu_app_id ?? null,
+      feishu_id: binding?.feishu_id ?? null,
+    };
+  }
+
+  private serializeUser(
+    user: User,
+    binding: { feishu_app_id: string | null; feishu_id: string | null } = {
+      feishu_app_id: null,
+      feishu_id: null,
+    },
+  ) {
     return {
       id: user.id,
       email: user.email,
       username: user.username,
+      feishu_app_id: binding.feishu_app_id,
+      feishu_id: binding.feishu_id,
       is_active: Boolean(user.isActive),
       created_at: user.createdAt,
       last_login_at: user.lastLoginAt,

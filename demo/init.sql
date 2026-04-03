@@ -16,3 +16,16 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_email    (email),
     INDEX idx_username (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS wf_003_feishu (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    user_id       INT NOT NULL UNIQUE COMMENT '关联用户 ID',
+    feishu_app_id VARCHAR(255) NOT NULL COMMENT 'WF-003 飞书多维表 App ID',
+    feishu_id     VARCHAR(255) NOT NULL COMMENT 'WF-003 飞书多维表 Table ID',
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_wf_003_feishu_user_id (user_id),
+    CONSTRAINT fk_wf_003_feishu_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -18,6 +18,11 @@ import { WorkflowsService } from './workflows.service';
 const execFileAsync = promisify(execFile);
 const ALLOWED_WF002_ASPECT_RATIOS = ['1:1', '4:3', '3:4', '16:9', '9:16'] as const;
 
+type Wf003UserMetadata = {
+  feishu_app_id: string | null;
+  feishu_id: string | null;
+};
+
 @Injectable()
 export class WorkflowExecutionService {
   constructor(
@@ -328,6 +333,7 @@ export class WorkflowExecutionService {
       request_payload_summary: requestPayloadSummary,
     });
     const runId = registerData.run_id;
+    const userMetadata = await this.getWf003UserMetadata(currentUser.userId);
 
     try {
       const formData = new FormData();
@@ -336,6 +342,8 @@ export class WorkflowExecutionService {
       formData.append('client_request_id', clientRequestId);
       formData.append('workflow_code', workflowCode);
       formData.append('user_id', String(currentUser.userId));
+      formData.append('feishu_app_id', userMetadata.feishu_app_id ?? '');
+      formData.append('feishu_id', userMetadata.feishu_id ?? '');
       if (callbackBaseUrl) {
         formData.append(
           'callback_url',
@@ -628,6 +636,7 @@ export class WorkflowExecutionService {
       request_payload_summary: requestPayloadSummary,
     });
     const runId = registerData.run_id;
+    const userMetadata = await this.getWf003UserMetadata(currentUser.userId);
 
     try {
       const abortController = new AbortController();
@@ -651,6 +660,8 @@ export class WorkflowExecutionService {
           client_request_id: clientRequestId,
           workflow_code: workflowCode,
           user_id: currentUser.userId,
+          feishu_app_id: userMetadata.feishu_app_id,
+          feishu_id: userMetadata.feishu_id,
           callback_url: callbackUrl,
           callback_token: callbackToken || undefined,
         }),
@@ -842,6 +853,29 @@ export class WorkflowExecutionService {
       scriptPath.lastIndexOf('/'),
     );
     return lastSlash === -1 ? process.cwd() : scriptPath.slice(0, lastSlash);
+  }
+
+  private async getWf003UserMetadata(userId: number): Promise<Wf003UserMetadata> {
+    const [binding] = await this.dataSource.query(
+      `
+        SELECT feishu_app_id, feishu_id
+        FROM wf_003_feishu
+        WHERE user_id = ?
+        LIMIT 1
+      `,
+      [userId],
+    );
+
+    return {
+      feishu_app_id:
+        typeof binding?.feishu_app_id === 'string' && binding.feishu_app_id.trim()
+          ? binding.feishu_app_id.trim()
+          : null,
+      feishu_id:
+        typeof binding?.feishu_id === 'string' && binding.feishu_id.trim()
+          ? binding.feishu_id.trim()
+          : null,
+    };
   }
 
   private async findWorkflowRun(

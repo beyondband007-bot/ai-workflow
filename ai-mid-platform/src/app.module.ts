@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PointAccountsModule } from './point-accounts/point-accounts.module';
 import { WorkflowRunsModule } from './workflow-runs/workflow-runs.module';
+import { Wf003Feishu } from './workflows/wf003-feishu.entity';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { User } from './users/user.entity';
 
@@ -25,7 +26,7 @@ import { User } from './users/user.entity';
         database: configService.getOrThrow<string>('DATABASE_NAME'),
         autoLoadEntities: true,
         synchronize: false,
-        entities: [User],
+        entities: [User, Wf003Feishu],
       }),
     }),
     AuthModule,

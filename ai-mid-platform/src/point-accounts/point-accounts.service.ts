@@ -9,9 +9,16 @@ export class PointAccountsService {
   async getMyPointAccount(currentUser: AuthUser) {
     const [user] = await this.dataSource.query(
       `
-        SELECT id, email, username, is_active
-        FROM users
-        WHERE id = ?
+        SELECT
+          u.id,
+          u.email,
+          u.username,
+          u.is_active,
+          f.feishu_app_id,
+          f.feishu_id
+        FROM users u
+        LEFT JOIN wf_003_feishu f ON f.user_id = u.id
+        WHERE u.id = ?
         LIMIT 1
       `,
       [currentUser.userId],
@@ -39,6 +46,8 @@ export class PointAccountsService {
       user_id: String(user.id),
       email: user.email,
       username: user.username,
+      feishu_app_id: user.feishu_app_id ?? null,
+      feishu_id: user.feishu_id ?? null,
       is_active: Boolean(user.is_active),
       available_points: Number(pointAccount.available_points ?? 0),
       frozen_points: Number(pointAccount.frozen_points ?? 0),

@@ -14,6 +14,19 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_users_username (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS wf_003_feishu (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    user_id       INT NOT NULL UNIQUE,
+    feishu_app_id VARCHAR(255) NOT NULL,
+    feishu_id     VARCHAR(255) NOT NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_wf_003_feishu_user_id (user_id),
+    CONSTRAINT fk_wf_003_feishu_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS point_accounts (
     user_id                 INT PRIMARY KEY,
     available_points        INT NOT NULL DEFAULT 0,
