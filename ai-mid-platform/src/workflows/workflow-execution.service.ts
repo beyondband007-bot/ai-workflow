@@ -73,9 +73,9 @@ export class WorkflowExecutionService {
       );
     }
 
-    const webhookUrl = this.configService
-      .get<string>('WF_002_WEBHOOK_URL')
-      ?.trim();
+    const webhookUrl =
+      this.configService.get<string>('WF_002_WEBHOOK_URL')?.trim() ||
+      'https://n8n.deepsix.store/webhook/simple-prompt';
     const webhookTimeoutMs = Number(
       this.configService.get<string>('WF_002_WEBHOOK_TIMEOUT_MS') || '180000',
     );
