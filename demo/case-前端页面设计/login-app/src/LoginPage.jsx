@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import wikiLogo from './微信图片_20260310102730_18_61.png';
+import wikiLogo from './logo.png';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '';
 const PORTAL_BASE =
