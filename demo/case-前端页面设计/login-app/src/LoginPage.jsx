@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import wikiLogo from './logo.png';
+﻿import { useEffect, useRef, useState } from 'react';
+import wikiLogo1 from './logo1.png';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '';
 const PORTAL_BASE =
@@ -17,7 +17,7 @@ async function requestJson(path, options = {}) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.detail || '请求失败');
+    throw new Error(data.detail || 'Request failed');
   }
   return data;
 }
@@ -28,72 +28,164 @@ function redirectToPortal(token) {
   window.location.href = target.toString();
 }
 
-function GridBackground() {
+function IndexFxBackground() {
   const canvasRef = useRef(null);
+  const pointerRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    const pointer = pointerRef.current;
     const ctx = canvas?.getContext?.('2d');
-    let frameId;
+    let rafId;
+    let width = 0;
+    let height = 0;
+    const pointerPos = { x: -9999, y: -9999 };
+    const particles = [];
+    const isMobile = window.matchMedia('(max-width: 760px)').matches;
 
     if (!canvas || !ctx) {
       return undefined;
     }
 
+    const random = (min, max) => Math.random() * (max - min) + min;
+
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
     };
 
-    const draw = (time) => {
-      const { width, height } = canvas;
-      ctx.clearRect(0, 0, width, height);
+    const buildParticles = () => {
+      particles.length = 0;
+      const count = isMobile ? 38 : 72;
+      for (let i = 0; i < count; i += 1) {
+        particles.push({
+          x: random(0, width),
+          y: random(0, height),
+          vx: random(-0.24, 0.24),
+          vy: random(-0.22, 0.22),
+          r: random(0.8, 2.4),
+          a: random(0.18, 0.75),
+        });
+      }
+    };
 
-      for (let row = 0; row < 42; row += 1) {
-        for (let col = 0; col < 120; col += 1) {
-          const x = (col / 119) * width;
-          const baseY = height * 0.68 + row * 8.2;
-          const wave =
-            Math.sin(col * 0.16 + time * 0.0012) * 16 +
-            Math.cos(row * 0.32 + time * 0.0014) * 10 +
-            Math.sin((row + col) * 0.06 + time * 0.0008) * 18;
-          const depth = (row / 42) ** 1.8;
-          const y = baseY + wave * (0.25 + depth);
-          const size = 0.55 + depth * 1.6;
-          const alpha = 0.05 + depth * 0.28;
-
-          ctx.beginPath();
-          ctx.fillStyle = `rgba(60, 196, 255, ${alpha})`;
-          ctx.arc(x, y, size, 0, Math.PI * 2);
-          ctx.fill();
+    const drawLinks = () => {
+      for (let i = 0; i < particles.length; i += 1) {
+        const p = particles[i];
+        for (let j = i + 1; j < particles.length; j += 2) {
+          const q = particles[j];
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 105) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = `rgba(74, 228, 198, ${0.12 * (1 - dist / 105)})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
         }
       }
+    };
 
-      frameId = requestAnimationFrame(draw);
+    const tick = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      const glow = ctx.createRadialGradient(
+        pointerPos.x,
+        pointerPos.y,
+        0,
+        pointerPos.x,
+        pointerPos.y,
+        160,
+      );
+      glow.addColorStop(0, 'rgba(54, 244, 199, 0.16)');
+      glow.addColorStop(1, 'rgba(54, 244, 199, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, height);
+
+      for (let i = 0; i < particles.length; i += 1) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < -10) p.x = width + 10;
+        if (p.x > width + 10) p.x = -10;
+        if (p.y < -10) p.y = height + 10;
+        if (p.y > height + 10) p.y = -10;
+
+        const dx = pointerPos.x - p.x;
+        const dy = pointerPos.y - p.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          p.x -= dx * 0.0018;
+          p.y -= dy * 0.0018;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(54, 244, 199, ${p.a})`;
+        ctx.fill();
+      }
+
+      drawLinks();
+      rafId = requestAnimationFrame(tick);
+    };
+
+    const handleMouseMove = (event) => {
+      pointerPos.x = event.clientX;
+      pointerPos.y = event.clientY;
+      if (pointer) {
+        pointer.style.opacity = '1';
+        pointer.style.transform = `translate(${event.clientX - 170}px, ${event.clientY - 170}px)`;
+      }
+    };
+
+    const handleTouchMove = (event) => {
+      if (!event.touches[0]) {
+        return;
+      }
+      pointerPos.x = event.touches[0].clientX;
+      pointerPos.y = event.touches[0].clientY;
+    };
+
+    const handleMouseLeave = () => {
+      if (pointer) {
+        pointer.style.opacity = '0';
+      }
+    };
+
+    const handleResize = () => {
+      cancelAnimationFrame(rafId);
+      resize();
+      buildParticles();
+      tick();
     };
 
     resize();
-    draw(0);
-    window.addEventListener('resize', resize);
+    buildParticles();
+    tick();
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('mouseleave', handleMouseLeave);
+    window.addEventListener('resize', handleResize);
 
     return () => {
-      cancelAnimationFrame(frameId);
-      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: 'fixed',
-        top: 30,
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        zIndex: 0,
-      }}
-    />
+    <>
+      <canvas ref={canvasRef} className="fx-canvas" />
+      <div ref={pointerRef} className="pointer-glow" />
+    </>
   );
 }
 
@@ -144,7 +236,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
   const [message, setMessage] = useState('');
-  const [currentUser, setCurrentUser] = useState(null);
+  const [, setCurrentUser] = useState(null);
   const [ripple, setRipple] = useState(null);
   const [hoverForgot, setHoverForgot] = useState(false);
   const btnRef = useRef(null);
@@ -169,7 +261,7 @@ export default function LoginPage() {
       });
       setCurrentUser(me);
       setStatus('ok');
-      setMessage(`已登录：${me.username}（${me.email}）`);
+      setMessage('已登录' + me.username + ' (' + me.email + ')');
     } catch (error) {
       window.localStorage.removeItem(TOKEN_KEY);
       setCurrentUser(null);
@@ -220,7 +312,7 @@ export default function LoginPage() {
         });
 
         setStatus('ok');
-        setMessage(`注册成功：${result.username}，请直接登录。`);
+        setMessage('注册成功：' + result.username + ', 请登录。');
         setMode('login');
         setForm({
           identifier: result.email,
@@ -249,9 +341,9 @@ export default function LoginPage() {
     setTimeout(() => setPressing(false), 160);
   };
 
-  const CYAN = '#61f0e8';
-  const LINE = 'rgba(56, 192, 228, 0.26)';
-  const PANEL = 'rgba(5, 16, 36, 0.84)';
+  const CYAN = '#36f4c7';
+  const LINE = 'rgba(74, 228, 198, 0.2)';
+  const PANEL = 'rgba(10, 18, 30, 0.92)';
 
   const S = {
     page: {
@@ -262,7 +354,7 @@ export default function LoginPage() {
       justifyContent: 'center',
       overflow: 'hidden',
       background:
-        'radial-gradient(circle at 12% 18%, rgba(35, 140, 170, 0.22), transparent 34%), radial-gradient(circle at 88% 24%, rgba(42, 108, 175, 0.2), transparent 34%), linear-gradient(128deg, #020914 0%, #030f22 52%, #020815 100%)',
+        'radial-gradient(circle at top left, rgba(54, 244, 199, 0.14), transparent 30%), radial-gradient(circle at 80% 10%, rgba(39, 207, 255, 0.2), transparent 26%), linear-gradient(180deg, #060a10 0%, #0a121d 44%, #04080f 100%)',
       fontFamily: "'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
       padding: '24px',
     },
@@ -311,18 +403,21 @@ export default function LoginPage() {
       alignItems: 'center',
       gap: 10,
       borderRadius: 999,
-      border: `1px solid ${LINE}`,
-      background: 'rgba(7, 25, 46, 0.8)',
-      color: 'rgba(172, 218, 230, 0.84)',
+      border: '1px solid ' + LINE,
+      background: 'rgba(255, 255, 255, 0.92)',
+      color: 'rgba(134, 169, 173, 0.95)',
       padding: '8px 14px',
       fontSize: 12,
       letterSpacing: '0.14em',
       textTransform: 'uppercase',
-      marginBottom: 20,
+      marginBottom: 10,
+    },
+    leftLogoImg: {
+      width: 120,
     },
     leftTitle: {
       margin: 0,
-      color: '#def6fb',
+      color: '#e6f7f3',
       fontSize: 'clamp(30px, 4vw, 48px)',
       lineHeight: 1.06,
       letterSpacing: 0.5,
@@ -331,10 +426,10 @@ export default function LoginPage() {
     leftSub: {
       marginTop: 16,
       marginBottom: 24,
-      color: 'rgba(165, 198, 217, 0.78)',
+      color: 'rgba(134, 169, 173, 0.9)',
       fontSize: 15,
       lineHeight: 1.75,
-      maxWidth: 580,
+      maxWidth: 600,
     },
     leftCards: {
       display: 'grid',
@@ -345,28 +440,28 @@ export default function LoginPage() {
     leftCard: {
       padding: '16px 14px',
       borderRadius: 16,
-      border: `1px solid ${LINE}`,
-      background: 'rgba(6, 22, 44, 0.72)',
+      border: '1px solid ' + LINE,
+      background: 'rgba(8, 22, 34, 0.72)',
       boxShadow: 'inset 0 0 0 1px rgba(208, 252, 255, 0.03)',
     },
     leftCardLabel: {
       fontSize: 12,
-      color: 'rgba(146, 186, 207, 0.84)',
+      color: 'rgba(134, 169, 173, 0.9)',
       marginTop: 8,
       letterSpacing: '0.05em',
     },
     leftCardValue: {
       fontSize: 20,
       fontWeight: 800,
-      color: '#e0fbff',
+      color: '#e6f7f3',
       lineHeight: 1,
     },
     leftWorkflow: {
       marginTop: 14,
       borderRadius: 20,
-      border: `1px solid ${LINE}`,
+      border: '1px solid ' + LINE,
       background:
-        'linear-gradient(140deg, rgba(10, 36, 62, 0.82), rgba(4, 14, 31, 0.66))',
+        'linear-gradient(140deg, rgba(12, 24, 36, 0.84), rgba(8, 22, 34, 0.72))',
       padding: '22px 20px',
       display: 'grid',
       gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
@@ -375,17 +470,17 @@ export default function LoginPage() {
     workflowItem: {
       borderRadius: 14,
       padding: '14px 12px',
-      border: '1px solid rgba(56, 192, 228, 0.18)',
+      border: '1px solid rgba(74, 228, 198, 0.18)',
       background: 'rgba(2, 11, 23, 0.5)',
     },
     workflowTitle: {
-      color: '#e6faff',
+      color: '#e6f7f3',
       fontWeight: 700,
       marginBottom: 6,
       fontSize: 14,
     },
     workflowDesc: {
-      color: 'rgba(146, 186, 207, 0.76)',
+      color: 'rgba(134, 169, 173, 0.86)',
       fontSize: 12,
       lineHeight: 1.5,
     },
@@ -402,7 +497,7 @@ export default function LoginPage() {
       padding: '28px 24px 24px',
       background: PANEL,
       borderRadius: 22,
-      border: `1px solid ${LINE}`,
+      border: '1px solid ' + LINE,
     },
     cardHalo: {
       position: 'absolute',
@@ -410,7 +505,7 @@ export default function LoginPage() {
       borderRadius: 22,
       pointerEvents: 'none',
       background:
-        'linear-gradient(180deg, rgba(138, 251, 255, 0.14), rgba(18,47,89,0.04) 44%, rgba(0,0,0,0) 100%)',
+        'linear-gradient(180deg, rgba(54, 244, 199, 0.14), rgba(39,207,255,0.06) 44%, rgba(0,0,0,0) 100%)',
       maskImage:
         'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
       padding: 1,
@@ -432,7 +527,7 @@ export default function LoginPage() {
       background:
         'linear-gradient(180deg, rgba(86, 243, 255, 0.98), rgba(48, 199, 238, 0.92))',
       boxShadow:
-        '0 12px 30px rgba(46, 243, 255, 0.24), inset 0 1px 0 rgba(255,255,255,0.42)',
+        '0 12px 30px rgba(54, 244, 199, 0.24), inset 0 1px 0 rgba(255,255,255,0.42)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -447,12 +542,12 @@ export default function LoginPage() {
       fontSize: 20,
       fontWeight: 800,
       letterSpacing: 0.4,
-      color: '#f0fdff',
+      color: '#e6f7f3',
       marginBottom: 2,
     },
     logoTextSub: {
       fontSize: 12,
-      color: 'rgba(163, 203, 218, 0.8)',
+      color: 'rgba(134, 169, 173, 0.88)',
       fontWeight: 600,
       letterSpacing: '0.14em',
       textTransform: 'uppercase',
@@ -466,20 +561,20 @@ export default function LoginPage() {
       borderRadius: 999,
       border: '1px solid rgba(112, 242, 255, 0.24)',
       background: 'rgba(6, 20, 39, 0.72)',
-      color: 'rgba(170, 238, 245, 0.86)',
+      color: 'rgba(134, 169, 173, 0.92)',
       fontSize: 11,
       letterSpacing: '0.14em',
       textTransform: 'uppercase',
     },
     h1: {
-      color: '#edfbff',
+      color: '#e6f7f3',
       fontSize: 'clamp(22px, 3.2vw, 28px)',
       fontWeight: 800,
       margin: '0 0 8px',
       textShadow: '0 0 18px rgba(97, 240, 232, 0.1)',
     },
     sub: {
-      color: 'rgba(163, 203, 218, 0.78)',
+      color: 'rgba(134, 169, 173, 0.88)',
       fontSize: 14,
       lineHeight: 1.7,
       margin: '0 0 18px',
@@ -488,11 +583,11 @@ export default function LoginPage() {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
       gap: 8,
-      marginBottom: 18,
+      marginBottom: 30,
       padding: 4,
       background: 'rgba(255,255,255,0.03)',
       borderRadius: 14,
-      border: `1px solid ${LINE}`,
+      border: '1px solid ' + LINE,
       boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.02)',
     },
     modeBtn: (active) => ({
@@ -502,16 +597,16 @@ export default function LoginPage() {
       cursor: 'pointer',
       fontWeight: 700,
       fontSize: 14,
-      color: active ? '#03202b' : 'rgba(194, 227, 238, 0.82)',
+      color: active ? '#031020' : 'rgba(230, 247, 243, 0.86)',
       background: active
-        ? 'linear-gradient(315deg, #7cf5eb 0%, #56d8f0 100%)'
+        ? 'linear-gradient(135deg, #36f4c7 0%, #86e8ff 100%)'
         : 'rgba(255,255,255,0.02)',
-      boxShadow: active ? '0 0 20px rgba(86, 216, 240, 0.28)' : 'none',
+      boxShadow: active ? '0 0 20px rgba(54, 244, 199, 0.28)' : 'none',
       transition: 'all .2s ease',
     }),
     label: {
       display: 'block',
-      color: 'rgba(194, 227, 238, 0.92)',
+      color: 'rgba(230, 247, 243, 0.92)',
       fontSize: 13,
       fontWeight: 600,
       marginBottom: 8,
@@ -524,21 +619,21 @@ export default function LoginPage() {
     input: (name) => ({
       width: '100%',
       boxSizing: 'border-box',
-      background: 'rgba(4, 15, 33, 0.96)',
+      background: 'rgba(9, 24, 41, 0.9)',
       border: `1.5px solid ${
-        focused === name ? 'rgba(124,245,235,0.56)' : LINE
+        focused === name ? 'rgba(74, 228, 198, 0.55)' : LINE
       }`,
       borderRadius: 12,
       padding: '12px 14px',
       paddingRight: name === 'password' ? 46 : 14,
-      color: '#ebfcff',
+      color: '#e6f7f3',
       caretColor: CYAN,
       fontSize: 15,
       outline: 'none',
       transition: 'border-color .25s, box-shadow .25s, background .25s',
       boxShadow:
         focused === name
-          ? '0 0 0 3px rgba(86, 216, 240, 0.14), 0 0 16px rgba(86, 216, 240, 0.12)'
+          ? '0 0 0 3px rgba(74, 228, 198, 0.14), 0 0 16px rgba(74, 228, 198, 0.12)'
           : 'none',
     }),
     eyeBtn: {
@@ -548,7 +643,7 @@ export default function LoginPage() {
       background: 'none',
       border: 'none',
       cursor: 'pointer',
-      color: 'rgba(163, 203, 218, 0.6)',
+      color: 'rgba(134, 169, 173, 0.8)',
       padding: 4,
       display: 'flex',
       transition: 'color .2s',
@@ -558,12 +653,13 @@ export default function LoginPage() {
       overflow: 'hidden',
       width: '100%',
       padding: '13px 0',
+      marginTop: 30,
       borderRadius: 999,
       border: '1px solid rgba(122, 244, 238, 0.3)',
       background: loading
-        ? 'rgba(42, 134, 173, 0.42)'
-        : 'linear-gradient(315deg, #7cf5eb 0%, #56d8f0 100%)',
-      color: loading ? 'rgba(255,255,255,0.88)' : '#02222d',
+        ? 'rgba(23, 85, 110, 0.55)'
+        : 'linear-gradient(135deg, #36f4c7 0%, #86e8ff 100%)',
+      color: loading ? 'rgba(230,247,243,0.9)' : '#031020',
       fontSize: 15,
       fontWeight: 800,
       cursor: loading ? 'wait' : 'pointer',
@@ -571,8 +667,8 @@ export default function LoginPage() {
       transitionProperty: 'transform, box-shadow, filter',
       transitionDuration: pressing ? '0.08s' : '0.22s',
       boxShadow: pressing
-        ? '0 4px 14px rgba(86, 216, 240, 0.26)'
-        : '0 0 24px rgba(86, 216, 240, 0.28), inset 0 1px 0 rgba(255,255,255,0.5)',
+        ? '0 4px 14px rgba(54, 244, 199, 0.26)'
+        : '0 0 24px rgba(54, 244, 199, 0.28), inset 0 1px 0 rgba(255,255,255,0.5)',
       filter: pressing ? 'brightness(0.95)' : 'brightness(1)',
       userSelect: 'none',
       letterSpacing: 1,
@@ -584,7 +680,7 @@ export default function LoginPage() {
     forgotLink: {
       position: 'relative',
       display: 'inline-block',
-      color: hoverForgot ? CYAN : 'rgba(163, 203, 218, 0.62)',
+      color: hoverForgot ? CYAN : 'rgba(134, 169, 173, 0.92)',
       fontSize: 13,
       cursor: 'pointer',
       textDecoration: 'none',
@@ -596,7 +692,7 @@ export default function LoginPage() {
       left: 0,
       height: 1.5,
       borderRadius: 2,
-      background: 'linear-gradient(90deg, #56d8f0, #7cf5eb)',
+      background: 'linear-gradient(90deg, #27cfff, #36f4c7)',
       width: hoverForgot ? '100%' : '0%',
       transition: 'width 0.3s cubic-bezier(.4,0,.2,1)',
     },
@@ -604,17 +700,17 @@ export default function LoginPage() {
       marginTop: 14,
       padding: '12px 14px',
       borderRadius: 12,
-      background: 'rgba(3, 13, 30, 0.8)',
-      border: `1px solid ${LINE}`,
-      color: '#d8f8ff',
+      background: 'rgba(8, 21, 36, 0.92)',
+      border: '1px solid ' + LINE,
+      color: '#e6f7f3',
       fontSize: 14,
       lineHeight: 1.7,
       boxShadow:
-        'inset 0 0 0 1px rgba(255,255,255,0.02), 0 0 20px rgba(20,98,120,0.14)',
+        'inset 0 0 0 1px rgba(255,255,255,0.02), 0 0 20px rgba(2, 8, 14, 0.58)',
     },
     sessionTitle: {
       fontSize: 12,
-      color: 'rgba(163, 203, 218, 0.74)',
+      color: 'rgba(134, 169, 173, 0.9)',
       marginBottom: 6,
       letterSpacing: '0.14em',
       textTransform: 'uppercase',
@@ -622,8 +718,8 @@ export default function LoginPage() {
     logoutBtn: {
       marginTop: 10,
       background: 'rgba(255,255,255,0.02)',
-      color: '#bff4ff',
-      border: `1px solid ${LINE}`,
+      color: '#e6f7f3',
+      border: '1px solid ' + LINE,
       borderRadius: 999,
       padding: '8px 14px',
       cursor: 'pointer',
@@ -639,7 +735,7 @@ export default function LoginPage() {
       border: `1px solid ${
         ok ? 'rgba(103, 241, 201, 0.18)' : 'rgba(255, 130, 146, 0.16)'
       }`,
-      color: ok ? '#88efce' : '#ff9ead',
+      color: ok ? '#8bf76a' : '#ff9ead',
       display: 'flex',
       alignItems: 'center',
       gap: 8,
@@ -668,39 +764,145 @@ export default function LoginPage() {
           from { opacity: 0; transform: translateY(16px) scale(0.985); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
+        @keyframes drift {
+          from { transform: translate3d(0, 0, 0); }
+          to { transform: translate3d(46px, 46px, 0); }
+        }
+        @keyframes gridWarp {
+          0%, 100% { transform: perspective(900px) rotateX(0deg) scale(1); }
+          50% { transform: perspective(900px) rotateX(4deg) scale(1.04); }
+        }
+        @keyframes beamMove {
+          0% { transform: translateX(-40%) translateY(0); }
+          50% { transform: translateX(0%) translateY(-3%); }
+          100% { transform: translateX(40%) translateY(0); }
+        }
+        @keyframes noiseShift {
+          0% { transform: translate(0, 0); }
+          50% { transform: translate(-1px, 1px); }
+          100% { transform: translate(1px, -1px); }
+        }
+        @keyframes fxSpin {
+          to { transform: rotate(1turn); }
+        }
 
         * { -webkit-tap-highlight-color: transparent; }
 
         .login-input {
-          background: rgba(4, 15, 33, 0.96) !important;
-          color: #ebfcff !important;
-          caret-color: #61f0e8;
+          background: rgba(9, 24, 41, 0.9) !important;
+          color: #e6f7f3 !important;
+          caret-color: #36f4c7;
         }
 
         .login-input:hover,
         .login-input:focus,
         .login-input:active,
         .login-input:not(:placeholder-shown) {
-          background: rgba(4, 15, 33, 0.98) !important;
-          color: #ebfcff !important;
+          background: rgba(9, 24, 41, 0.95) !important;
+          color: #e6f7f3 !important;
         }
 
         input::placeholder {
-          color: rgba(151, 197, 211, 0.34);
+          color: rgba(134, 169, 173, 0.7);
         }
 
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
         input:-webkit-autofill:active {
-          -webkit-box-shadow: 0 0 0 1000px rgba(4, 15, 33, 0.98) inset !important;
-          -webkit-text-fill-color: #ebfcff !important;
-          caret-color: #61f0e8;
+          -webkit-box-shadow: 0 0 0 1000px rgba(9, 24, 41, 0.95) inset !important;
+          -webkit-text-fill-color: #e6f7f3 !important;
+          caret-color: #36f4c7;
           transition: background-color 5000s ease-in-out 0s;
         }
 
         .lp-shell {
           animation: cardIn .5s ease both;
+        }
+        .fx-grid {
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+          background-image:
+            linear-gradient(rgba(70, 92, 170, 0.15) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(70, 92, 170, 0.15) 1px, transparent 1px);
+          background-size: 40px 40px;
+          mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.9), transparent 85%);
+          opacity: 0.5;
+          transform-origin: center;
+          animation: drift 22s linear infinite, gridWarp 10s ease-in-out infinite;
+          pointer-events: none;
+        }
+        .fx-noise {
+          position: fixed;
+          inset: 0;
+          z-index: 1;
+          pointer-events: none;
+          background-image: radial-gradient(rgba(255, 255, 255, 0.08) 0.6px, transparent 0.6px);
+          background-size: 3px 3px;
+          opacity: 0.06;
+          animation: noiseShift 0.28s steps(2) infinite;
+        }
+        .fx-beam {
+          position: fixed;
+          inset: -20% -40%;
+          z-index: 1;
+          pointer-events: none;
+          background: linear-gradient(112deg, transparent 42%, rgba(54, 244, 199, 0.2) 50%, transparent 58%);
+          transform: translateX(-35%);
+          animation: beamMove 5.2s ease-in-out infinite;
+        }
+        .fx-rings {
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+          pointer-events: none;
+        }
+        .fx-rings::before,
+        .fx-rings::after {
+          content: "";
+          position: absolute;
+          width: 60vmax;
+          height: 60vmax;
+          border-radius: 50%;
+          border: 1px solid rgba(74, 228, 198, 0.18);
+          filter: blur(0.5px);
+        }
+        .fx-rings::before {
+          top: -18vmax;
+          right: -18vmax;
+          animation: fxSpin 20s linear infinite;
+          box-shadow: inset 0 0 140px rgba(54, 244, 199, 0.12);
+        }
+        .fx-rings::after {
+          bottom: -24vmax;
+          left: -20vmax;
+          animation: fxSpin 30s linear infinite reverse;
+          box-shadow: inset 0 0 140px rgba(74, 228, 198, 0.12);
+        }
+        .fx-canvas {
+          position: fixed;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          z-index: 2;
+          pointer-events: none;
+        }
+        .pointer-glow {
+          position: fixed;
+          width: 380px;
+          height: 380px;
+          left: 0;
+          top: 0;
+          z-index: 2;
+          pointer-events: none;
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
+          background: radial-gradient(circle, rgba(54, 244, 199, 0.24) 0%, rgba(54, 244, 199, 0.12) 18%, rgba(54, 244, 199, 0.03) 48%, rgba(54, 244, 199, 0) 74%);
+          mix-blend-mode: screen;
+          filter: blur(4px);
+          opacity: 0;
+          transition: opacity 0.25s ease;
         }
 
         @media (max-width: 1080px) {
@@ -710,7 +912,7 @@ export default function LoginPage() {
 
           .lp-left {
             border-right: none !important;
-            border-bottom: 1px solid rgba(56, 192, 228, 0.26);
+            border-bottom: 1px solid rgba(74, 228, 198, 0.2);
           }
         }
 
@@ -726,45 +928,52 @@ export default function LoginPage() {
       `}</style>
 
       <div style={S.page}>
-        <div style={S.grid} />
+        <div className="fx-grid" />
+        <div className="fx-rings" />
+        <div className="fx-beam" />
+        <div className="fx-noise" />
         <div style={S.glowTop} />
-        <GridBackground />
+        <IndexFxBackground />
 
         <div className="lp-shell" style={S.shell}>
           <section className="lp-left" style={S.left}>
             <div>
-              <div style={S.leftBadge}>Workflow Console</div>
-              <h1 style={S.leftTitle}>鲸创传媒集团<br /><small>积分系统客户端</small></h1>
+              <div style={S.leftBadge}>
+                <img src={wikiLogo1} alt="logo1" style={S.leftLogoImg} />
+              </div>
+              <h1 style={S.leftTitle}>
+                鲸创传媒集团
+                <br />
+                <small>
+                  智能工作流平台积分系统客户端
+                </small>
+              </h1>
               <p style={S.leftSub}>
                 助力企业降本增效。深度整合资源，优化运营流程，以创新管理模式全方位助力企业降低运营成本；同时通过技术赋能提升效率，实现企业可持续的降本增效与高质量发展。
               </p>
-
               <div className="lp-left-cards" style={S.leftCards}>
                 <div style={S.leftCard}>
-                  <div style={S.leftCardValue}>整合</div>
-                  <div style={S.leftCardLabel}>融合资源 协同运作</div>
-                </div>
-                <div style={S.leftCard}>
-                  <div style={S.leftCardValue}>创新</div>
-                  <div style={S.leftCardLabel}>变革模式 优化管理</div>
-                </div>
-                <div style={S.leftCard}>
-                  <div style={S.leftCardValue}>赋能</div>
-                  <div style={S.leftCardLabel}>注入技术 提升效率</div>
-                </div>
-              </div>
-
-              <div className="lp-workflow" style={S.leftWorkflow}>
-                <div style={S.workflowItem}>
-                  <div style={S.workflowTitle}>工作流入口</div>
-                  <div style={S.workflowDesc}>
-                    先看账户，再进流程，最后统一在记录区追踪状态和积分变化。
+                  <div style={S.leftCardValue}>
+                    整合
+                  </div>
+                  <div style={S.leftCardLabel}>
+                    融合资源 协同运作
                   </div>
                 </div>
-                <div style={S.workflowItem}>
-                  <div style={S.workflowTitle}>计量策略</div>
-                  <div style={S.workflowDesc}>
-                    同时支持固定积分和按结果计量，适配多种业务场景。
+                <div style={S.leftCard}>
+                  <div style={S.leftCardValue}>
+                    创新
+                  </div>
+                  <div style={S.leftCardLabel}>
+                    变革模式 优化管理
+                  </div>
+                </div>
+                <div style={S.leftCard}>
+                  <div style={S.leftCardValue}>
+                    赋能
+                  </div>
+                  <div style={S.leftCardLabel}>
+                    注入技术 提升效率
                   </div>
                 </div>
               </div>
@@ -775,22 +984,13 @@ export default function LoginPage() {
             <div style={S.card}>
               <div style={S.cardHalo} />
 
-              <div style={S.logoWrap}>
-                <div style={S.logoBadge}>
-                  <img src={wikiLogo} alt="logo" style={S.logoImage} />
-                </div>
-                <div>
-                  <div style={S.logoTextMain}>Wiki 媒体工作台</div>
-                  <div style={S.logoTextSub}>Client Login</div>
-                </div>
-              </div>
-
-              <div style={S.introTag}>Account Access</div>
-              <h2 style={S.h1}>{mode === 'login' ? '欢迎登录' : '创建账户'}</h2>
+              <h2 style={S.h1}>
+                {mode === 'login' ? '欢迎回来' : '创建账户'}
+              </h2>
               <p style={S.sub}>
                 {mode === 'login'
-                  ? '请输入账号信息继续访问控制台。'
-                  : '填写注册信息后将自动切回登录并保留账号信息。'}
+                  ? '请输入账户信息登录系统，登录成功后将自动跳转到个人积分工作台。'
+                  : '创建新账户后将初始化 100 积分，并可直接进入工作流系统。'}
               </p>
 
               <div style={S.modeSwitch}>
@@ -809,7 +1009,6 @@ export default function LoginPage() {
                   注册
                 </button>
               </div>
-
               <form onSubmit={handleSubmit} noValidate>
                 {mode === 'login' ? (
                   <div style={S.fieldWrap}>
@@ -850,7 +1049,6 @@ export default function LoginPage() {
                         autoComplete="email"
                       />
                     </div>
-
                     <div style={S.fieldWrap}>
                       <label style={S.label} htmlFor="username">
                         用户名
@@ -871,7 +1069,6 @@ export default function LoginPage() {
                     </div>
                   </>
                 )}
-
                 <div style={S.fieldWrap}>
                   <label style={S.label} htmlFor="password">
                     密码
@@ -881,7 +1078,7 @@ export default function LoginPage() {
                     id="password"
                     name="password"
                     type={showPwd ? 'text' : 'password'}
-                    placeholder={mode === 'login' ? '请输入密码' : '请输入至少 6 位密码'}
+                    placeholder={mode === 'login' ? '请输入密码' : '请输入至少6个字符'}
                     value={form.password}
                     onChange={handleChange}
                     onFocus={() => setFocused('password')}
@@ -895,7 +1092,7 @@ export default function LoginPage() {
                     type="button"
                     style={S.eyeBtn}
                     onClick={() => setShowPwd((value) => !value)}
-                    aria-label={showPwd ? '隐藏密码' : '显示密码'}
+                    aria-label={showPwd ? 'Hide password' : 'Show password'}
                   >
                     <EyeIcon open={showPwd} />
                   </button>
@@ -929,7 +1126,7 @@ export default function LoginPage() {
                   {loading ? (
                     <>
                       <span style={S.spinner} />
-                      {mode === 'login' ? '登录中...' : '注册中...'}
+                      {mode === 'login' ? 'Logging in...' : 'Registering...'}
                     </>
                   ) : mode === 'login' ? (
                     '登录'
@@ -942,27 +1139,6 @@ export default function LoginPage() {
               {status === 'ok' && <div style={S.alert(true)}>{message}</div>}
               {status === 'err' && <div style={S.alert(false)}>{message}</div>}
 
-              {currentUser && (
-                <div style={S.sessionCard}>
-                  <div style={S.sessionTitle}>Current Session</div>
-                  <div>用户名：{currentUser.username}</div>
-                  <div>邮箱：{currentUser.email}</div>
-                  <div>状态：{currentUser.is_active ? '启用中' : '已禁用'}</div>
-                  <button
-                    type="button"
-                    style={S.logoutBtn}
-                    onClick={() => {
-                      window.localStorage.removeItem(TOKEN_KEY);
-                      setCurrentUser(null);
-                      setStatus(null);
-                      setMessage('已退出登录。');
-                    }}
-                  >
-                    退出登录
-                  </button>
-                </div>
-              )}
-
               <div style={S.forgotWrap}>
                 <a
                   href="#forgot"
@@ -973,10 +1149,10 @@ export default function LoginPage() {
                   onBlur={() => setHoverForgot(false)}
                   onClick={(event) => {
                     event.preventDefault();
-                    alert('当前项目暂未提供重置密码接口。');
+                    alert('当前项目还没有重置密码接口，后续可以继续补上。');
                   }}
                 >
-                  忘记密码？
+                  忘记密码?
                   <span style={S.underline} />
                 </a>
               </div>
@@ -987,3 +1163,4 @@ export default function LoginPage() {
     </>
   );
 }
+
