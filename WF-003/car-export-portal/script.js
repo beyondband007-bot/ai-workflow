@@ -15,6 +15,8 @@ const closeLightboxBtn = document.getElementById("closeLightboxBtn");
 const RUNTIME_CONFIG = window.__WF003_CONFIG__ || {};
 const KIE_UPLOAD_URL = RUNTIME_CONFIG.kieUploadUrl || "https://kieai.redpandaai.co/api/file-stream-upload";
 const KIE_API_KEY = RUNTIME_CONFIG.kieApiKey || "";
+const RUNTIME_WEBHOOK_URL = (RUNTIME_CONFIG.workflowWebhookUrl || "").replace(/\/$/, "");
+const RUNTIME_API_BASE = (RUNTIME_CONFIG.workflowApiBase || "").replace(/\/$/, "");
 const FIXED_LOGO_URL = "https://mycar.deepsix.store/logo/logo.png";
 const TOKEN_KEY = "auth_demo_token";
 const MAX_FILES_PER_GROUP = 5;
@@ -23,6 +25,14 @@ const DEFAULT_UPLOAD_CONCURRENCY = 3;
 const WORKFLOW_CODE = "WF-003";
 
 function resolveApiBase() {
+  if (RUNTIME_WEBHOOK_URL) {
+    return "";
+  }
+
+  if (RUNTIME_API_BASE) {
+    return RUNTIME_API_BASE;
+  }
+
   const query = new URLSearchParams(window.location.search);
   const override = query.get("apiBase") || window.localStorage.getItem("wf003_api_base");
   if (override) {
@@ -329,7 +339,8 @@ function buildWorkflowPayload(carName, mainUrls, interiorUrls, logoUrl) {
 }
 
 async function submitWorkflow(payload) {
-  const response = await fetch(buildApiUrl(`/api/v1/workflows/${WORKFLOW_CODE}/json-execute`), {
+  const requestUrl = RUNTIME_WEBHOOK_URL || buildApiUrl(`/api/v1/workflows/${WORKFLOW_CODE}/json-execute`);
+  const response = await fetch(requestUrl, {
     method: "POST",
     headers: buildHeaders(),
     body: JSON.stringify(payload),
@@ -339,7 +350,7 @@ async function submitWorkflow(payload) {
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
-    throw new Error(data?.message || data?.error || `Webhook提交失败 (${response.status})`);
+    throw new Error(data?.message || data?.error || `工作流提交失败 (${response.status}): ${requestUrl}`);
   }
 
   return data;

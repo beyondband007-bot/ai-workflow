@@ -32,6 +32,44 @@ $env:CAR_EXPORT_WEBHOOK_URL="你的 n8n webhook 地址"
 https://n8n.deepsix.store/webhook/bda7b6ac-10b6-4467-b6fd-83dd68c0bbd9
 ```
 
+配置工作流 API 基地址：
+
+```powershell
+$env:WORKFLOW_API_BASE="https://你的工作流后端域名"
+```
+
+例如：
+
+```text
+https://n8n.deepsix.store
+```
+
+如果你的 WF-003 后端部署在 n8n，还可以显式配置提交 webhook 路径：
+
+```powershell
+$env:WORKFLOW_SUBMIT_PATH="/webhook/wf003-kie-submit"
+```
+
+前端提交 `POST /api/v1/workflows/WF-003/json-execute` 时，`server.js` 会把这条路径重写并转发到：
+
+```text
+{WORKFLOW_API_BASE}{WORKFLOW_SUBMIT_PATH}
+```
+
+按当前仓库里的 n8n 导出文件，默认会转发到：
+
+```text
+https://n8n.deepsix.store/webhook/wf003-kie-submit
+```
+
+如果你已经直接配置了完整的 n8n 提交地址，也可以只设置：
+
+```powershell
+$env:WF_003_WEBHOOK_URL="https://n8n.deepsix.store/webhook/wf003-kie-submit"
+```
+
+当前版本会优先使用 `WF_003_WEBHOOK_URL`。这适合你的线上环境已经直接给出完整 webhook 地址的情况。
+
 先安装依赖：
 
 ```powershell

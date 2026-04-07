@@ -145,7 +145,16 @@ sudo systemctl status wf003-car-export
 
 ```env
 PORT=3001
-WF_003_MIDDLE_PLATFORM_URL=http://127.0.0.1:3002/api/v1/workflows/WF-003/upload-execute
+# server.js 优先级：WF_003_WEBHOOK_URL > WF_003_MIDDLE_PLATFORM_URL > WORKFLOW_API_BASE+WORKFLOW_SUBMIT_PATH
+# 走中台（推荐）——中台会处理积分冻结/结算
+WF_003_MIDDLE_PLATFORM_URL=http://127.0.0.1:3002/api/v1/workflows/WF-003/json-execute
+# 直连 n8n webhook（绕过中台积分结算，仅测试用）
+# WF_003_WEBHOOK_URL=https://n8n.deepsix.store/webhook/wf003-kie-submit
+# 备选：base + path（WORKFLOW_SUBMIT_PATH 默认值为 /webhook/wf003-kie-submit）
+# WORKFLOW_API_BASE=http://127.0.0.1:3002
+# WORKFLOW_SUBMIT_PATH=/webhook/wf003-kie-submit
+KIE_UPLOAD_URL=https://kieai.redpandaai.co/api/file-stream-upload
+KIE_API_KEY=你的Kie API Key
 ```
 
 推荐直接复制模板：
@@ -159,6 +168,7 @@ cp /srv/ai-workflow/WF-003/car-export-portal/.env.production.example /srv/ai-wor
 - `WF-003` 页面提交后不再直接走旧 n8n webhook
 - 必须从积分门户进入，页面会携带登录 token
 - `car-export-portal` 服务收到 token 后，会转发到积分中台执行冻结和结算
+- 当前 `server.js` 优先读取 `WF_003_WEBHOOK_URL`，其次兼容旧变量 `WF_003_MIDDLE_PLATFORM_URL`，最后才使用 `WORKFLOW_API_BASE + WORKFLOW_SUBMIT_PATH`
 
 ### 4.2 中台补充工作流环境变量
 
