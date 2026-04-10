@@ -518,6 +518,7 @@ body::after {
 	border-radius: 999px;
 	font: inherit;
 	cursor: pointer;
+	text-decoration: none;
 	transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
 	position: relative;
 	overflow: hidden;
@@ -846,6 +847,10 @@ table th,
 	min-width: 0;
 }
 
+.content-section.is-hidden {
+	display: none !important;
+}
+
 .chip-group {
 	display: flex;
 	gap: 8px;
@@ -865,9 +870,159 @@ table th,
 	background: linear-gradient(135deg, var(--teal), #86e8ff);
 }
 
+.record-search {
+	display: grid;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: 10px;
+	align-items: end;
+}
+
+.record-search-item {
+	display: grid;
+	gap: 6px;
+}
+
+.record-search-item label {
+	color: var(--muted);
+	font-size: 12px;
+}
+
+.record-search-item input,
+.record-search-item select {
+	height: 38px;
+	border: 1px solid rgba(74, 228, 198, 0.22);
+	border-radius: 10px;
+	padding: 0 10px;
+	color: var(--text);
+	background: rgba(8, 22, 36, 0.84);
+	font: inherit;
+}
+
+.record-search-item input:focus,
+.record-search-item select:focus {
+	outline: none;
+	border-color: rgba(54, 244, 199, 0.58);
+	box-shadow: 0 0 0 2px rgba(54, 244, 199, 0.18);
+}
+
+.record-search-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.record-search-actions .secondary-button,
+.record-search-actions .ghost-button {
+	min-width: 64px;
+}
+
+.record-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-top: 14px;
+}
+
+.record-pagination-left {
+	color: var(--muted);
+}
+
+.record-pagination-right {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.record-page-numbers {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.record-page-number {
+	min-width: 30px;
+	height: 30px;
+	padding: 0 8px;
+	border: 1px solid rgba(74, 228, 198, 0.22);
+	border-radius: 8px;
+	color: var(--text);
+	background: rgba(8, 22, 36, 0.84);
+	cursor: pointer;
+	font: inherit;
+}
+
+.record-page-number.is-active {
+	color: #031020;
+	background: linear-gradient(135deg, var(--teal), #86e8ff);
+	border-color: transparent;
+}
+
+.record-page-ellipsis {
+	color: var(--muted);
+}
+
+.record-pagination-right label {
+	color: var(--muted);
+}
+
+.record-pagination-right select {
+	height: 34px;
+	padding: 0 10px;
+	border: 1px solid rgba(74, 228, 198, 0.22);
+	border-radius: 10px;
+	color: var(--text);
+	background: rgba(8, 22, 36, 0.84);
+	font: inherit;
+}
+
+#recordPageInfo {
+	min-width: 64px;
+	text-align: center;
+}
+
+#recordPrevPage:disabled,
+#recordNextPage:disabled {
+	opacity: 0.42;
+	cursor: not-allowed;
+	transform: none;
+}
+
 .table-wrap {
 	overflow: auto;
 	max-height: 395px;
+}
+
+/* 二级页（调用记录/积分流水）单独放大表格可视高度，首页保持原值不变 */
+body[data-page="records"] .content,
+body[data-page="ledger"] .content {
+	height: calc(100vh - 48px);
+}
+
+body[data-page="records"] .surface-card.wide-card,
+body[data-page="ledger"] .surface-card.wide-card {
+	display: flex;
+	flex-direction: column;
+	height: calc(100vh - 160px);
+	min-height: 0;
+}
+
+body[data-page="records"] .table-wrap,
+body[data-page="ledger"] .table-wrap {
+	max-height: none;
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+@media (max-width: 760px) {
+	body[data-page="records"] .content,
+	body[data-page="ledger"] .content {
+		height: auto;
+	}
+
+	body[data-page="records"] .surface-card.wide-card,
+	body[data-page="ledger"] .surface-card.wide-card {
+		height: auto;
+	}
 }
 
 /* 自定义滚动条整体样式 */
@@ -911,6 +1066,11 @@ thead th {
 	padding: 12px 10px;
 	font-size: clamp(12px, 0.8vw, 13px);
 	border-bottom: 1px solid rgba(74, 228, 198, 0.2);
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background: rgba(8, 21, 36, 0.96);
+	backdrop-filter: blur(4px);
 }
 
 thead th:first-child {
@@ -1173,6 +1333,10 @@ tr:hover .status-pill,
 	.hero-panel {
 		max-width: 420px;
 	}
+
+	.record-search {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
 }
 
 @media (max-width: 920px) {
@@ -1251,6 +1415,24 @@ tr:hover .status-pill,
 	.mobile-records {
 		display: grid;
 		gap: 12px;
+	}
+
+	.record-search {
+		grid-template-columns: 1fr;
+	}
+
+	.record-search-actions {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.record-pagination {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.record-pagination-right {
+		flex-wrap: wrap;
 	}
 }
 

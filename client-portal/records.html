@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>积分系统客户端 - 调用记录</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body data-page="records">
+<div class="ambient ambient-a"></div>
+<div class="ambient ambient-b"></div>
+
+<div class="page-shell">
+  <div class="overflow-auto sidebar1">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-mark">WP</div>
+        <div>
+          <p class="eyebrow">Workflow Points</p>
+          <h1>积分系统客户端</h1>
+        </div>
+      </div>
+
+      <section class="account-panel">
+        <div class="account-head">
+          <div class="avatar"><img src="./DefaultAvatar.jpg" alt="" /></div>
+          <div>
+            <h2>用户信息</h2>
+            <p class="account-role">会员用户</p>
+          </div>
+        </div>
+
+        <div class="mobile-account-inline">
+          <div class="mobile-inline-item">
+            <span>可用积分</span>
+            <strong id="mobileAvailablePoints">0</strong>
+          </div>
+          <div class="mobile-inline-item">
+            <span>今日调用次数</span>
+            <strong id="mobileTodayRuns">0</strong>
+          </div>
+          <div class="mobile-inline-item">
+            <span>今日消耗积分</span>
+            <strong id="mobileTodaySpent">0</strong>
+          </div>
+        </div>
+
+        <div class="account-balance">
+          <span>当前可用积分</span>
+          <strong id="sidebarAvailablePoints">0</strong>
+          <em>冻结积分 <span id="sidebarFrozenPoints">0</span></em>
+        </div>
+
+        <div class="account-list">
+          <div class="account-item">
+            <span>账户编号</span>
+            <strong id="userId">0</strong>
+          </div>
+          <div class="account-item">
+            <span>套餐状态</span>
+            <strong id="accountDiscount">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <nav class="side-nav">
+        <a href="./index.html?section=overview" class="nav-item">总览</a>
+        <a href="./index.html?section=workflows" class="nav-item">工作流</a>
+        <a href="./records.html" class="nav-item is-active">调用记录</a>
+        <a href="./ledger.html" class="nav-item">积分流水</a>
+        <a href="./index.html?section=rules" class="nav-item">结算规则</a>
+      </nav>
+
+      <div class="side-actions">
+        <button class="logout-button" id="logoutButton" type="button">退出登录</button>
+      </div>
+
+      <section class="quick-panel">
+        <p class="quick-label mt-0">快捷入口</p>
+        <button class="ghost-button" type="button">进入图生图工作流</button>
+        <button class="ghost-button" type="button">查看账户流水</button>
+        <button class="ghost-button" type="button">联系运营支持</button>
+      </section>
+    </aside>
+  </div>
+
+  <div class="overflow-auto">
+    <main class="content">
+      <section class="section-head">
+        <div>
+          <p class="eyebrow">Run Center</p>
+          <h3>调用记录</h3>
+          <p class="section-note">支持按时间、状态、订单号检索，并支持分页查看。</p>
+        </div>
+      </section>
+
+      <section>
+        <article class="surface-card wide-card">
+          <div class="record-search" id="recordSearch">
+            <div class="record-search-item">
+              <label for="recordStartTime">开始时间</label>
+              <input id="recordStartTime" type="datetime-local" />
+            </div>
+            <div class="record-search-item">
+              <label for="recordEndTime">结束时间</label>
+              <input id="recordEndTime" type="datetime-local" />
+            </div>
+            <div class="record-search-item">
+              <label for="recordStatus">状态</label>
+              <select id="recordStatus">
+                <option value="all">全部</option>
+                <option value="success">成功</option>
+                <option value="running">执行中</option>
+                <option value="failed">失败</option>
+                <option value="timeout">超时</option>
+                <option value="cancelled">已取消</option>
+              </select>
+            </div>
+            <div class="record-search-item">
+              <label for="recordOrderNo">订单号</label>
+              <input id="recordOrderNo" type="text" placeholder="run_id / order_no / client_request_id" />
+            </div>
+            <div class="record-search-actions">
+              <button class="secondary-button" id="recordSearchButton" type="button">搜索</button>
+              <button class="ghost-button" id="recordResetButton" type="button">重置</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>工作流</th>
+                  <th>任务状态</th>
+                  <th>预冻结积分</th>
+                  <th>最终扣除积分</th>
+                  <th>时间</th>
+                </tr>
+              </thead>
+              <tbody id="recordsBody"></tbody>
+            </table>
+          </div>
+
+          <div class="mobile-records" id="mobileRecords"></div>
+
+          <div class="record-pagination" id="recordPagination">
+            <div class="record-pagination-left">
+              <span id="recordTotalCount">0</span>
+            </div>
+            <div class="record-pagination-right">
+              <label for="recordPageSize">每页</label>
+              <select id="recordPageSize">
+                <option value="20" selected>20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+              <button class="ghost-button" id="recordPrevPage" type="button">上一页</button>
+              <div class="record-page-numbers" id="recordPageNumbers"></div>
+              <span id="recordPageInfo">1 / 1</span>
+              <button class="ghost-button" id="recordNextPage" type="button">下一页</button>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="./records.js"></script>
+</body>
+</html>

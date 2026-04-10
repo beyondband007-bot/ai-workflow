@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>积分系统客户端 - 积分流水</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body data-page="ledger">
+<div class="ambient ambient-a"></div>
+<div class="ambient ambient-b"></div>
+
+<div class="page-shell">
+  <div class="overflow-auto sidebar1">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-mark">WP</div>
+        <div>
+          <p class="eyebrow">Workflow Points</p>
+          <h1>积分系统客户端</h1>
+        </div>
+      </div>
+
+      <section class="account-panel">
+        <div class="account-head">
+          <div class="avatar"><img src="./DefaultAvatar.jpg" alt="" /></div>
+          <div>
+            <h2>用户信息</h2>
+            <p class="account-role">会员用户</p>
+          </div>
+        </div>
+
+        <div class="mobile-account-inline">
+          <div class="mobile-inline-item">
+            <span>可用积分</span>
+            <strong id="mobileAvailablePoints">0</strong>
+          </div>
+          <div class="mobile-inline-item">
+            <span>今日调用次数</span>
+            <strong id="mobileTodayRuns">0</strong>
+          </div>
+          <div class="mobile-inline-item">
+            <span>今日消耗积分</span>
+            <strong id="mobileTodaySpent">0</strong>
+          </div>
+        </div>
+
+        <div class="account-balance">
+          <span>当前可用积分</span>
+          <strong id="sidebarAvailablePoints">0</strong>
+          <em>冻结积分 <span id="sidebarFrozenPoints">0</span></em>
+        </div>
+
+        <div class="account-list">
+          <div class="account-item">
+            <span>账户编号</span>
+            <strong id="userId">0</strong>
+          </div>
+          <div class="account-item">
+            <span>套餐状态</span>
+            <strong id="accountDiscount">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <nav class="side-nav">
+        <a href="./index.html?section=overview" class="nav-item">总览</a>
+        <a href="./index.html?section=workflows" class="nav-item">工作流</a>
+        <a href="./records.html" class="nav-item">调用记录</a>
+        <a href="./ledger.html" class="nav-item is-active">积分流水</a>
+        <a href="./index.html?section=rules" class="nav-item">结算规则</a>
+      </nav>
+
+      <div class="side-actions">
+        <button class="logout-button" id="logoutButton" type="button">退出登录</button>
+      </div>
+
+      <section class="quick-panel">
+        <p class="quick-label mt-0">快捷入口</p>
+        <button class="ghost-button" type="button">进入图生图工作流</button>
+        <button class="ghost-button" type="button">查看账户流水</button>
+        <button class="ghost-button" type="button">联系运营支持</button>
+      </section>
+    </aside>
+  </div>
+
+  <div class="overflow-auto">
+    <main class="content">
+      <section class="section-head">
+        <div>
+          <p class="eyebrow">Points Ledger</p>
+          <h3>积分流水</h3>
+          <p class="section-note">支持按时间、流水类型、关键词检索，并支持分页查看。</p>
+        </div>
+      </section>
+
+      <section>
+        <article class="surface-card wide-card">
+          <div class="record-search" id="ledgerSearch">
+            <div class="record-search-item">
+              <label for="ledgerStartTime">开始时间</label>
+              <input id="ledgerStartTime" type="datetime-local" />
+            </div>
+            <div class="record-search-item">
+              <label for="ledgerEndTime">结束时间</label>
+              <input id="ledgerEndTime" type="datetime-local" />
+            </div>
+            <div class="record-search-item">
+              <label for="ledgerType">流水类型</label>
+              <select id="ledgerType">
+                <option value="all">全部</option>
+                <option value="freeze">冻结</option>
+                <option value="charge">扣费</option>
+                <option value="rollback">回滚</option>
+              </select>
+            </div>
+            <div class="record-search-item">
+              <label for="ledgerKeyword">关键词</label>
+              <input id="ledgerKeyword" type="text" placeholder="流水号 / run_id / workflow_code / 备注" />
+            </div>
+            <div class="record-search-actions">
+              <button class="secondary-button" id="ledgerSearchButton" type="button">搜索</button>
+              <button class="ghost-button" id="ledgerResetButton" type="button">重置</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>流水号</th>
+                  <th>流水类型</th>
+                  <th>积分变化</th>
+                  <th>工作流</th>
+                  <th>run_id</th>
+                  <th>备注</th>
+                  <th>时间</th>
+                </tr>
+              </thead>
+              <tbody id="ledgerBody"></tbody>
+            </table>
+          </div>
+
+          <div class="record-pagination" id="ledgerPagination">
+            <div class="record-pagination-left">
+              <span id="ledgerTotalCount">0</span>
+            </div>
+            <div class="record-pagination-right">
+              <label for="ledgerPageSize">每页</label>
+              <select id="ledgerPageSize">
+                <option value="20" selected>20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+              <button class="ghost-button" id="ledgerPrevPage" type="button">上一页</button>
+              <div class="record-page-numbers" id="ledgerPageNumbers"></div>
+              <span id="ledgerPageInfo">1 / 1</span>
+              <button class="ghost-button" id="ledgerNextPage" type="button">下一页</button>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="./ledger.js"></script>
+</body>
+</html>

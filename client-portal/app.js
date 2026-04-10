@@ -50,8 +50,25 @@ function resolveAuthEntryUrl() {
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = "auth_demo_token";
 let latestWorkflowRuns = [];
-let latestRecordFilter = "all";
+const recordQuery = {
+  startTime: "",
+  endTime: "",
+  status: "all",
+  orderNo: "",
+};
+const recordPagination = {
+  page: 1,
+  pageSize: 20,
+};
+const allowedSections = new Set(["overview", "workflows", "records", "ledger", "rules"]);
+let currentSection = "overview";
 let refreshTimer = null;
+
+function resolveInitialSection() {
+  const params = new URLSearchParams(window.location.search);
+  const section = params.get("section");
+  return allowedSections.has(section) ? section : "overview";
+}
 
 const fallbackPointAccount = {
   user_id: "-",
@@ -132,6 +149,55 @@ function formatDateTime(value) {
 
   const pad = (input) => String(input).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function resolveRecordTime(record) {
+  return record.finished_at || record.started_at || record.created_at || null;
+}
+
+function toTimestamp(value) {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function getRecordOrderNo(record) {
+  return String(
+    record.order_no ||
+      record.order_id ||
+      record.client_request_id ||
+      record.run_id ||
+      "",
+  );
+}
+
+function applyRecordFilters(workflowRuns) {
+  const startTimestamp = toTimestamp(recordQuery.startTime);
+  const endTimestamp = toTimestamp(recordQuery.endTime);
+  const keyword = String(recordQuery.orderNo || "").trim().toLowerCase();
+
+  return workflowRuns.filter((record) => {
+    if (recordQuery.status !== "all" && record.status !== recordQuery.status) {
+      return false;
+    }
+
+    const recordTimestamp = toTimestamp(resolveRecordTime(record));
+    if (startTimestamp !== null && (recordTimestamp === null || recordTimestamp < startTimestamp)) {
+      return false;
+    }
+    if (endTimestamp !== null && (recordTimestamp === null || recordTimestamp > endTimestamp)) {
+      return false;
+    }
+
+    if (!keyword) {
+      return true;
+    }
+
+    return getRecordOrderNo(record).toLowerCase().includes(keyword);
+  });
 }
 
 function getToken() {
@@ -250,50 +316,80 @@ function renderWorkflows(workflows) {
     .join("");
 }
 
-function renderRecords(workflowRuns, filter = "all") {
-  latestRecordFilter = filter;
-  const rows = workflowRuns.filter((record) => filter === "all" || record.status === filter);
+function renderRecords(workflowRuns = latestWorkflowRuns) {
+  const filteredRows = applyRecordFilters(workflowRuns);
+  const totalCount = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / recordPagination.pageSize));
+  recordPagination.page = Math.min(Math.max(1, recordPagination.page), totalPages);
+
+  const startIndex = (recordPagination.page - 1) * recordPagination.pageSize;
+  const pageRows = filteredRows.slice(startIndex, startIndex + recordPagination.pageSize);
+
   const recordsBody = document.getElementById("recordsBody");
   const mobileRecords = document.getElementById("mobileRecords");
-  const resolveRecordTime = (record) => record.finished_at || record.started_at || record.created_at;
+  const totalCountNode = document.getElementById("recordTotalCount");
+  const pageInfoNode = document.getElementById("recordPageInfo");
+  const prevPageButton = document.getElementById("recordPrevPage");
+  const nextPageButton = document.getElementById("recordNextPage");
 
-  recordsBody.innerHTML = rows
-    .map(
-      (record) => `
-        <tr>
-          <td>${record.run_id}</td>
-          <td>${record.workflow_code}</td>
-          <td><span class="status-pill status-${record.status}">${statusTextMap[record.status] ?? record.status}</span></td>
-          <td>${formatNumber(record.estimated_frozen_points)}</td>
-          <td>${formatNumber(record.final_charge_points)}</td>
-          <td>${formatDateTime(resolveRecordTime(record))}</td>
-        </tr>
-      `,
-    )
-    .join("");
+  if (recordsBody) {
+    recordsBody.innerHTML = pageRows.length
+      ? pageRows
+          .map(
+            (record) => `
+              <tr>
+                <td>${record.run_id}</td>
+                <td>${record.workflow_code}</td>
+                <td><span class="status-pill status-${record.status}">${statusTextMap[record.status] ?? record.status}</span></td>
+                <td>${formatNumber(record.estimated_frozen_points)}</td>
+                <td>${formatNumber(record.final_charge_points)}</td>
+                <td>${formatDateTime(resolveRecordTime(record))}</td>
+              </tr>
+            `,
+          )
+          .join("")
+      : '<tr><td colspan="6">暂无符合条件的调用记录</td></tr>';
+  }
 
-  mobileRecords.innerHTML = rows
-    .map(
-      (record) => `
-        <article class="mobile-record-card">
-          <div class="mobile-record-top">
-            <strong>${record.workflow_code}</strong>
-            <span class="status-pill status-${record.status}">${statusTextMap[record.status] ?? record.status}</span>
-          </div>
-          <div class="mobile-record-main">
-            <p>${record.result_summary ?? "-"}</p>
-          </div>
-          <div class="mobile-record-meta">
-            <span><strong>run_id</strong> ${record.run_id}</span>
-            <span><strong>billing_status</strong> ${billingStatusTextMap[record.billing_status] ?? record.billing_status}</span>
-            <span><strong>estimated_frozen_points</strong> ${formatNumber(record.estimated_frozen_points)}</span>
-            <span><strong>final_charge_points</strong> ${formatNumber(record.final_charge_points)}</span>
-          </div>
-          <span class="mobile-record-time">${formatDateTime(resolveRecordTime(record))}</span>
-        </article>
-      `,
-    )
-    .join("");
+  if (mobileRecords) {
+    mobileRecords.innerHTML = pageRows.length
+      ? pageRows
+          .map(
+            (record) => `
+              <article class="mobile-record-card">
+                <div class="mobile-record-top">
+                  <strong>${record.workflow_code}</strong>
+                  <span class="status-pill status-${record.status}">${statusTextMap[record.status] ?? record.status}</span>
+                </div>
+                <div class="mobile-record-main">
+                  <p>${record.result_summary ?? "-"}</p>
+                </div>
+                <div class="mobile-record-meta">
+                  <span><strong>run_id</strong> ${record.run_id}</span>
+                  <span><strong>billing_status</strong> ${billingStatusTextMap[record.billing_status] ?? record.billing_status}</span>
+                  <span><strong>estimated_frozen_points</strong> ${formatNumber(record.estimated_frozen_points)}</span>
+                  <span><strong>final_charge_points</strong> ${formatNumber(record.final_charge_points)}</span>
+                </div>
+                <span class="mobile-record-time">${formatDateTime(resolveRecordTime(record))}</span>
+              </article>
+            `,
+          )
+          .join("")
+      : '<article class="mobile-record-card"><p>暂无符合条件的调用记录</p></article>';
+  }
+
+  if (totalCountNode) {
+    totalCountNode.textContent = `共 ${formatNumber(totalCount)} 条`;
+  }
+  if (pageInfoNode) {
+    pageInfoNode.textContent = `${recordPagination.page} / ${totalPages}`;
+  }
+  if (prevPageButton) {
+    prevPageButton.disabled = recordPagination.page <= 1;
+  }
+  if (nextPageButton) {
+    nextPageButton.disabled = recordPagination.page >= totalPages;
+  }
 }
 
 function buildLedgerRowsFromRuns(workflowRuns) {
@@ -386,22 +482,123 @@ function renderConnectionState(message, isError = false) {
   setText("lastRechargeAt", message);
 }
 
-function attachRecordFilter(workflowRuns) {
-  const filterRoot = document.getElementById("recordFilters");
-  if (!filterRoot) {
+function setActiveSection(sectionKey, options = {}) {
+  currentSection = sectionKey;
+  const blocks = document.querySelectorAll("[data-section-block]");
+  const navItems = document.querySelectorAll(".side-nav .nav-item");
+
+  blocks.forEach((block) => {
+    const blockKey = block.getAttribute("data-section-block");
+    const isVisible =
+      sectionKey === "overview"
+        ? blockKey === "overview" || blockKey === "workflows"
+        : sectionKey === "rules"
+          ? blockKey === "ledger"
+          : blockKey === sectionKey;
+
+    block.classList.toggle("is-hidden", !isVisible);
+  });
+
+  navItems.forEach((item) => {
+    item.classList.toggle("is-active", item.dataset.section === sectionKey);
+  });
+
+  if (options.scroll !== false) {
+    const anchorId = sectionKey === "rules" ? "rules" : sectionKey;
+    const target = document.getElementById(anchorId);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+}
+
+function attachSidebarNavigation() {
+  const navRoot = document.querySelector(".side-nav");
+  if (!navRoot) {
     return;
   }
 
-  filterRoot.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-filter]");
-    if (!button) {
+  navRoot.addEventListener("click", (event) => {
+    const navItem = event.target.closest(".nav-item[data-section]");
+    if (!navItem) {
       return;
     }
 
-    document.querySelectorAll(".chip").forEach((chip) => chip.classList.remove("is-active"));
-    button.classList.add("is-active");
-    renderRecords(latestWorkflowRuns, button.dataset.filter);
+    event.preventDefault();
+    setActiveSection(navItem.dataset.section);
   });
+}
+
+function attachRecordControls() {
+  const startTimeInput = document.getElementById("recordStartTime");
+  const endTimeInput = document.getElementById("recordEndTime");
+  const statusSelect = document.getElementById("recordStatus");
+  const orderNoInput = document.getElementById("recordOrderNo");
+  const searchButton = document.getElementById("recordSearchButton");
+  const resetButton = document.getElementById("recordResetButton");
+  const pageSizeSelect = document.getElementById("recordPageSize");
+  const prevPageButton = document.getElementById("recordPrevPage");
+  const nextPageButton = document.getElementById("recordNextPage");
+  const openRecordsButton = document.querySelector(".mobile-quick-entry .secondary-button");
+
+  if (openRecordsButton) {
+    openRecordsButton.addEventListener("click", () => {
+      setActiveSection("records");
+    });
+  }
+
+  if (searchButton) {
+    searchButton.addEventListener("click", () => {
+      recordQuery.startTime = startTimeInput?.value || "";
+      recordQuery.endTime = endTimeInput?.value || "";
+      recordQuery.status = statusSelect?.value || "all";
+      recordQuery.orderNo = orderNoInput?.value || "";
+      recordPagination.page = 1;
+      renderRecords();
+    });
+  }
+
+  if (resetButton) {
+    resetButton.addEventListener("click", () => {
+      if (startTimeInput) startTimeInput.value = "";
+      if (endTimeInput) endTimeInput.value = "";
+      if (statusSelect) statusSelect.value = "all";
+      if (orderNoInput) orderNoInput.value = "";
+
+      recordQuery.startTime = "";
+      recordQuery.endTime = "";
+      recordQuery.status = "all";
+      recordQuery.orderNo = "";
+      recordPagination.page = 1;
+      renderRecords();
+    });
+  }
+
+  if (pageSizeSelect) {
+    pageSizeSelect.value = String(recordPagination.pageSize);
+    pageSizeSelect.addEventListener("change", (event) => {
+      recordPagination.pageSize = Number(event.target.value) || 20;
+      recordPagination.page = 1;
+      renderRecords();
+    });
+  }
+
+  if (prevPageButton) {
+    prevPageButton.addEventListener("click", () => {
+      if (recordPagination.page <= 1) {
+        return;
+      }
+      recordPagination.page -= 1;
+      renderRecords();
+    });
+  }
+
+  if (nextPageButton) {
+    nextPageButton.addEventListener("click", () => {
+      recordPagination.page += 1;
+      renderRecords();
+    });
+  }
 }
 
 function attachWorkflowButtons() {
@@ -487,7 +684,7 @@ async function refreshDashboardData() {
 
   latestWorkflowRuns = workflowRuns;
   syncAccountView(pointAccount);
-  renderRecords(workflowRuns, latestRecordFilter);
+  renderRecords(workflowRuns);
   renderLedgers(workflowRuns);
 }
 
@@ -510,11 +707,15 @@ function startAutoRefresh() {
 }
 
 async function bootstrap() {
+  currentSection = resolveInitialSection();
   // renderApiContracts();
   syncAccountView(fallbackPointAccount);
   renderRecords([]);
   renderLedgers([]);
   attachLogoutButton();
+  attachSidebarNavigation();
+  attachRecordControls();
+  setActiveSection(currentSection, { scroll: false });
 
   try {
     const [pointAccount, workflows, workflowRuns] = await Promise.all([
@@ -529,7 +730,6 @@ async function bootstrap() {
     renderRecords(workflowRuns);
     renderLedgers(workflowRuns);
     renderConnectionState(`账号 ${pointAccount.username || pointAccount.user_id} 已连接中台`, false);
-    attachRecordFilter(workflowRuns);
     attachWorkflowButtons();
     startAutoRefresh();
   } catch (error) {

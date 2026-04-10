@@ -153,7 +153,7 @@ WF_003_MIDDLE_PLATFORM_URL=http://127.0.0.1:3002/api/v1/workflows/WF-003/json-ex
 # 备选：base + path（WORKFLOW_SUBMIT_PATH 默认值为 /webhook/wf003-kie-submit）
 # WORKFLOW_API_BASE=http://127.0.0.1:3002
 # WORKFLOW_SUBMIT_PATH=/webhook/wf003-kie-submit
-KIE_UPLOAD_URL=https://kieai.redpandaai.co/api/file-stream-upload
+KIE_UPLOAD_URL=https://kieai.riftrunnerai.com/api/file-stream-upload
 KIE_API_KEY=你的Kie API Key
 ```
 

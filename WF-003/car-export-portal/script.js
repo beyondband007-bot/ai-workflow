@@ -13,10 +13,14 @@ const lightboxImage = document.getElementById("lightboxImage");
 const closeLightboxBtn = document.getElementById("closeLightboxBtn");
 
 const RUNTIME_CONFIG = window.__WF003_CONFIG__ || {};
-const KIE_UPLOAD_URL = RUNTIME_CONFIG.kieUploadUrl || "https://kieai.redpandaai.co/api/file-stream-upload";
+const UPLOAD_PROXY_URL = RUNTIME_CONFIG.kieUploadUrl || "/api/kie-upload";
 const KIE_API_KEY = RUNTIME_CONFIG.kieApiKey || "";
 const RUNTIME_WEBHOOK_URL = (RUNTIME_CONFIG.workflowWebhookUrl || "").replace(/\/$/, "");
 const RUNTIME_API_BASE = (RUNTIME_CONFIG.workflowApiBase || "").replace(/\/$/, "");
+const DEFAULT_CALLBACK_URL = (RUNTIME_CONFIG.defaultCallbackUrl || "").trim();
+const DEFAULT_CALLBACK_TOKEN = (RUNTIME_CONFIG.defaultCallbackToken || "").trim();
+const DEFAULT_FEISHU_APP_ID = (RUNTIME_CONFIG.defaultFeishuAppId || "").trim();
+const DEFAULT_FEISHU_ID = (RUNTIME_CONFIG.defaultFeishuId || "").trim();
 const FIXED_LOGO_URL = "https://mycar.deepsix.store/logo/logo.png";
 const TOKEN_KEY = "auth_demo_token";
 const MAX_FILES_PER_GROUP = 5;
@@ -192,15 +196,28 @@ function clearAll() {
 }
 
 function getToken() {
-  const urlToken = new URLSearchParams(window.location.search).get("token");
-  if (urlToken) {
-    window.localStorage.setItem(TOKEN_KEY, urlToken);
-    return urlToken;
+  const query = new URLSearchParams(window.location.search);
+  const queryKeys = ["token", "access_token", "auth_token", "jwt"];
+  for (const key of queryKeys) {
+    const value = query.get(key);
+    if (value && value.trim()) {
+      const cleaned = value.replace(/^Bearer\s+/i, "").trim();
+      if (cleaned) {
+        window.localStorage.setItem(TOKEN_KEY, cleaned);
+        return cleaned;
+      }
+    }
   }
 
-  const localToken = window.localStorage.getItem(TOKEN_KEY);
-  if (localToken) {
-    return localToken;
+  const localKeys = [TOKEN_KEY, "access_token", "auth_token", "jwt"];
+  for (const key of localKeys) {
+    const value = window.localStorage.getItem(key);
+    if (value && value.trim()) {
+      const cleaned = value.replace(/^Bearer\s+/i, "").trim();
+      if (cleaned) {
+        return cleaned;
+      }
+    }
   }
 
   return null;
@@ -231,6 +248,16 @@ function buildApiUrl(path) {
   return API_BASE ? `${API_BASE}${path}` : path;
 }
 
+function buildAuthHeaderOnly() {
+  const token = getToken();
+  if (!token) {
+    throw new Error("缺少身份验证令牌，请从客户端门户打开此页面。");
+  }
+  return {
+    Authorization: `Bearer ${token}`,
+  };
+}
+
 function buildHeaders() {
   const token = getToken();
   if (!token) {
@@ -240,6 +267,38 @@ function buildHeaders() {
   return {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
+  };
+}
+
+async function fetchCurrentUserMetadata() {
+  const response = await fetch(buildApiUrl("/api/v1/point-accounts/me"), {
+    method: "GET",
+    headers: buildAuthHeaderOnly(),
+  });
+
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("登录态已失效（401），请重新登录并刷新页面。");
+    }
+    throw new Error(data?.message || data?.error || `读取用户配置失败 (${response.status})`);
+  }
+
+  const userId = String(data?.user_id || "").trim();
+  const feishuAppId = String(data?.feishu_app_id || "").trim();
+  const feishuId = String(data?.feishu_id || "").trim();
+
+  return {
+    user_id: userId,
+    feishu_app_id: feishuAppId,
+    feishu_id: feishuId,
   };
 }
 
@@ -269,28 +328,35 @@ function validateBeforeSubmit(carName) {
   return true;
 }
 
-async function uploadToKie(file, uploadPath) {
-  if (!KIE_API_KEY) {
-    throw new Error("KIE_API_KEY is not configured");
-  }
-
+async function uploadAsset(file, uploadPath) {
   const formData = new FormData();
   formData.append("file", file, file.name);
   formData.append("uploadPath", uploadPath);
   formData.append("fileName", file.name);
 
-  const response = await fetch(KIE_UPLOAD_URL, {
+  const headers = {};
+  if (KIE_API_KEY) {
+    headers.Authorization = `Bearer ${KIE_API_KEY}`;
+  }
+
+  const response = await fetch(UPLOAD_PROXY_URL, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${KIE_API_KEY}`,
-    },
+    headers,
     body: formData,
   });
 
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
 
   if (!response.ok) {
+    if (text && /cloudflare|sorry,\s*you\s*have\s*been\s*blocked/i.test(text)) {
+      throw new Error(`Kie upload blocked by Cloudflare (${response.status})`);
+    }
     throw new Error(data?.msg || data?.message || `Kie upload failed (${response.status})`);
   }
 
@@ -301,7 +367,7 @@ async function uploadToKie(file, uploadPath) {
   return data.data.downloadUrl;
 }
 
-async function uploadBatchToKie(items, typeLabel, uploadPath, concurrency = DEFAULT_UPLOAD_CONCURRENCY) {
+async function uploadBatchAssets(items, typeLabel, uploadPath, concurrency = DEFAULT_UPLOAD_CONCURRENCY) {
   const total = items.length;
   const urls = new Array(total);
   let cursor = 0;
@@ -315,7 +381,7 @@ async function uploadBatchToKie(items, typeLabel, uploadPath, concurrency = DEFA
       setStatus(`正在上传 ${typeLabel} ${currentIndex + 1}/${total}...`, "");
 
       try {
-        urls[currentIndex] = await uploadToKie(currentItem.file, uploadPath);
+        urls[currentIndex] = await uploadAsset(currentItem.file, uploadPath);
       } catch (error) {
         throw new Error(`${typeLabel} "${currentItem.file.name}" upload failed: ${error.message}`);
       }
@@ -327,8 +393,26 @@ async function uploadBatchToKie(items, typeLabel, uploadPath, concurrency = DEFA
   return urls;
 }
 
-function buildWorkflowPayload(carName, mainUrls, interiorUrls, logoUrl) {
+function buildWorkflowPayload(carName, mainUrls, interiorUrls, logoUrl, userMeta) {
+  const query = new URLSearchParams(window.location.search);
+  const runId = `wf003_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const workflowCode = WORKFLOW_CODE;
+  const clientRequestId = query.get("client_request_id") || runId;
+  const userId = (userMeta?.user_id || query.get("user_id") || "").trim();
+  const feishuAppId = (userMeta?.feishu_app_id || query.get("feishu_app_id") || DEFAULT_FEISHU_APP_ID).trim();
+  const feishuId = (userMeta?.feishu_id || query.get("feishu_id") || DEFAULT_FEISHU_ID).trim();
+  const callbackUrl = query.get("callback_url") || DEFAULT_CALLBACK_URL;
+  const callbackToken = query.get("callback_token") || DEFAULT_CALLBACK_TOKEN;
+
   return {
+    run_id: runId,
+    workflow_code: workflowCode,
+    client_request_id: clientRequestId,
+    user_id: userId,
+    feishu_app_id: feishuAppId,
+    feishu_id: feishuId,
+    callback_url: callbackUrl,
+    callback_token: callbackToken,
     car_name: carName,
     exterior_images: mainUrls,
     interior_images: interiorUrls,
@@ -408,14 +492,20 @@ form.addEventListener("submit", async (event) => {
     markUploading(true);
     setStatus("正在上传图片到 Kie...", "");
 
+    setStatus("正在读取用户飞书配置...", "");
+    const userMeta = await fetchCurrentUserMetadata();
+    if (!userMeta.feishu_app_id || !userMeta.feishu_id) {
+      throw new Error("当前账号未绑定飞书配置（feishu_app_id / feishu_id），请先在系统中完成绑定。");
+    }
+
     const [mainUrls, interiorUrls] = await Promise.all([
-      uploadBatchToKie(state.main, "main image", "car-exterior"),
-      uploadBatchToKie(state.interior, "interior image", "car-interior"),
+      uploadBatchAssets(state.main, "main image", "car-exterior"),
+      uploadBatchAssets(state.interior, "interior image", "car-interior"),
     ]);
 
     setStatus("冻结点和提交工作流程……", "");
 
-    const payload = buildWorkflowPayload(carName, mainUrls, interiorUrls, FIXED_LOGO_URL);
+    const payload = buildWorkflowPayload(carName, mainUrls, interiorUrls, FIXED_LOGO_URL, userMeta);
     const result = await submitWorkflow(payload);
 
     // console.log("工作流有效负载：", payload);

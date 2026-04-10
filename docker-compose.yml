@@ -59,9 +59,8 @@ services:
       - .env.docker
     environment:
       PORT: 3001
-      # Override .env.docker's WF_003_WEBHOOK_URL so requests go through the
-      # middle-platform container instead of directly to the external n8n webhook.
-      WF_003_WEBHOOK_URL: ""
+      # Read webhook target from .env.docker for local WF-003 debugging.
+      WF_003_WEBHOOK_URL: ${WF_003_WEBHOOK_URL:-}
       WF_003_MIDDLE_PLATFORM_URL: http://app:3002/api/v1/workflows/WF-003/json-execute
       CAR_EXPORT_WEBHOOK_URL: ${CAR_EXPORT_WEBHOOK_URL:-https://n8n.deepsix.store/webhook/bda7b6ac-10b6-4467-b6fd-83dd68c0bbd9}
     ports:
