@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>超级Token聚合器 - 调用记录</title>
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body data-page="records">
+<div class="ambient ambient-a"></div>
+<div class="ambient ambient-b"></div>
+
+<div class="page-shell">
+  <div class="overflow-auto sidebar1">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-mark"><img src="./logo.png" alt="logo"></div>
+        <div>
+          <p class="eyebrow">Workflow Points</p>
+          <h1>超级Token聚合器</h1>
+        </div>
+      </div>
+
+      <div class="sidebar-nav-group">
+        <p class="sidebar-section-title">MAIN MENU</p>
+        <nav class="side-nav">
+          <a href="./index.html#overview" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <rect x="3" y="3" width="5" height="5" rx="1.2"></rect>
+                  <rect x="12" y="3" width="5" height="5" rx="1.2"></rect>
+                  <rect x="3" y="12" width="5" height="5" rx="1.2"></rect>
+                  <rect x="12" y="12" width="5" height="5" rx="1.2"></rect>
+                </svg>
+              </span>
+              <span>总览</span>
+            </span>
+          </a>
+          <a href="./index.html#workflows" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M4 5.5h12M4 10h8M4 14.5h12"></path>
+                  <circle cx="15" cy="10" r="2.2"></circle>
+                </svg>
+              </span>
+              <span>工作流</span>
+            </span>
+          </a>
+          <a href="./index.html#workflows" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M10 4.2a3 3 0 1 0 0 6a3 3 0 0 0 0-6Z"></path>
+                  <path d="M4.8 15.8a5.7 5.7 0 0 1 10.4 0"></path>
+                </svg>
+              </span>
+              <span>我的工作流</span>
+            </span>
+          </a>
+          <a href="./records.html" class="nav-item is-active">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M5 4h10a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 15 16H5A1.5 1.5 0 0 1 3.5 14.5v-9A1.5 1.5 0 0 1 5 4Z"></path>
+                  <path d="M6.5 7.2h7M6.5 10h7M6.5 12.8h4.5"></path>
+                </svg>
+              </span>
+              <span>调用记录</span>
+            </span>
+          </a>
+          <a href="./ledger.html" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M10 2.8v14.4"></path>
+                  <path d="M13.3 5.5c-.7-.8-1.9-1.3-3.3-1.3c-2 0-3.5 1.1-3.5 2.7c0 1.8 1.6 2.4 3.6 2.9c2 .5 3.4 1 3.4 2.7c0 1.7-1.5 2.9-3.7 2.9c-1.5 0-2.8-.5-3.7-1.5"></path>
+                </svg>
+              </span>
+              <span>积分流水</span>
+            </span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="sidebar-nav-group">
+        <p class="sidebar-section-title">GENERAL</p>
+        <nav class="side-nav side-nav-secondary">
+          <a href="./index.html#rules" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M10 3.2l5.8 2.2v4.4c0 3.3-2.2 5.8-5.8 7c-3.6-1.2-5.8-3.7-5.8-7V5.4L10 3.2Z"></path>
+                  <path d="m7.5 10.1l1.7 1.7l3.3-3.5"></path>
+                </svg>
+              </span>
+              <span>结算规则</span>
+            </span>
+          </a>
+        </nav>
+      </div>
+
+      <section class="quick-panel">
+        <p class="quick-label mt-0">快捷入口</p>
+        <button class="ghost-button side-shortcut-button" type="button">
+          <span class="side-shortcut-content">
+            <span class="quick-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" focusable="false">
+                <path d="M6 5.5h8A1.5 1.5 0 0 1 15.5 7v6A1.5 1.5 0 0 1 14 14.5H6A1.5 1.5 0 0 1 4.5 13V7A1.5 1.5 0 0 1 6 5.5Z"></path>
+                <path d="M7.2 10h5.6M10 7.2v5.6"></path>
+              </svg>
+            </span>
+            <span>进入图生图工作流</span>
+          </span>
+        </button>
+        <button class="ghost-button side-shortcut-button" type="button">
+          <span class="side-shortcut-content">
+            <span class="quick-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" focusable="false">
+                <path d="M5.5 4.5h9a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 14V6a1.5 1.5 0 0 1 1.5-1.5Z"></path>
+                <path d="M7 8h6M7 10.8h6M7 13.6h3.5"></path>
+              </svg>
+            </span>
+            <span>查看账户流水</span>
+          </span>
+        </button>
+        <button class="ghost-button side-shortcut-button" type="button">
+          <span class="side-shortcut-content">
+            <span class="quick-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" focusable="false">
+                <path d="M10 16.2c3.4 0 6.2-2.5 6.2-5.6S13.4 5 10 5S3.8 7.5 3.8 10.6c0 1.3.5 2.5 1.4 3.5l-.6 2.1l2.4-.9c.9.6 1.9.9 3 .9Z"></path>
+                <path d="M7.2 10.4h.1M10 10.4h.1M12.8 10.4h.1"></path>
+              </svg>
+            </span>
+            <span>联系运营支持</span>
+          </span>
+        </button>
+      </section>
+    </aside>
+  </div>
+
+  <div class="overflow-auto main-shell">
+    <header class="topbar">
+      <div class="topbar-path">
+        <div class="topbar-nav">
+          <button class="topbar-icon" type="button" aria-label="Back">←</button>
+          <button class="topbar-icon" type="button" aria-label="Forward">→</button>
+        </div>
+        <div class="topbar-breadcrumb">
+          <span>Workflow Points</span>
+          <span class="topbar-divider">/</span>
+          <strong>调用记录</strong>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false" aria-label="切换白天夜间模式">
+          <span class="theme-toggle-track" aria-hidden="true">
+            <span class="theme-toggle-thumb"></span>
+          </span>
+          <span class="theme-toggle-label">白天模式</span>
+        </button>
+        <div class="profile-menu" id="profileMenu">
+          <button class="topbar-profile profile-menu-trigger" id="profileMenuTrigger" type="button" aria-haspopup="menu" aria-expanded="false">
+            <div class="topbar-avatar"><img id="profileAvatarImage" src="./logo.png" alt="avatar" /></div>
+            <div class="topbar-profile-copy">
+              <span>Workflow Points</span>
+              <strong>Online</strong>
+            </div>
+          </button>
+          <div class="profile-menu-dropdown" id="profileMenuDropdown" role="menu" aria-hidden="true">
+            <div class="profile-menu-summary">
+              <div class="topbar-avatar profile-menu-avatar"><img id="profileMenuAvatarImage" src="./logo.png" alt="avatar" /></div>
+              <div class="profile-menu-copy">
+                <strong id="profileMenuDisplayName">Workflow Points</strong>
+                <span id="profileMenuUsername">@workflow_points</span>
+              </div>
+            </div>
+            <button class="profile-menu-item" id="profileEditButton" type="button" role="menuitem">个人中心</button>
+            <button class="profile-menu-item danger" id="profileLogoutButton" type="button" role="menuitem">退出登录</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="section-head">
+        <div>
+          <p class="eyebrow">Run Center</p>
+          <h3>调用记录</h3>
+          <p class="section-note">支持按时间、状态、订单号检索，并支持分页查看。</p>
+        </div>
+      </section>
+
+      <section>
+        <article class="surface-card wide-card">
+          <div class="record-search" id="recordSearch">
+            <div class="record-search-item">
+              <label for="recordStartTime">开始时间</label>
+              <input id="recordStartTime" type="datetime-local" />
+            </div>
+            <div class="record-search-item">
+              <label for="recordEndTime">结束时间</label>
+              <input id="recordEndTime" type="datetime-local" />
+            </div>
+            <div class="record-search-item">
+              <label for="recordStatus">状态</label>
+              <select id="recordStatus">
+                <option value="all">全部</option>
+                <option value="success">成功</option>
+                <option value="running">执行中</option>
+                <option value="failed">失败</option>
+                <option value="timeout">超时</option>
+                <option value="cancelled">已取消</option>
+              </select>
+            </div>
+            <div class="record-search-item">
+              <label for="recordOrderNo">订单号</label>
+              <input id="recordOrderNo" type="text" placeholder="run_id / order_no / client_request_id" />
+            </div>
+            <div class="record-search-actions">
+              <button class="secondary-button" id="recordSearchButton" type="button">搜索</button>
+              <button class="ghost-button" id="recordResetButton" type="button">重置</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>工作流</th>
+                  <th>任务状态</th>
+                  <th>预冻结积分</th>
+                  <th>最终扣除积分</th>
+                  <th>时间</th>
+                </tr>
+              </thead>
+              <tbody id="recordsBody"></tbody>
+            </table>
+          </div>
+
+          <div class="mobile-records" id="mobileRecords"></div>
+
+          <div class="record-pagination" id="recordPagination">
+            <div class="record-pagination-left">
+              <span id="recordTotalCount">0</span>
+            </div>
+            <div class="record-pagination-right">
+              <label for="recordPageSize">每页</label>
+              <select id="recordPageSize">
+                <option value="20" selected>20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+              <button class="ghost-button" id="recordPrevPage" type="button">上一页</button>
+              <div class="record-page-numbers" id="recordPageNumbers"></div>
+              <span id="recordPageInfo">1 / 1</span>
+              <button class="ghost-button" id="recordNextPage" type="button">下一页</button>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="profile-modal" id="profileModal" aria-hidden="true">
+  <div class="profile-modal-backdrop" data-profile-close="true"></div>
+  <div class="profile-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+    <div class="profile-modal-head">
+      <h3 id="profileModalTitle">编辑个人资料</h3>
+      <button class="profile-modal-close" id="profileModalClose" type="button" aria-label="Close">x</button>
+    </div>
+    <form class="profile-form" id="profileForm">
+      <div class="profile-avatar-editor">
+        <div class="profile-avatar-preview">
+          <img id="profileAvatarPreview" src="./logo.png" alt="avatar preview" />
+        </div>
+        <input class="sr-only" id="profileAvatarInput" type="file" accept="image/*" />
+        <button class="profile-avatar-upload" id="profileAvatarUpload" type="button">更换头像</button>
+      </div>
+      <label class="profile-field">
+        <span>昵称</span>
+        <input id="profileDisplayNameInput" name="displayName" type="text" maxlength="24" placeholder="请输入昵称" required />
+      </label>
+      <label class="profile-field">
+        <span>用户名</span>
+        <input id="profileUsernameInput" name="username" type="text" maxlength="24" placeholder="请输入用户名" required />
+      </label>
+      <label class="profile-field">
+        <span>手机号</span>
+        <input id="profilePhoneInput" name="phone" type="text" maxlength="20" placeholder="请输入手机号" />
+      </label>
+      <label class="profile-field">
+        <span>地址</span>
+        <input id="profileAddressInput" name="address" type="text" maxlength="255" placeholder="请输入地址" />
+      </label>
+      <p class="profile-form-hint">个人资料将同步更新到当前账户，用户名需保持唯一。</p>
+      <p class="profile-form-error" id="profileFormError" hidden></p>
+      <div class="profile-form-actions">
+        <button class="secondary-button profile-form-cancel" id="profileModalCancel" type="button">取消</button>
+        <button class="primary-button" type="submit">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="./portal-shell.js"></script>
+<script src="./records.js"></script>
+</body>
+</html>

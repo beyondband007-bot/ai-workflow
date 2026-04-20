@@ -26,10 +26,14 @@ services:
     restart: unless-stopped
     env_file:
       - .env.docker
+    environment:
+      CLIENT_PORTAL_AVATAR_DIR: /app/client-portal/avatar
     depends_on:
       - db
     ports:
       - "3002:3002"
+    volumes:
+      - ./client-portal/avatar:/app/client-portal/avatar
 
   web:
     build:
@@ -44,6 +48,8 @@ services:
       - app
     ports:
       - "8080:80"
+    volumes:
+      - ./client-portal/avatar:/srv/portal/avatar
 
   wf003:
     build:

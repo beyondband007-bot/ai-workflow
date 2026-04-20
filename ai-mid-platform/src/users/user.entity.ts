@@ -11,6 +11,18 @@ export class User {
   @Column({ length: 50, unique: true })
   username: string;
 
+  @Column('varchar', { length: 100, nullable: true })
+  nickname: string | null;
+
+  @Column('varchar', { name: 'avatar_img', length: 500, nullable: true })
+  avatarImg: string | null;
+
+  @Column('varchar', { length: 32, nullable: true })
+  phone: string | null;
+
+  @Column('varchar', { length: 255, nullable: true })
+  address: string | null;
+
   @Column({ name: 'password_hash', length: 255 })
   passwordHash: string;
 

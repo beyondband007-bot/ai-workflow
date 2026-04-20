@@ -49,9 +49,14 @@ function resolveAuthEntryUrl() {
 
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = "auth_demo_token";
+const PROFILE_STORAGE_KEY = "client_portal_profile";
+const DEFAULT_AVATAR_SRC = "./logo.png";
 let latestWorkflowRuns = [];
 let latestRecordFilter = "all";
 let refreshTimer = null;
+let profileState = null;
+let pendingAvatarDataUrl = "";
+let pendingAvatarFile = null;
 
 const fallbackPointAccount = {
   user_id: "-",
@@ -166,8 +171,519 @@ function getAuthHeaders() {
   };
 }
 
+function readStoredProfile() {
+  try {
+    const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.warn("failed to read profile settings", error);
+    return null;
+  }
+}
+
+function writeStoredProfile(profile) {
+  try {
+    window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+  } catch (error) {
+    console.warn("failed to write profile settings", error);
+  }
+}
+
+function normalizeDisplayName(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 24);
+}
+
+function normalizeUsername(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, "")
+    .slice(0, 24);
+}
+
+function normalizePhone(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 20);
+}
+
+function normalizeAddress(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 255);
+}
+
+function ensureProfileFormFields() {
+  const form = document.getElementById("profileForm");
+  if (!form) {
+    return;
+  }
+
+  const displayNameInput = document.getElementById("profileDisplayNameInput");
+  const phoneInput = document.getElementById("profilePhoneInput");
+  const formHint = form.querySelector(".profile-form-hint");
+  if (displayNameInput) {
+    displayNameInput.maxLength = 24;
+  }
+  if (phoneInput) {
+    phoneInput.maxLength = 20;
+    phoneInput.required = false;
+  }
+
+  let addressInput = document.getElementById("profileAddressInput");
+  if (!addressInput) {
+    const addressField = document.createElement("label");
+    addressField.className = "profile-field";
+    addressField.innerHTML =
+      '<span>地址</span><input id="profileAddressInput" name="address" type="text" maxlength="255" placeholder="请输入地址" />';
+    if (formHint) {
+      form.insertBefore(addressField, formHint);
+    } else {
+      form.appendChild(addressField);
+    }
+    addressInput = addressField.querySelector("input");
+  }
+}
+
+function getProfileElements() {
+  ensureProfileFormFields();
+  return {
+    menuRoot: document.getElementById("profileMenu"),
+    menuTrigger: document.getElementById("profileMenuTrigger"),
+    menuDropdown: document.getElementById("profileMenuDropdown"),
+    topbarDisplayName: document.querySelector("#profileMenuTrigger .topbar-profile-copy span"),
+    topbarAvatar: document.getElementById("profileAvatarImage"),
+    menuAvatar: document.getElementById("profileMenuAvatarImage"),
+    menuDisplayName: document.getElementById("profileMenuDisplayName"),
+    menuUsername: document.getElementById("profileMenuUsername"),
+    editButton: document.getElementById("profileEditButton"),
+    logoutButton: document.getElementById("profileLogoutButton"),
+    modal: document.getElementById("profileModal"),
+    modalClose: document.getElementById("profileModalClose"),
+    modalCancel: document.getElementById("profileModalCancel"),
+    modalBackdrop: document.querySelector("[data-profile-close='true']"),
+    form: document.getElementById("profileForm"),
+    avatarPreview: document.getElementById("profileAvatarPreview"),
+    avatarInput: document.getElementById("profileAvatarInput"),
+    avatarUpload: document.getElementById("profileAvatarUpload"),
+    displayNameInput: document.getElementById("profileDisplayNameInput"),
+    usernameInput: document.getElementById("profileUsernameInput"),
+    phoneInput: document.getElementById("profilePhoneInput"),
+    addressInput: document.getElementById("profileAddressInput"),
+    submitButton: document.querySelector("#profileForm button[type='submit']"),
+    formError: document.getElementById("profileFormError"),
+  };
+}
+
+function getProfileDefaults() {
+  const elements = getProfileElements();
+  return {
+    displayName: normalizeDisplayName(elements.topbarDisplayName?.textContent || "Workflow Points"),
+    username: normalizeUsername(elements.menuUsername?.textContent?.replace(/^@/, "") || "workflow_points"),
+    avatarDataUrl: "",
+    phone: "",
+    address: "",
+  };
+}
+
+function resolveProfileState(overrides = {}) {
+  const defaults = getProfileDefaults();
+  return {
+    displayName: normalizeDisplayName(overrides.displayName || profileState?.displayName || defaults.displayName) || defaults.displayName,
+    username: normalizeUsername(overrides.username || profileState?.username || defaults.username) || defaults.username,
+    avatarDataUrl: String(overrides.avatarDataUrl ?? profileState?.avatarDataUrl ?? defaults.avatarDataUrl ?? ""),
+    phone: normalizePhone(overrides.phone ?? profileState?.phone ?? defaults.phone),
+    address: normalizeAddress(overrides.address ?? profileState?.address ?? defaults.address),
+  };
+}
+
+function renderProfile(profile, options = {}) {
+  const elements = getProfileElements();
+  if (!elements.menuTrigger) {
+    return;
+  }
+
+  profileState = resolveProfileState(profile);
+  const avatarSrc = profileState.avatarDataUrl || DEFAULT_AVATAR_SRC;
+
+  if (elements.topbarDisplayName) {
+    elements.topbarDisplayName.textContent = profileState.displayName;
+  }
+  if (elements.menuDisplayName) {
+    elements.menuDisplayName.textContent = profileState.displayName;
+  }
+  if (elements.menuUsername) {
+    elements.menuUsername.textContent = `@${profileState.username}`;
+  }
+
+  [elements.topbarAvatar, elements.menuAvatar, elements.avatarPreview].forEach((image) => {
+    if (image) {
+      image.src = avatarSrc;
+    }
+  });
+
+  if (options.persist) {
+    writeStoredProfile(profileState);
+  }
+}
+
+function mapUserToProfile(user = {}) {
+  return {
+    displayName: normalizeDisplayName(user.nickname || user.username || "Workflow Points"),
+    username: normalizeUsername(user.username || "workflow_points"),
+    avatarDataUrl: String(user.avatar_img || ""),
+    phone: normalizePhone(user.phone || ""),
+    address: normalizeAddress(user.address || ""),
+  };
+}
+
+function seedProfileFromAccount(pointAccount = {}) {
+  const storedProfile = readStoredProfile();
+  renderProfile(
+    {
+      ...mapUserToProfile(pointAccount),
+      avatarDataUrl: pointAccount.avatar_img || storedProfile?.avatarDataUrl || "",
+    },
+    { persist: true },
+  );
+}
+
+function closeProfileMenu() {
+  const elements = getProfileElements();
+  if (!elements.menuRoot || !elements.menuTrigger || !elements.menuDropdown) {
+    return;
+  }
+
+  elements.menuRoot.classList.remove("is-open");
+  elements.menuTrigger.setAttribute("aria-expanded", "false");
+  elements.menuDropdown.setAttribute("aria-hidden", "true");
+}
+
+function openProfileMenu() {
+  const elements = getProfileElements();
+  if (!elements.menuRoot || !elements.menuTrigger || !elements.menuDropdown) {
+    return;
+  }
+
+  elements.menuRoot.classList.add("is-open");
+  elements.menuTrigger.setAttribute("aria-expanded", "true");
+  elements.menuDropdown.setAttribute("aria-hidden", "false");
+}
+
+function syncProfileForm() {
+  const elements = getProfileElements();
+  if (!elements.form) {
+    return;
+  }
+
+  const nextProfile = resolveProfileState();
+  pendingAvatarDataUrl = nextProfile.avatarDataUrl || "";
+  pendingAvatarFile = null;
+
+  if (elements.displayNameInput) {
+    elements.displayNameInput.value = nextProfile.displayName;
+  }
+  if (elements.usernameInput) {
+    elements.usernameInput.value = nextProfile.username;
+  }
+  if (elements.phoneInput) {
+    elements.phoneInput.value = nextProfile.phone;
+  }
+  if (elements.addressInput) {
+    elements.addressInput.value = nextProfile.address;
+  }
+  if (elements.avatarPreview) {
+    elements.avatarPreview.src = pendingAvatarDataUrl || DEFAULT_AVATAR_SRC;
+  }
+  if (elements.avatarInput) {
+    elements.avatarInput.value = "";
+  }
+  if (elements.formError) {
+    elements.formError.hidden = true;
+    elements.formError.textContent = "";
+  }
+}
+
+async function uploadProfileAvatar(file) {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append("avatar", file);
+
+  const response = await fetch(`${API_BASE}/api/v1/profile/avatar`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    throw new Error(data?.message || data?.detail || `Avatar upload failed: ${response.status}`);
+  }
+
+  return data;
+}
+
+async function saveProfile(payload) {
+  return requestJson("/api/v1/profile", {
+    method: "PATCH",
+    body: JSON.stringify({
+      nickname: payload.displayName,
+      username: payload.username,
+      phone: payload.phone || null,
+      address: payload.address || null,
+    }),
+  });
+}
+
+function openProfileModal() {
+  const elements = getProfileElements();
+  if (!elements.modal) {
+    return;
+  }
+
+  syncProfileForm();
+  elements.modal.classList.add("is-open");
+  elements.modal.setAttribute("aria-hidden", "false");
+  window.setTimeout(() => elements.displayNameInput?.focus(), 10);
+}
+
+function closeProfileModal() {
+  const elements = getProfileElements();
+  if (!elements.modal) {
+    return;
+  }
+
+  elements.modal.classList.remove("is-open");
+  elements.modal.setAttribute("aria-hidden", "true");
+}
+
+function attachProfileControls() {
+  const elements = getProfileElements();
+  if (!elements.menuTrigger || !elements.form) {
+    return;
+  }
+
+  renderProfile(readStoredProfile() || getProfileDefaults());
+
+  elements.menuTrigger.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (elements.menuRoot?.classList.contains("is-open")) {
+      closeProfileMenu();
+      return;
+    }
+    openProfileMenu();
+  });
+
+  elements.editButton?.addEventListener("click", () => {
+    closeProfileMenu();
+    openProfileModal();
+  });
+
+  elements.avatarUpload?.addEventListener("click", () => {
+    elements.avatarInput?.click();
+  });
+
+  elements.avatarInput?.addEventListener("change", () => {
+    const file = elements.avatarInput?.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      if (elements.formError) {
+        elements.formError.hidden = false;
+        elements.formError.textContent = "请选择图片文件作为头像。";
+      }
+      return;
+    }
+
+    pendingAvatarFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      pendingAvatarDataUrl = typeof reader.result === "string" ? reader.result : "";
+      if (elements.avatarPreview) {
+        elements.avatarPreview.src = pendingAvatarDataUrl || DEFAULT_AVATAR_SRC;
+      }
+      if (elements.formError) {
+        elements.formError.hidden = true;
+        elements.formError.textContent = "";
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+
+  elements.form.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const displayName = normalizeDisplayName(elements.displayNameInput?.value);
+    const username = normalizeUsername(elements.usernameInput?.value).toLowerCase();
+
+    if (!displayName) {
+      elements.formError.hidden = false;
+      elements.formError.textContent = "请输入昵称。";
+      elements.displayNameInput?.focus();
+      return;
+    }
+
+    if (!/^[a-z0-9_]{3,24}$/.test(username)) {
+      elements.formError.hidden = false;
+      elements.formError.textContent = "用户名需为 3-24 位，只能包含字母、数字、下划线。";
+      elements.usernameInput?.focus();
+      return;
+    }
+
+    renderProfile(
+      {
+        displayName,
+        username,
+        avatarDataUrl: pendingAvatarDataUrl || profileState?.avatarDataUrl || "",
+      },
+      { persist: true },
+    );
+    closeProfileModal();
+  });
+
+  elements.avatarInput?.addEventListener(
+    "change",
+    (event) => {
+      event.stopImmediatePropagation();
+
+      const file = elements.avatarInput?.files?.[0];
+      if (!file) {
+        return;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        if (elements.formError) {
+          elements.formError.hidden = false;
+          elements.formError.textContent = "Please choose an image file for the avatar.";
+        }
+        return;
+      }
+
+      pendingAvatarFile = file;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        pendingAvatarDataUrl = typeof reader.result === "string" ? reader.result : "";
+        if (elements.avatarPreview) {
+          elements.avatarPreview.src = pendingAvatarDataUrl || DEFAULT_AVATAR_SRC;
+        }
+        if (elements.formError) {
+          elements.formError.hidden = true;
+          elements.formError.textContent = "";
+        }
+      };
+      reader.readAsDataURL(file);
+    },
+    true,
+  );
+
+  elements.form.addEventListener(
+    "submit",
+    async (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      const displayName = normalizeDisplayName(elements.displayNameInput?.value);
+      const username = normalizeUsername(elements.usernameInput?.value).toLowerCase();
+      const phone = normalizePhone(elements.phoneInput?.value);
+      const address = normalizeAddress(elements.addressInput?.value);
+
+      if (!displayName) {
+        elements.formError.hidden = false;
+        elements.formError.textContent = "Please enter a nickname.";
+        elements.displayNameInput?.focus();
+        return;
+      }
+
+      if (!/^[a-z0-9_]{3,24}$/.test(username)) {
+        elements.formError.hidden = false;
+        elements.formError.textContent =
+          "用户名需为 3-24 位，只能包含字母、数字、下划线。";
+        elements.usernameInput?.focus();
+        return;
+      }
+
+      const originalText = elements.submitButton?.textContent || "Save";
+      if (elements.submitButton) {
+        elements.submitButton.disabled = true;
+        elements.submitButton.textContent = "Saving...";
+      }
+
+      try {
+        if (pendingAvatarFile) {
+          const avatarResult = await uploadProfileAvatar(pendingAvatarFile);
+          pendingAvatarDataUrl =
+            avatarResult.avatar_img || avatarResult.avatar_url || pendingAvatarDataUrl;
+        }
+
+        const savedUser = await saveProfile({
+          displayName,
+          username,
+          phone,
+          address,
+        });
+
+        renderProfile(
+          {
+            ...mapUserToProfile(savedUser),
+            avatarDataUrl:
+              savedUser.avatar_img ||
+              pendingAvatarDataUrl ||
+              profileState?.avatarDataUrl ||
+              "",
+          },
+          { persist: true },
+        );
+        closeProfileModal();
+      } catch (error) {
+        elements.formError.hidden = false;
+        elements.formError.textContent =
+          error.message || "Failed to save profile.";
+      } finally {
+        if (elements.submitButton) {
+          elements.submitButton.disabled = false;
+          elements.submitButton.textContent = originalText;
+        }
+      }
+    },
+    true,
+  );
+
+  [elements.modalClose, elements.modalCancel, elements.modalBackdrop].forEach((node) => {
+    node?.addEventListener("click", () => {
+      closeProfileModal();
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!elements.menuRoot?.contains(event.target)) {
+      closeProfileMenu();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+
+    closeProfileMenu();
+    closeProfileModal();
+  });
+}
+
 function logout() {
   window.localStorage.removeItem(TOKEN_KEY);
+  window.localStorage.removeItem(PROFILE_STORAGE_KEY);
   window.location.href = resolveAuthEntryUrl();
 }
 
@@ -471,12 +987,14 @@ function attachWorkflowButtons() {
 }
 
 function attachLogoutButton() {
-  const logoutButton = document.getElementById("logoutButton");
-  if (!logoutButton) {
+  const logoutButtons = document.querySelectorAll("#logoutButton, #profileLogoutButton");
+  if (!logoutButtons.length) {
     return;
   }
 
-  logoutButton.addEventListener("click", logout);
+  logoutButtons.forEach((button) => {
+    button.addEventListener("click", logout);
+  });
 }
 
 async function refreshDashboardData() {
@@ -514,10 +1032,12 @@ async function bootstrap() {
   syncAccountView(fallbackPointAccount);
   renderRecords([]);
   renderLedgers([]);
+  attachProfileControls();
   attachLogoutButton();
 
   try {
-    const [pointAccount, workflows, workflowRuns] = await Promise.all([
+    const [currentUser, pointAccount, workflows, workflowRuns] = await Promise.all([
+      requestJson("/me"),
       requestJson("/api/v1/point-accounts/me"),
       requestJson("/api/v1/workflows"),
       requestJson("/api/v1/workflow-runs"),
@@ -525,6 +1045,7 @@ async function bootstrap() {
 
     latestWorkflowRuns = workflowRuns;
     syncAccountView(pointAccount);
+    seedProfileFromAccount(currentUser);
     renderWorkflows(workflows);
     renderRecords(workflowRuns);
     renderLedgers(workflowRuns);

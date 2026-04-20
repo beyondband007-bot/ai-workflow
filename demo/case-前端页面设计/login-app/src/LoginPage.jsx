@@ -6,6 +6,35 @@ const PORTAL_BASE =
   process.env.REACT_APP_PORTAL_BASE || '/portal/index.html';
 const TOKEN_KEY = 'auth_demo_token';
 
+function decodeJwtPayload(token) {
+  if (!token || typeof token !== 'string') {
+    return null;
+  }
+
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    return null;
+  }
+
+  const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+
+  try {
+    return JSON.parse(window.atob(padded));
+  } catch {
+    return null;
+  }
+}
+
+function isTokenExpired(token) {
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== 'number') {
+    return null;
+  }
+
+  return Date.now() >= payload.exp * 1000;
+}
+
 async function requestJson(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -248,10 +277,12 @@ export default function LoginPage() {
 
   const fetchCurrentUser = async (
     token = window.localStorage.getItem(TOKEN_KEY),
+    options = {},
   ) => {
+    const { silent = false } = options;
     if (!token) {
       setCurrentUser(null);
-      return;
+      return null;
     }
 
     try {
@@ -260,13 +291,19 @@ export default function LoginPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCurrentUser(me);
-      setStatus('ok');
-      setMessage('已登录' + me.username + ' (' + me.email + ')');
+      if (!silent) {
+        setStatus('ok');
+        setMessage('已登录' + me.username + ' (' + me.email + ')');
+      }
+      return me;
     } catch (error) {
       window.localStorage.removeItem(TOKEN_KEY);
       setCurrentUser(null);
-      setStatus('err');
-      setMessage(error.message);
+      if (!silent) {
+        setStatus('err');
+        setMessage(error.message);
+      }
+      return null;
     }
   };
 
@@ -276,7 +313,29 @@ export default function LoginPage() {
       return;
     }
 
-    fetchCurrentUser(token);
+    const expired = isTokenExpired(token);
+    if (expired === true) {
+      window.localStorage.removeItem(TOKEN_KEY);
+      return;
+    }
+
+    if (expired === false) {
+      redirectToPortal(token);
+      return;
+    }
+
+    let active = true;
+    const autoRedirectIfTokenValid = async () => {
+      const user = await fetchCurrentUser(token, { silent: true });
+      if (active && user) {
+        redirectToPortal(token);
+      }
+    };
+    autoRedirectIfTokenValid();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleSubmit = async (event) => {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthUser } from '../auth/auth-user.interface';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -16,6 +16,23 @@ export class WorkflowRunsController {
   @Get()
   getMyRuns(@CurrentUser() currentUser: AuthUser) {
     return this.workflowRunsService.getMyRuns(currentUser);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('query')
+  getMyRunsQuery(
+    @CurrentUser() currentUser: AuthUser,
+    @Query()
+    query: {
+      page?: string;
+      page_size?: string;
+      start_time?: string;
+      end_time?: string;
+      status?: string;
+      order_no?: string;
+    },
+  ) {
+    return this.workflowRunsService.getMyRunsQuery(currentUser, query);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -73,5 +90,65 @@ export class WorkflowRunsController {
   ) {
     this.callbackSignatureService.verifyWf003CallbackToken(workflowCallbackToken);
     return this.workflowRunsService.callback(body);
+  }
+
+  @Post('wf003-state/register-task')
+  wf003RegisterTask(
+    @Headers('x-workflow-callback-token') workflowCallbackToken: string,
+    @Body()
+    body: {
+      submissionId?: string;
+      run_id?: string;
+      workflow_code?: string;
+      client_request_id?: string;
+      user_id?: string;
+      callback_url?: string;
+      callback_token?: string;
+      car_name?: string;
+      logo?: string;
+      feishu_app_id?: string;
+      feishu_id?: string;
+      expectedTasks?: number;
+      taskId?: string;
+      type?: 'exterior' | 'interior';
+      index?: number;
+      groupIndex?: number;
+      imageUrl?: string;
+      imageUrls?: string[];
+    },
+  ) {
+    this.callbackSignatureService.verifyWf003CallbackToken(workflowCallbackToken);
+    return this.workflowRunsService.wf003RegisterTask(body);
+  }
+
+  @Post('wf003-state/update-submission-state')
+  wf003UpdateSubmissionState(
+    @Headers('x-workflow-callback-token') workflowCallbackToken: string,
+    @Body()
+    body: {
+      taskId?: string;
+      state?: string;
+      rawState?: string;
+      resultUrl?: string | null;
+      failCode?: string | null;
+      failMsg?: string | null;
+      body?: Record<string, unknown>;
+    },
+  ) {
+    this.callbackSignatureService.verifyWf003CallbackToken(workflowCallbackToken);
+    return this.workflowRunsService.wf003UpdateSubmissionState(body);
+  }
+
+  @Post('wf003-state/build-final-assets')
+  wf003BuildFinalAssets(
+    @Headers('x-workflow-callback-token') workflowCallbackToken: string,
+    @Body()
+    body: {
+      submissionId?: string;
+      finalizeToken?: string | null;
+    },
+  ) {
+    this.callbackSignatureService.verifyWf003CallbackToken(workflowCallbackToken);
+    return this.workflowRunsService.wf003BuildFinalAssets(body);
   }
 }

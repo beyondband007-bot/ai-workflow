@@ -9,6 +9,9 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { sign } from 'jsonwebtoken';
+import { randomUUID } from 'node:crypto';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { basename, extname, resolve } from 'node:path';
 import { Repository } from 'typeorm';
 import { PointAccountsService } from '../point-accounts/point-accounts.service';
 import { User } from '../users/user.entity';
@@ -22,6 +25,20 @@ type RegisterPayload = {
 type LoginPayload = {
   identifier?: string;
   password?: string;
+};
+
+type UpdateProfilePayload = {
+  nickname?: string;
+  username?: string;
+  phone?: string;
+  address?: string;
+};
+
+type UploadedAvatarFile = {
+  buffer: Buffer;
+  mimetype: string;
+  originalname: string;
+  size: number;
 };
 
 @Injectable()
@@ -123,6 +140,95 @@ export class AuthService {
     );
   }
 
+  async updateProfile(userId: number, payload: UpdateProfilePayload) {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
+    const nextUsername = payload.username?.trim().toLowerCase();
+    const nextNickname = payload.nickname?.trim() || null;
+    const nextPhone = payload.phone?.trim() || null;
+    const nextAddress = payload.address?.trim() || null;
+
+    if (!nextNickname) {
+      throw new BadRequestException('nickname is required');
+    }
+
+    if (!nextUsername) {
+      throw new BadRequestException('username is required');
+    }
+
+    if (!/^[a-z0-9_]{3,24}$/.test(nextUsername)) {
+      throw new BadRequestException(
+        'username must be 3-24 chars and only contain letters, numbers, and underscores',
+      );
+    }
+
+    if (nextPhone && !/^[0-9+\-()\s]{6,20}$/.test(nextPhone)) {
+      throw new BadRequestException('phone format is invalid');
+    }
+
+    if (nextAddress && nextAddress.length > 255) {
+      throw new BadRequestException('address is too long');
+    }
+
+    if (user.username !== nextUsername) {
+      const existingUsername = await this.usersRepository.findOneBy({
+        username: nextUsername,
+      });
+
+      if (existingUsername && existingUsername.id !== user.id) {
+        throw new BadRequestException('username already exists');
+      }
+    }
+
+    user.username = nextUsername;
+    user.nickname = nextNickname.slice(0, 100);
+    user.phone = nextPhone?.slice(0, 32) ?? null;
+    user.address = nextAddress?.slice(0, 255) ?? null;
+
+    const savedUser = await this.usersRepository.save(user);
+
+    return this.serializeUser(
+      savedUser,
+      await this.getWf003FeishuBinding(savedUser.id),
+    );
+  }
+
+  async uploadProfileAvatar(userId: number, file?: UploadedAvatarFile) {
+    if (!file) {
+      throw new BadRequestException('avatar file is required');
+    }
+
+    if (!file.mimetype?.startsWith('image/')) {
+      throw new BadRequestException('avatar must be an image');
+    }
+
+    const user = await this.usersRepository.findOneBy({ id: userId });
+
+    if (!user) {
+      throw new NotFoundException('user not found');
+    }
+
+    const avatarDir = await this.ensureAvatarDir();
+    const extension = this.resolveAvatarExtension(file);
+    const fileName = `${userId}-${Date.now()}-${randomUUID()}${extension}`;
+    const filePath = resolve(avatarDir, fileName);
+
+    await writeFile(filePath, file.buffer);
+    await this.removePreviousAvatar(user.avatarImg, avatarDir);
+
+    user.avatarImg = `/portal/avatar/${fileName}`;
+    await this.usersRepository.save(user);
+
+    return {
+      avatar_img: user.avatarImg,
+      avatar_url: user.avatarImg,
+    };
+  }
+
   private createAccessToken(userId: number, email: string) {
     const secret = this.configService.getOrThrow<string>('JWT_SECRET');
 
@@ -167,11 +273,59 @@ export class AuthService {
       id: user.id,
       email: user.email,
       username: user.username,
+      nickname: user.nickname,
+      avatar_img: user.avatarImg,
+      phone: user.phone,
+      address: user.address,
       feishu_app_id: binding.feishu_app_id,
       feishu_id: binding.feishu_id,
       is_active: Boolean(user.isActive),
       created_at: user.createdAt,
       last_login_at: user.lastLoginAt,
     };
+  }
+
+  private async ensureAvatarDir() {
+    const configuredDir = this.configService.get<string>('CLIENT_PORTAL_AVATAR_DIR');
+    const targetDir = configuredDir
+      ? resolve(configuredDir)
+      : resolve(process.cwd(), '..', 'client-portal', 'avatar');
+
+    await mkdir(targetDir, { recursive: true });
+    return targetDir;
+  }
+
+  private resolveAvatarExtension(file: UploadedAvatarFile) {
+    const originalExt = extname(file.originalname || '').toLowerCase();
+    if (originalExt && /^[.][a-z0-9]+$/.test(originalExt)) {
+      return originalExt;
+    }
+
+    const mimeTypeMap: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+      'image/gif': '.gif',
+      'image/svg+xml': '.svg',
+    };
+
+    return mimeTypeMap[file.mimetype] || '.png';
+  }
+
+  private async removePreviousAvatar(
+    avatarImg: string | null,
+    avatarDir: string,
+  ) {
+    if (!avatarImg || !avatarImg.startsWith('/portal/avatar/')) {
+      return;
+    }
+
+    const previousPath = resolve(avatarDir, basename(avatarImg));
+
+    try {
+      await rm(previousPath, { force: true });
+    } catch (error) {
+      console.warn('failed to remove previous avatar', error);
+    }
   }
 }

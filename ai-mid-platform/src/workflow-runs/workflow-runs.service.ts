@@ -28,6 +28,51 @@ type CallbackPayload = {
   error_message?: string;
 };
 
+type RunsQueryPayload = {
+  page?: string;
+  page_size?: string;
+  start_time?: string;
+  end_time?: string;
+  status?: string;
+  order_no?: string;
+};
+
+type Wf003RegisterTaskPayload = {
+  submissionId?: string;
+  run_id?: string;
+  workflow_code?: string;
+  client_request_id?: string;
+  user_id?: string;
+  callback_url?: string;
+  callback_token?: string;
+  car_name?: string;
+  logo?: string;
+  feishu_app_id?: string;
+  feishu_id?: string;
+  expectedTasks?: number;
+  taskId?: string;
+  type?: 'exterior' | 'interior';
+  index?: number;
+  groupIndex?: number;
+  imageUrl?: string;
+  imageUrls?: string[];
+};
+
+type Wf003TaskCallbackPayload = {
+  taskId?: string;
+  state?: string;
+  rawState?: string;
+  resultUrl?: string | null;
+  failCode?: string | null;
+  failMsg?: string | null;
+  body?: Record<string, unknown>;
+};
+
+type Wf003BuildFinalPayload = {
+  submissionId?: string;
+  finalizeToken?: string | null;
+};
+
 @Injectable()
 export class WorkflowRunsService {
   constructor(
@@ -183,7 +228,7 @@ export class WorkflowRunsService {
         FROM workflow_runs
         WHERE user_id = ?
         ORDER BY id DESC
-        LIMIT 50
+        LIMIT 10
       `,
       [currentUser.userId],
     );
@@ -192,6 +237,97 @@ export class WorkflowRunsService {
       ...run,
       result_urls: this.parseJsonArray(run.result_urls_json),
     }));
+  }
+
+  async getMyRunsQuery(currentUser: AuthUser, query: RunsQueryPayload) {
+    const page = this.normalizePage(query.page);
+    const pageSize = this.normalizePageSize(query.page_size, 20);
+    const offset = (page - 1) * pageSize;
+
+    const conditions: string[] = ['user_id = ?'];
+    const params: unknown[] = [currentUser.userId];
+
+    const startTime = this.normalizeDateTime(query.start_time);
+    if (startTime) {
+      conditions.push(
+        'COALESCE(finished_at, started_at, created_at) >= ?',
+      );
+      params.push(startTime);
+    }
+
+    const endTime = this.normalizeDateTime(query.end_time);
+    if (endTime) {
+      conditions.push(
+        'COALESCE(finished_at, started_at, created_at) <= ?',
+      );
+      params.push(endTime);
+    }
+
+    const status = this.normalizeStatus(query.status);
+    if (status) {
+      conditions.push('status = ?');
+      params.push(status);
+    }
+
+    const orderNo = (query.order_no ?? '').trim();
+    if (orderNo) {
+      const pattern = `%${orderNo}%`;
+      conditions.push(
+        '(run_id LIKE ? OR IFNULL(client_request_id, \'\') LIKE ?)',
+      );
+      params.push(pattern, pattern);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    const [countRow] = await this.dataSource.query(
+      `
+        SELECT COUNT(1) AS total
+        FROM workflow_runs
+        WHERE ${whereClause}
+      `,
+      params,
+    );
+
+    const total = Number(countRow?.total ?? 0);
+
+    const runs = await this.dataSource.query(
+      `
+        SELECT
+          run_id,
+          workflow_code,
+          status,
+          billing_status,
+          estimated_count,
+          actual_completed_count,
+          estimated_frozen_points,
+          final_charge_points,
+          refund_points,
+          result_summary,
+          result_summary_url,
+          result_urls_json,
+          external_task_id,
+          error_message,
+          started_at,
+          finished_at,
+          created_at
+        FROM workflow_runs
+        WHERE ${whereClause}
+        ORDER BY id DESC
+        LIMIT ? OFFSET ?
+      `,
+      [...params, pageSize, offset],
+    );
+
+    return {
+      page,
+      page_size: pageSize,
+      total,
+      items: runs.map((run: Record<string, unknown>) => ({
+        ...run,
+        result_urls: this.parseJsonArray(run.result_urls_json),
+      })),
+    };
   }
 
   async callback(payload: CallbackPayload) {
@@ -434,6 +570,530 @@ export class WorkflowRunsService {
     }
   }
 
+  async wf003RegisterTask(payload: Wf003RegisterTaskPayload) {
+    const submissionId = (payload.submissionId ?? '').trim();
+    const taskId = (payload.taskId ?? '').trim();
+    const taskType = (payload.type ?? '').trim();
+
+    if (!submissionId) {
+      throw new BadRequestException('submissionId is required');
+    }
+
+    if (!taskId) {
+      throw new BadRequestException('taskId is required');
+    }
+
+    if (!taskType || !['exterior', 'interior'].includes(taskType)) {
+      throw new BadRequestException('type must be exterior or interior');
+    }
+
+    await this.dataSource.query(
+      `
+        INSERT INTO wf003_submissions (
+          submission_id,
+          run_id,
+          workflow_code,
+          client_request_id,
+          user_id,
+          callback_url,
+          callback_token,
+          car_name,
+          logo,
+          feishu_app_id,
+          feishu_id,
+          expected_tasks,
+          finalized,
+          finalize_in_progress,
+          finalize_token
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, NULL)
+        ON DUPLICATE KEY UPDATE
+          run_id = VALUES(run_id),
+          workflow_code = VALUES(workflow_code),
+          client_request_id = VALUES(client_request_id),
+          user_id = VALUES(user_id),
+          callback_url = COALESCE(NULLIF(VALUES(callback_url), ''), callback_url),
+          callback_token = COALESCE(NULLIF(VALUES(callback_token), ''), callback_token),
+          car_name = COALESCE(NULLIF(VALUES(car_name), ''), car_name),
+          logo = COALESCE(NULLIF(VALUES(logo), ''), logo),
+          feishu_app_id = COALESCE(NULLIF(VALUES(feishu_app_id), ''), feishu_app_id),
+          feishu_id = COALESCE(NULLIF(VALUES(feishu_id), ''), feishu_id),
+          expected_tasks = GREATEST(expected_tasks, VALUES(expected_tasks)),
+          updated_at = CURRENT_TIMESTAMP
+      `,
+      [
+        submissionId,
+        (payload.run_id ?? submissionId).trim(),
+        (payload.workflow_code ?? 'WF-003').trim() || 'WF-003',
+        (payload.client_request_id ?? '').trim(),
+        (payload.user_id ?? '').trim(),
+        (payload.callback_url ?? '').trim(),
+        (payload.callback_token ?? '').trim(),
+        (payload.car_name ?? '').trim(),
+        (payload.logo ?? '').trim(),
+        (payload.feishu_app_id ?? '').trim(),
+        (payload.feishu_id ?? '').trim(),
+        Math.max(0, Number(payload.expectedTasks ?? 0) || 0),
+      ],
+    );
+
+    await this.dataSource.query(
+      `
+        INSERT INTO wf003_tasks (
+          task_id,
+          submission_id,
+          type,
+          task_index,
+          group_index,
+          image_url,
+          image_urls_json,
+          state,
+          result_url
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'submitted', NULL)
+        ON DUPLICATE KEY UPDATE
+          submission_id = VALUES(submission_id),
+          type = VALUES(type),
+          task_index = VALUES(task_index),
+          group_index = VALUES(group_index),
+          image_url = VALUES(image_url),
+          image_urls_json = VALUES(image_urls_json),
+          updated_at = CURRENT_TIMESTAMP
+      `,
+      [
+        taskId,
+        submissionId,
+        taskType,
+        payload.index ?? null,
+        payload.groupIndex ?? null,
+        payload.imageUrl ?? null,
+        JSON.stringify(payload.imageUrls ?? []),
+      ],
+    );
+
+    return {
+      ok: true,
+      submissionId,
+      taskId,
+      type: taskType,
+      index: payload.index ?? null,
+      groupIndex: payload.groupIndex ?? null,
+    };
+  }
+
+  async wf003UpdateSubmissionState(payload: Wf003TaskCallbackPayload) {
+    const taskId = (payload.taskId ?? '').trim();
+    if (!taskId) {
+      throw new BadRequestException('taskId is required');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const [taskMeta] = await queryRunner.query(
+        `
+          SELECT
+            task_id,
+            submission_id,
+            type,
+            state,
+            result_url
+          FROM wf003_tasks
+          WHERE task_id = ?
+          LIMIT 1
+        `,
+        [taskId],
+      );
+
+      if (!taskMeta) {
+        await queryRunner.commitTransaction();
+        return {
+          ok: false,
+          accepted: true,
+          reason: 'task_not_found',
+          taskId,
+          isComplete: false,
+          shouldFinalize: false,
+        };
+      }
+
+      const submissionId = String(taskMeta.submission_id);
+      const [submission] = await queryRunner.query(
+        `
+          SELECT
+            submission_id,
+            expected_tasks,
+            finalized,
+            finalize_in_progress,
+            finalize_token
+          FROM wf003_submissions
+          WHERE submission_id = ?
+          LIMIT 1
+          FOR UPDATE
+        `,
+        [submissionId],
+      );
+
+      if (!submission) {
+        await queryRunner.commitTransaction();
+        return {
+          ok: false,
+          accepted: true,
+          reason: 'submission_not_found',
+          submissionId,
+          taskId,
+          isComplete: false,
+          shouldFinalize: false,
+        };
+      }
+
+      const expectedTasks = Number(submission.expected_tasks ?? 0);
+      const alreadyFinalized = Number(submission.finalized ?? 0) === 1;
+      if (alreadyFinalized) {
+        const counts = await this.getWf003TaskCounts(queryRunner, submissionId);
+        await queryRunner.commitTransaction();
+        return {
+          ok: true,
+          accepted: true,
+          submissionId,
+          taskId,
+          taskType: taskMeta.type,
+          state: taskMeta.state || payload.state || null,
+          resultUrl: taskMeta.result_url || payload.resultUrl || null,
+          expectedTasks,
+          resolvedCount: counts.resolvedCount,
+          successCount: counts.successCount,
+          failedCount: counts.failedCount,
+          isComplete: false,
+          shouldFinalize: false,
+          reason: 'already_finalized',
+        };
+      }
+
+      const terminalStates = new Set(['success', 'failed', 'error']);
+      const existingState = String(taskMeta.state ?? '');
+      const existingResultUrl = taskMeta.result_url
+        ? String(taskMeta.result_url)
+        : '';
+      const alreadyResolved =
+        terminalStates.has(existingState) || Boolean(existingResultUrl);
+
+      if (alreadyResolved) {
+        const counts = await this.getWf003TaskCounts(queryRunner, submissionId);
+        await queryRunner.commitTransaction();
+        return {
+          ok: true,
+          accepted: true,
+          submissionId,
+          taskId,
+          taskType: taskMeta.type,
+          state: existingState,
+          resultUrl: existingResultUrl || null,
+          expectedTasks,
+          resolvedCount: counts.resolvedCount,
+          successCount: counts.successCount,
+          failedCount: counts.failedCount,
+          isComplete: counts.resolvedCount >= expectedTasks,
+          shouldFinalize: false,
+          reason: 'duplicate_callback',
+        };
+      }
+
+      await queryRunner.query(
+        `
+          UPDATE wf003_tasks
+          SET state = ?,
+              raw_state = ?,
+              result_url = ?,
+              fail_code = ?,
+              fail_msg = ?,
+              callback_payload_json = ?,
+              last_callback_at = CURRENT_TIMESTAMP,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE task_id = ?
+        `,
+        [
+          String(payload.state ?? '').trim() || 'unknown',
+          String(payload.rawState ?? '').trim() || null,
+          payload.resultUrl ?? null,
+          payload.failCode ?? null,
+          payload.failMsg ?? null,
+          JSON.stringify(payload.body ?? {}),
+          taskId,
+        ],
+      );
+
+      const counts = await this.getWf003TaskCounts(queryRunner, submissionId);
+      const isComplete = counts.resolvedCount >= expectedTasks;
+      let shouldFinalize = false;
+      let finalizeToken = submission.finalize_token
+        ? String(submission.finalize_token)
+        : null;
+
+      if (
+        isComplete &&
+        Number(submission.finalized ?? 0) === 0 &&
+        Number(submission.finalize_in_progress ?? 0) === 0
+      ) {
+        shouldFinalize = true;
+        finalizeToken = `fin_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        await queryRunner.query(
+          `
+            UPDATE wf003_submissions
+            SET finalize_in_progress = 1,
+                finalize_token = ?,
+                finalize_requested_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE submission_id = ?
+          `,
+          [finalizeToken, submissionId],
+        );
+      } else {
+        await queryRunner.query(
+          `
+            UPDATE wf003_submissions
+            SET updated_at = CURRENT_TIMESTAMP
+            WHERE submission_id = ?
+          `,
+          [submissionId],
+        );
+      }
+
+      await queryRunner.commitTransaction();
+
+      return {
+        ok: true,
+        accepted: true,
+        submissionId,
+        taskId,
+        taskType: taskMeta.type,
+        state: String(payload.state ?? '').trim() || 'unknown',
+        resultUrl: payload.resultUrl ?? null,
+        failCode: payload.failCode ?? null,
+        failMsg: payload.failMsg ?? null,
+        expectedTasks,
+        resolvedCount: counts.resolvedCount,
+        successCount: counts.successCount,
+        failedCount: counts.failedCount,
+        isComplete,
+        shouldFinalize,
+        finalizeToken,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async wf003BuildFinalAssets(payload: Wf003BuildFinalPayload) {
+    const submissionId = (payload.submissionId ?? '').trim();
+    if (!submissionId) {
+      throw new BadRequestException('submissionId is required');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const [submission] = await queryRunner.query(
+        `
+          SELECT
+            submission_id,
+            run_id,
+            workflow_code,
+            client_request_id,
+            callback_url,
+            callback_token,
+            car_name,
+            feishu_app_id,
+            feishu_id,
+            finalized,
+            finalize_in_progress,
+            finalize_token
+          FROM wf003_submissions
+          WHERE submission_id = ?
+          LIMIT 1
+          FOR UPDATE
+        `,
+        [submissionId],
+      );
+
+      if (!submission) {
+        await queryRunner.commitTransaction();
+        return { skipFinalize: true, reason: 'submission_not_found', submissionId };
+      }
+
+      if (Number(submission.finalized ?? 0) === 1) {
+        await queryRunner.commitTransaction();
+        return { skipFinalize: true, reason: 'already_finalized', submissionId };
+      }
+
+      if (
+        Number(submission.finalize_in_progress ?? 0) !== 1 ||
+        !submission.finalize_token
+      ) {
+        await queryRunner.commitTransaction();
+        return { skipFinalize: true, reason: 'finalize_not_claimed', submissionId };
+      }
+
+      const finalizeToken = (payload.finalizeToken ?? '').trim();
+      if (finalizeToken && finalizeToken !== String(submission.finalize_token)) {
+        await queryRunner.commitTransaction();
+        return {
+          skipFinalize: true,
+          reason: 'finalize_token_mismatch',
+          submissionId,
+        };
+      }
+
+      const tasks = await queryRunner.query(
+        `
+          SELECT
+            task_id,
+            type,
+            task_index,
+            group_index,
+            state,
+            result_url,
+            fail_code,
+            fail_msg
+          FROM wf003_tasks
+          WHERE submission_id = ?
+        `,
+        [submissionId],
+      );
+
+      const normalizedCallbackUrlForNotify = /^https?:\/\//i.test(
+        String(submission.callback_url ?? '').trim(),
+      )
+        ? String(submission.callback_url ?? '').trim()
+        : 'https://gzl.wikigood.top/api/v1/workflow-runs/wf003-callback';
+
+      const exteriorImages = (tasks as Array<Record<string, unknown>>)
+        .filter(
+          (task) =>
+            task.type === 'exterior' &&
+            task.state === 'success' &&
+            Boolean(task.result_url),
+        )
+        .sort(
+          (a, b) => Number(a.task_index ?? 0) - Number(b.task_index ?? 0),
+        )
+        .map((task, index) => ({
+          originalIndex: Number(task.task_index ?? 0) || null,
+          imageUrl: String(task.result_url),
+          fileName: `exterior_${index + 1}.jpg`,
+          taskId: String(task.task_id),
+        }));
+
+      const interiorImages = (tasks as Array<Record<string, unknown>>)
+        .filter(
+          (task) =>
+            task.type === 'interior' &&
+            task.state === 'success' &&
+            Boolean(task.result_url),
+        )
+        .sort(
+          (a, b) => Number(a.group_index ?? 0) - Number(b.group_index ?? 0),
+        )
+        .map((task, index) => ({
+          groupIndex: Number(task.group_index ?? 0) || null,
+          imageUrl: String(task.result_url),
+          fileName: `interior_${index + 1}.jpg`,
+          taskId: String(task.task_id),
+        }));
+
+      const failedTasks = (tasks as Array<Record<string, unknown>>)
+        .filter((task) => ['failed', 'error'].includes(String(task.state ?? '')))
+        .map((task) => ({
+          type: String(task.type ?? ''),
+          index: Number(task.task_index ?? task.group_index ?? 0) || null,
+          taskId: String(task.task_id),
+          failCode: task.fail_code ? String(task.fail_code) : null,
+          failMsg: task.fail_msg ? String(task.fail_msg) : null,
+        }));
+
+      await queryRunner.query(
+        `
+          UPDATE wf003_submissions
+          SET finalized = 1,
+              finalized_at = CURRENT_TIMESTAMP,
+              finalize_in_progress = 0,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE submission_id = ?
+        `,
+        [submissionId],
+      );
+
+      await queryRunner.commitTransaction();
+
+      return {
+        skipFinalize: false,
+        submissionId,
+        run_id: String(submission.run_id ?? submissionId),
+        workflow_code: String(submission.workflow_code ?? 'WF-003'),
+        client_request_id: String(submission.client_request_id ?? ''),
+        callback_url: normalizedCallbackUrlForNotify,
+        callback_token: String(submission.callback_token ?? ''),
+        car_name: String(submission.car_name ?? ''),
+        feishu_app_id: String(submission.feishu_app_id ?? ''),
+        feishu_id: String(submission.feishu_id ?? ''),
+        exteriorImages,
+        interiorImages,
+        totalExterior: exteriorImages.length,
+        totalInterior: interiorImages.length,
+        successCount: exteriorImages.length + interiorImages.length,
+        failedCount: failedTasks.length,
+        failedTasks,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  private async getWf003TaskCounts(queryRunner: QueryRunner, submissionId: string) {
+    const [counts] = await queryRunner.query(
+      `
+        SELECT
+          SUM(
+            CASE
+              WHEN state IN ('success', 'failed', 'error')
+                   OR (result_url IS NOT NULL AND result_url <> '')
+              THEN 1 ELSE 0
+            END
+          ) AS resolved_count,
+          SUM(
+            CASE
+              WHEN state = 'success'
+                   AND (result_url IS NOT NULL AND result_url <> '')
+              THEN 1 ELSE 0
+            END
+          ) AS success_count,
+          SUM(
+            CASE
+              WHEN state IN ('failed', 'error')
+              THEN 1 ELSE 0
+            END
+          ) AS failed_count
+        FROM wf003_tasks
+        WHERE submission_id = ?
+      `,
+      [submissionId],
+    );
+
+    return {
+      resolvedCount: Number(counts?.resolved_count ?? 0),
+      successCount: Number(counts?.success_count ?? 0),
+      failedCount: Number(counts?.failed_count ?? 0),
+    };
+  }
+
   private async findExistingRun(
     userId: number,
     workflowCode: string,
@@ -498,6 +1158,55 @@ export class WorkflowRunsService {
     }
 
     return Math.min(Math.floor(normalized), max);
+  }
+
+  private normalizePage(value: unknown) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      return 1;
+    }
+
+    return Math.floor(parsed);
+  }
+
+  private normalizePageSize(value: unknown, fallback: number) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      return fallback;
+    }
+
+    return Math.min(Math.floor(parsed), 100);
+  }
+
+  private normalizeStatus(value: unknown) {
+    const normalized = String(value ?? '').trim();
+    if (!normalized || normalized === 'all') {
+      return null;
+    }
+
+    const allowed = new Set([
+      'success',
+      'running',
+      'failed',
+      'timeout',
+      'cancelled',
+    ]);
+
+    return allowed.has(normalized) ? normalized : null;
+  }
+
+  private normalizeDateTime(value: unknown) {
+    const raw = String(value ?? '').trim();
+    if (!raw) {
+      return null;
+    }
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return this.formatDateTime(date);
   }
 
   private createRunId() {
