@@ -1,5 +1,7 @@
 const form = document.getElementById("carForm");
 const carNameInput = document.getElementById("carName");
+const manufacturerSelect = document.getElementById("manufacturerSelect");
+const manufacturerHelp = document.getElementById("manufacturerHelp");
 const mainInput = document.getElementById("mainImages");
 const interiorInput = document.getElementById("interiorImages");
 const pickMainBtn = document.getElementById("pickMainBtn");
@@ -13,11 +15,10 @@ const lightboxImage = document.getElementById("lightboxImage");
 const closeLightboxBtn = document.getElementById("closeLightboxBtn");
 
 const RUNTIME_CONFIG = window.__WF003_CONFIG__ || {};
-const KIE_UPLOAD_URL = RUNTIME_CONFIG.kieUploadUrl || "https://kieai.redpandaai.co/api/file-stream-upload";
+const KIE_UPLOAD_URL = RUNTIME_CONFIG.kieUploadUrl || "https://kieai.riftrunnerai.com/api/file-stream-upload";
 const KIE_API_KEY = RUNTIME_CONFIG.kieApiKey || "";
 const RUNTIME_WEBHOOK_URL = (RUNTIME_CONFIG.workflowWebhookUrl || "").replace(/\/$/, "");
 const RUNTIME_API_BASE = (RUNTIME_CONFIG.workflowApiBase || "").replace(/\/$/, "");
-const FIXED_LOGO_URL = "https://mycar.deepsix.store/logo/logo.png";
 const TOKEN_KEY = "auth_demo_token";
 const MAX_FILES_PER_GROUP = 5;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -46,7 +47,7 @@ function resolveApiBase() {
   }
 
   if (port === "3001" || port === "3003") {
-    return `${protocol}//${hostname}:3002`;
+    return "";
   }
 
   return "";
@@ -57,6 +58,8 @@ const API_BASE = resolveApiBase();
 const state = {
   main: [],
   interior: [],
+  manufacturers: [],
+  manufacturersLoaded: false,
   isSubmitting: false,
 };
 
@@ -177,6 +180,7 @@ function markUploading(uploading) {
   submitBtn.disabled = uploading;
   pickMainBtn.disabled = uploading;
   pickInteriorBtn.disabled = uploading;
+  manufacturerSelect.disabled = uploading || !state.manufacturersLoaded;
 }
 
 function clearAll() {
@@ -187,6 +191,9 @@ function clearAll() {
   form.reset();
   resetInput(mainInput);
   resetInput(interiorInput);
+  if (state.manufacturers.length) {
+    manufacturerSelect.value = "";
+  }
   renderGroup("main");
   renderGroup("interior");
 }
@@ -231,6 +238,58 @@ function buildApiUrl(path) {
   return API_BASE ? `${API_BASE}${path}` : path;
 }
 
+async function loadManufacturers() {
+  try {
+    manufacturerSelect.disabled = true;
+    manufacturerSelect.innerHTML = '<option value="">正在加载厂家...</option>';
+
+    const response = await fetch(buildApiUrl("/api/v1/wf003/manufacturers"), {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : [];
+
+    if (!response.ok) {
+      throw new Error(data?.message || data?.error || `Load manufacturers failed (${response.status})`);
+    }
+
+    const manufacturers = Array.isArray(data)
+      ? data.filter((item) => item?.manufacturer_code && item?.manufacturer_name)
+      : [];
+
+    state.manufacturers = manufacturers;
+    state.manufacturersLoaded = manufacturers.length > 0;
+    manufacturerSelect.innerHTML = "";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = manufacturers.length ? "请选择厂家" : "暂无可选厂家";
+    manufacturerSelect.appendChild(placeholder);
+
+    manufacturers.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.manufacturer_code;
+      option.textContent = item.manufacturer_name;
+      manufacturerSelect.appendChild(option);
+    });
+
+    manufacturerSelect.disabled = !state.manufacturersLoaded;
+    manufacturerHelp.textContent = state.manufacturersLoaded
+      ? "请选择生成图片时使用的厂家 Logo。"
+      : "厂家列表为空，请先导入厂家 Logo 后再提交。";
+  } catch (error) {
+    state.manufacturers = [];
+    state.manufacturersLoaded = false;
+    manufacturerSelect.innerHTML = '<option value="">厂家列表加载失败</option>';
+    manufacturerSelect.disabled = true;
+    manufacturerHelp.textContent = `厂家列表暂时不可用，请刷新页面或检查服务。${error.message || ""}`.trim();
+  }
+}
+
 function buildHeaders() {
   const token = getToken();
   if (!token) {
@@ -246,6 +305,16 @@ function buildHeaders() {
 function validateBeforeSubmit(carName) {
   if (!carName) {
     setStatus("请输入车辆名称", "error");
+    return false;
+  }
+
+  if (!state.manufacturersLoaded) {
+    setStatus("厂家列表未加载，暂时不能提交。", "error");
+    return false;
+  }
+
+  if (!manufacturerSelect.value) {
+    setStatus("请选择厂家。", "error");
     return false;
   }
 
@@ -327,12 +396,12 @@ async function uploadBatchToKie(items, typeLabel, uploadPath, concurrency = DEFA
   return urls;
 }
 
-function buildWorkflowPayload(carName, mainUrls, interiorUrls, logoUrl) {
+function buildWorkflowPayload(carName, mainUrls, interiorUrls, manufacturerCode) {
   return {
     car_name: carName,
     exterior_images: mainUrls,
     interior_images: interiorUrls,
-    logo: logoUrl,
+    manufacturer_code: manufacturerCode,
     source: "wf003_frontend_direct_to_kie",
     submitted_at: new Date().toISOString(),
   };
@@ -415,7 +484,7 @@ form.addEventListener("submit", async (event) => {
 
     setStatus("冻结点和提交工作流程……", "");
 
-    const payload = buildWorkflowPayload(carName, mainUrls, interiorUrls, FIXED_LOGO_URL);
+    const payload = buildWorkflowPayload(carName, mainUrls, interiorUrls, manufacturerSelect.value);
     const result = await submitWorkflow(payload);
 
     // console.log("工作流有效负载：", payload);
@@ -438,3 +507,4 @@ form.addEventListener("submit", async (event) => {
 
 renderGroup("main");
 renderGroup("interior");
+loadManufacturers();

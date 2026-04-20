@@ -13,6 +13,7 @@ import FormData from 'form-data';
 import { DataSource } from 'typeorm';
 import type { AuthUser } from '../auth/auth-user.interface';
 import { WorkflowRunsService } from '../workflow-runs/workflow-runs.service';
+import { Wf003ManufacturerLogosService } from './wf003-manufacturer-logos.service';
 import { WorkflowsService } from './workflows.service';
 
 const execFileAsync = promisify(execFile);
@@ -30,6 +31,7 @@ export class WorkflowExecutionService {
     private readonly workflowsService: WorkflowsService,
     private readonly workflowRunsService: WorkflowRunsService,
     private readonly dataSource: DataSource,
+    private readonly wf003ManufacturerLogosService: Wf003ManufacturerLogosService,
   ) {}
 
   async execute(
@@ -550,7 +552,7 @@ export class WorkflowExecutionService {
       car_name?: string;
       exterior_images?: string[];
       interior_images?: string[];
-      logo?: string;
+      manufacturer_code?: string;
       source?: string;
       submitted_at?: string;
     },
@@ -576,7 +578,7 @@ export class WorkflowExecutionService {
       .filter((item): item is string => typeof item === 'string')
       .map((item) => item.trim())
       .filter(Boolean);
-    const logoUrl = payload.logo?.trim() || '';
+    const manufacturerCode = payload.manufacturer_code?.trim().toLowerCase() || '';
 
     if (exteriorImages.length === 0) {
       throw new BadRequestException('At least one exterior image is required');
@@ -590,6 +592,10 @@ export class WorkflowExecutionService {
       throw new BadRequestException(
         'exterior_images and interior_images support up to 5 items each',
       );
+    }
+
+    if (!manufacturerCode) {
+      throw new BadRequestException('manufacturer_code is required');
     }
 
     const webhookUrl =
@@ -618,11 +624,15 @@ export class WorkflowExecutionService {
       );
     }
 
+    const logoUrl = await this.resolveWf003LogoUrl(manufacturerCode);
+
     const requestPayloadSummary = {
       workflow_code: workflowCode,
       car_name: carName.slice(0, 120),
       exterior_image_count: exteriorImages.length,
       interior_image_count: interiorImages.length,
+      manufacturer_code: manufacturerCode,
+      logo_source: 'manufacturer_database',
       executor_type: 'wf003_json_webhook',
       billing_mode: 'result_count',
       webhook_url: webhookUrl,
@@ -654,6 +664,7 @@ export class WorkflowExecutionService {
           exterior_images: exteriorImages,
           interior_images: interiorImages,
           logo: logoUrl,
+          manufacturer_code: manufacturerCode,
           source: payload.source?.trim() || 'wf003_frontend_direct_to_kie',
           submitted_at: payload.submitted_at?.trim() || new Date().toISOString(),
           run_id: runId,
@@ -752,6 +763,21 @@ export class WorkflowExecutionService {
       }
 
       throw new InternalServerErrorException(normalizedMessage);
+    }
+  }
+
+  private async resolveWf003LogoUrl(manufacturerCode: string) {
+    try {
+      const logo = await this.wf003ManufacturerLogosService.getActiveLogoByCode(
+        manufacturerCode,
+      );
+      return this.wf003ManufacturerLogosService.resolveLogoUrl(logo);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : `WF-003 manufacturer logo not found: ${manufacturerCode}`;
+      throw new BadRequestException(message);
     }
   }
 

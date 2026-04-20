@@ -7,10 +7,13 @@ const axios = require("axios");
 const host = "0.0.0.0";
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
 const rootDir = __dirname;
-const workflowApiBase = (process.env.WORKFLOW_API_BASE || "").replace(/\/$/, "");
 const workflowSubmitPath = process.env.WORKFLOW_SUBMIT_PATH || "/webhook/wf003-kie-submit";
 const legacyMiddlePlatformUrl = (process.env.WF_003_MIDDLE_PLATFORM_URL || "").replace(/\/$/, "");
 const workflowWebhookUrl = (process.env.WF_003_WEBHOOK_URL || "").replace(/\/$/, "");
+const inferredWorkflowApiBase = legacyMiddlePlatformUrl
+  ? new URL(legacyMiddlePlatformUrl).origin
+  : "";
+const workflowApiBase = (process.env.WORKFLOW_API_BASE || inferredWorkflowApiBase).replace(/\/$/, "");
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -39,9 +42,9 @@ function sendRuntimeConfig(res) {
   const payload = {
     kieUploadUrl:
       process.env.KIE_UPLOAD_URL ||
-      "https://kieai.redpandaai.co/api/file-stream-upload",
+      "https://kieai.riftrunnerai.com/api/file-stream-upload",
     kieApiKey: process.env.KIE_API_KEY || "",
-    workflowApiBase,
+    workflowApiBase: process.env.PUBLIC_WORKFLOW_API_BASE || "",
     workflowWebhookUrl,
   };
   const body = `window.__WF003_CONFIG__ = ${JSON.stringify(payload)};\n`;

@@ -192,6 +192,10 @@ form {
   display: block;
 }
 
+.field-spaced {
+  margin-top: 22px;
+}
+
 .field-label {
   margin: 0;
   font-size: 16px;
@@ -205,7 +209,8 @@ form {
   color: var(--muted-soft);
 }
 
-input[type="text"] {
+input[type="text"],
+select {
   width: 100%;
   margin-top: 10px;
   padding: 18px 20px;
@@ -217,11 +222,31 @@ input[type="text"] {
   outline: none;
 }
 
+select {
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, #dbe2ea 50%) right 22px center / 8px 8px no-repeat,
+    linear-gradient(135deg, #dbe2ea 50%, transparent 50%) right 16px center / 8px 8px no-repeat,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+  padding-right: 48px;
+}
+
+select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+select option {
+  background: #111820;
+  color: var(--text);
+}
+
 input[type="text"]::placeholder {
   color: #97a1ae;
 }
 
-input[type="text"]:focus {
+input[type="text"]:focus,
+select:focus {
   border-color: rgba(255, 90, 85, 0.45);
   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
 }

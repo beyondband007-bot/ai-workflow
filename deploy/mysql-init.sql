@@ -27,6 +27,22 @@ CREATE TABLE IF NOT EXISTS wf_003_feishu (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS wf_003_manufacturer_logos (
+    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    manufacturer_code   VARCHAR(64) NOT NULL UNIQUE,
+    manufacturer_name   VARCHAR(128) NOT NULL,
+    logo_file_name      VARCHAR(255) NULL,
+    logo_mime_type      VARCHAR(64) NOT NULL,
+    logo_public_url     VARCHAR(1000) NULL,
+    logo_content        LONGBLOB NOT NULL,
+    logo_sha256         CHAR(64) NULL,
+    is_active           TINYINT(1) NOT NULL DEFAULT 1,
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_wf003_manufacturer_logos_active (is_active),
+    INDEX idx_wf003_manufacturer_logos_name (manufacturer_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS point_accounts (
     user_id                 INT PRIMARY KEY,
     available_points        INT NOT NULL DEFAULT 0,
