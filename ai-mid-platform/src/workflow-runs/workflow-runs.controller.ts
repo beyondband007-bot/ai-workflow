@@ -71,6 +71,27 @@ export class WorkflowRunsController {
     return this.workflowRunsService.callback(body);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post('callback-auth')
+  callbackAuth(
+    @CurrentUser() currentUser: AuthUser,
+    @Body()
+    body: {
+      run_id?: string;
+      workflow_code?: string;
+      status?: 'success' | 'failed' | 'timeout' | 'cancelled';
+      finished_at?: string;
+      actual_completed_count?: number;
+      result_summary?: string;
+      result_summary_url?: string;
+      result_urls?: string[];
+      external_task_id?: string;
+      error_message?: string;
+    },
+  ) {
+    return this.workflowRunsService.callbackAuth(currentUser, body);
+  }
+
   @Post('wf003-callback')
   wf003Callback(
     @Headers('x-workflow-callback-token') workflowCallbackToken: string,

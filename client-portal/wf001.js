@@ -14,6 +14,26 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = "auth_demo_token";
+const THEME_KEY = "client_portal_theme";
+
+function applyTheme(theme) {
+  const nextTheme = theme === "dark" ? "dark" : "light";
+  document.body.dataset.theme = nextTheme;
+}
+
+function initTheme() {
+  try {
+    applyTheme(window.localStorage.getItem(THEME_KEY) || "light");
+  } catch {
+    applyTheme("light");
+  }
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === THEME_KEY) {
+      applyTheme(event.newValue || "light");
+    }
+  });
+}
 
 function getToken() {
   const urlToken = new URLSearchParams(window.location.search).get("token");
@@ -284,6 +304,7 @@ function bindFormSafe() {
 
 function bootstrap() {
   try {
+    initTheme();
     getToken();
     buildBackLink();
     bindDemoPrompt();

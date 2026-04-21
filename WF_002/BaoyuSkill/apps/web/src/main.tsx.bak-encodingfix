@@ -1,0 +1,2074 @@
+﻿import { StrictMode, useEffect, useMemo, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import "./styles.css";
+
+type Provider = "google" | "openai" | "dashscope" | "replicate" | "kie";
+type JobStatus = "queued" | "running" | "succeeded" | "failed";
+
+type ProjectData = {
+  version: 1;
+  contentType: string;
+  visualStyle: string;
+  layout: string;
+  palette: string;
+  customColor: string;
+  topic: string;
+  audience: string;
+  keyMessage: string;
+  visibleText: string;
+  scene: string;
+  avoid: string;
+  aspectRatio: string;
+  quality: string;
+};
+
+type ConfigResponse = {
+  aspectRatios: string[];
+  qualities: Array<"normal" | "2k">;
+};
+
+type GenerationJob = {
+  id: string;
+  status: JobStatus;
+  prompt: string;
+  provider: Provider;
+  model: string | null;
+  aspectRatio: string | null;
+  quality: string | null;
+  projectData: ProjectData | null;
+  outputUrl: string | null;
+  attempts: number;
+  error: string | null;
+  createdAt?: string;
+};
+
+type CreateGenerationResponse = {
+  jobId: string;
+  job: GenerationJob;
+};
+
+type HistoryResponse = {
+  jobs: GenerationJob[];
+};
+
+type Option = {
+  value: string;
+  label: string;
+  prompt: string;
+};
+
+type CaseStudy = {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string;
+  templateData: ProjectData;
+};
+
+type CreativeInspiration = {
+  id: string;
+  title: string;
+  description: string;
+  tip: string;
+  templateData: ProjectData;
+};
+
+type SmartRecommendation = {
+  style: string;
+  layout: string;
+  palette: string;
+  aspectRatio: string;
+  quality: string;
+  reason: string;
+  tips: string[];
+};
+
+const statusLabels: Record<JobStatus, string> = {
+  queued: "鎺掗槦涓?,
+  running: "鐢熸垚涓?,
+  succeeded: "宸插畬鎴?,
+  failed: "澶辫触",
+};
+
+const contentTypes: Option[] = [
+  { value: "xiaohongshu-cover", label: "灏忕孩涔﹀皝闈?, prompt: "閫傚悎灏忕孩涔﹀皝闈㈢殑绔栫増瑙嗚锛屾爣棰橀啋鐩紝淇℃伅鏈夊眰娆★紝閫傚悎绀句氦濯掍綋娴忚" },
+  { value: "knowledge-card", label: "鐭ヨ瘑鍗＄墖", prompt: "鐭ヨ瘑鍗＄墖璁捐锛岄噸鐐规竻鏅帮紝缁撴瀯鍖栨帓鐗堬紝閫傚悎鏀惰棌鍜岃浆鍙? },
+  { value: "quote-poster", label: "閲戝彞娴锋姤", prompt: "閲戝彞娴锋姤璁捐锛屾枃瀛楁湁鎯呯华寮犲姏锛岀敾闈㈢暀鐧藉厖瓒筹紝閫傚悎浼犳挱" },
+  { value: "tutorial", label: "姝ラ鏁欑▼鍥?, prompt: "姝ラ鏁欑▼淇℃伅鍥撅紝姝ラ缂栧彿娓呮锛岄槄璇昏矾寰勬槑纭紝鏄撲簬鐓х潃鎵ц" },
+  { value: "product-card", label: "浜у搧鍗栫偣鍥?, prompt: "浜у搧鍗栫偣鍥撅紝绐佸嚭鏍稿績浠峰€煎拰浣跨敤鍦烘櫙锛岃瑙夊共鍑€涓撲笟" },
+  { value: "comparison", label: "瀵规瘮鍒嗘瀽鍥?, prompt: "瀵规瘮鍒嗘瀽淇℃伅鍥撅紝宸﹀彸鎴栧垎鍖哄鐓э紝宸紓涓€鐪煎彲璇? },
+];
+
+const styleOptions: Option[] = [
+  { value: "fresh", label: "娓呮柊", prompt: "娓呮柊鏄庝寒锛岃交鐩堣嚜鐒讹紝浣庡櫔鐐癸紝楂樼骇鎰? },
+  { value: "cute", label: "鍙埍", prompt: "鍙埍浜插拰锛屽渾娑﹀浘褰紝杞绘澗娲绘臣浣嗕笉杩囧害骞肩" },
+  { value: "minimal", label: "鏋佺畝", prompt: "鏋佺畝璁捐锛屽厠鍒剁暀鐧斤紝灏戦噺鍏冪礌锛岄珮绾ф帓鐗? },
+  { value: "bold", label: "澶ц儐", prompt: "楂樺姣旓紝澶ф爣棰橈紝寮鸿瑙夊啿鍑伙紝閫傚悎蹇€熷惛寮曟敞鎰? },
+  { value: "handdrawn", label: "鎵嬬粯绗旇", prompt: "鎵嬬粯绗旇椋庢牸锛岃交寰焊寮犺川鎰燂紝鏍囨敞銆佺澶村拰灏忔彃鐢昏嚜鐒惰瀺鍚? },
+  { value: "retro", label: "澶嶅彜", prompt: "澶嶅彜骞抽潰璁捐锛屾€€鏃ц川鎰燂紝瀛椾綋鍜屾瀯鍥炬湁骞翠唬鎰? },
+  { value: "notion", label: "Notion 椋?, prompt: "Notion 椋庢牸锛屾ā鍧楀寲淇℃伅鍧楋紝骞插噣鐞嗘€э紝杞婚噺鍥炬爣鐐圭紑" },
+  { value: "blackboard", label: "榛戞澘椋?, prompt: "榛戞澘鏉夸功椋庢牸锛岀矇绗旇川鎰燂紝鍍忚鍫傞噸鐐规€荤粨" },
+];
+
+const layoutOptions: Option[] = [
+  { value: "balanced", label: "鍧囪　", prompt: "鍧囪　甯冨眬锛屼富瑙嗚銆佹爣棰樺拰璇存槑鏂囧瓧姣斾緥鍗忚皟" },
+  { value: "sparse", label: "鐣欑櫧", prompt: "澶ч噺鐣欑櫧锛屼腑蹇冧俊鎭獊鍑猴紝鐢婚潰鍛煎惛鎰熷己" },
+  { value: "dense", label: "瀵嗛泦", prompt: "淇℃伅瀵嗗害杈冮珮浣嗕笉鎷ユ尋锛屽垎缁勬竻鏅帮紝閫傚悎鐭ヨ瘑鎬荤粨" },
+  { value: "list", label: "鍒楄〃", prompt: "鍒楄〃寮忓竷灞€锛屾潯鐩榻愶紝閲嶇偣鐢ㄧ紪鍙锋垨鍥炬爣鍖哄垎" },
+  { value: "contrast", label: "瀵规瘮", prompt: "瀵规瘮寮忓竷灞€锛屽乏鍙虫垨涓婁笅鍒嗗尯锛屽樊寮傚叧绯绘槑纭? },
+  { value: "flow", label: "娴佺▼", prompt: "娴佺▼寮忓竷灞€锛岀敤绠ご銆佹楠ゅ拰璺緞寮曞闃呰椤哄簭" },
+];
+
+const paletteOptions: Option[] = [
+  { value: "auto", label: "鑷姩閰嶈壊", prompt: "鏍规嵁涓婚鑷姩閫夋嫨鍗忚皟閰嶈壊锛岄伩鍏嶆潅涔? },
+  { value: "pastel", label: "椹崱榫?, prompt: "鏌斿拰椹崱榫欓厤鑹诧紝浜插拰銆佽交蹇€佸共鍑€" },
+  { value: "warm", label: "鏆栬壊", prompt: "娓╂殩鏄庝寒閰嶈壊锛屽弸濂姐€佹湁鐢熸椿鎰? },
+  { value: "mono", label: "榛戠櫧鏋佺畝", prompt: "榛戠櫧鏋佺畝閰嶈壊锛屽皯閲忓己璋冭壊锛屽厠鍒朵笓涓? },
+  { value: "bluegreen", label: "钃濈豢鑹?, prompt: "钃濈豢鑹茬郴锛屾竻鐖姐€佸彲闈犮€佺鎶€鎰熼€備腑" },
+  { value: "neon", label: "闇撹櫣", prompt: "闇撹櫣寮鸿皟鑹诧紝楂樿兘閲忥紝楂樿瘑鍒害锛屾敞鎰忎繚鎸佹枃瀛楀彲璇绘€? },
+  { value: "custom", label: "鑷畾涔変富鑹?, prompt: "鍥寸粫鑷畾涔変富鑹插缓绔嬬粺涓€閰嶈壊锛屽眰娆″垎鏄? },
+];
+
+const audienceOptions = ["鏂版墜鍒涗綔鑰?, "鑱屽満浜?, "瀛︾敓", "瀹堕暱", "璁捐甯?, "鐭ヨ瘑鍗氫富", "灏忕孩涔︾敤鎴?, "浜у搧鐢ㄦ埛"];
+const sceneOptions = ["绀句氦濯掍綋灏侀潰鍜岀煡璇嗗垎浜?, "灏忕孩涔﹀皝闈?, "璇剧▼閰嶅浘", "娴锋姤瀹ｄ紶", "鏈嬪弸鍦堝垎浜?, "浜у搧浠嬬粛", "鐭ヨ瘑鍗＄墖", "婕旂ず鏂囩"];
+const keyMessageOptions = [
+  "鐢?3 涓楠ゅ揩閫熺悊瑙ｄ富棰樸€侀鏍煎拰鐢诲箙",
+  "璁╃敤鎴蜂竴鐪肩湅鎳傛牳蹇冪粨璁?,
+  "绐佸嚭涓€涓槑纭殑琛屽姩寤鸿",
+  "鐢ㄥ姣斿府鍔╃敤鎴峰揩閫熷仛閫夋嫨",
+  "鎶婂鏉傛蹇垫媶鎴愭竻妤氭ā鍧?,
+  "寮鸿皟鎯呯华姘涘洿鍜岃蹇嗙偣",
+];
+const avoidOptions = ["杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?, "姘村嵃銆佷簩缁寸爜銆佸搧鐗屾爣蹇?, "浜虹墿鍙樺舰銆侀敊鍒瓧銆佷贡鐮?, "浣庢竻鏅板害銆佹潅涔卞厓绱?, "杩囧害瑁呴グ銆佷俊鎭嫢鎸?];
+
+const aspectRatioLabels: Record<string, string> = {
+  "1:1": "鏂瑰浘",
+  "16:9": "妯増",
+  "9:16": "绔栫増",
+  "4:3": "妯増鍗＄墖",
+  "3:4": "绔栫増鍗＄墖",
+  auto: "鑷姩",
+};
+
+const starterIdea = "缁欏垰寮€濮嬪涔?AI 缁樼敾鐨勪汉鍋氫竴寮犲叆闂ㄦ寚鍗?;
+const customOptionValue = "__custom__";
+
+const caseStudies: CaseStudy[] = [
+  {
+    id: "old-photo-shadow",
+    title: "鏃у贩褰卞瓙鍙欎簨鍥?,
+    description: "鏃х収鐗囪川鎰熺殑鎯呯华鍦烘櫙锛岄€傚悎鍋氭垚闀裤€佸洖蹇嗗拰浜虹敓杞姌涓婚銆?,
+    thumbnailUrl: "/cases/case-01-old-photo-shadow.png",
+    templateData: {
+      version: 1,
+      contentType: "浼ゆ劅",
+      visualStyle: "retro",
+      layout: "balanced",
+      palette: "warm",
+      customColor: "#14b8a6",
+      topic: "鏃х収鐗囬鏍肩殑鍦烘櫙锛氫竴涓┛鑳屽績鐨勭敺瀛╄共鍦ㄥ贩鍙ｅ悆瑗跨摐锛屼粬韬悗鐨勫闈笂锛岃嚜宸辩殑褰卞瓙宸茬粡闀挎垚涓€涓┛瑗胯鐨勬垚骞翠汉銆?,
+      audience: "涓勾浜?,
+      keyMessage: "寮鸿皟鎯呯华姘涘洿鍜岃蹇嗙偣",
+      visibleText: "",
+      scene: "娣卞emo鍦烘櫙",
+      avoid: "浣庢竻鏅板害銆佹潅涔卞厓绱?,
+      aspectRatio: "16:9",
+      quality: "normal",
+    },
+  },
+  {
+    id: "late-night-radio-cover",
+    title: "娣卞鐢靛彴灏侀潰",
+    description: "鏌斿拰鏆楁亱姘涘洿鐨勬儏缁皝闈紝閫傚悎閿欒繃銆佹€€蹇靛拰娣卞鐙櫧鍐呭銆?,
+    thumbnailUrl: "/cases/case-02-late-night-radio.png",
+    templateData: {
+      version: 1,
+      contentType: "浼ゆ劅",
+      visualStyle: "fresh",
+      layout: "balanced",
+      palette: "warm",
+      customColor: "#14b8a6",
+      topic: "鍋氫竴寮犲叧浜庢殫鎭嬪拰閿欒繃鐨勬繁澶滅數鍙板皝闈㈠浘",
+      audience: "鑱屽満浜?,
+      keyMessage: "寮鸿皟鎯呯华姘涘洿鍜岃蹇嗙偣",
+      visibleText: "浠婃櫄\n涔熻緵鑻︿簡",
+      scene: "娣卞emo鍦烘櫙",
+      avoid: "浣庢竻鏅板害銆佹潅涔卞厓绱?,
+      aspectRatio: "16:9",
+      quality: "normal",
+    },
+  },
+  {
+    id: "wuhan-city-walk",
+    title: "姝︽眽鍩庡競婕璺嚎",
+    description: "鎵嬬粯璺嚎鏁欑▼鍥撅紝閫傚悎鍩庡競鏀荤暐銆佸懆鏈嚭琛屽拰鏀惰棌鍨嬪唴瀹广€?,
+    thumbnailUrl: "/cases/case-03-wuhan-city-walk.png",
+    templateData: {
+      version: 1,
+      contentType: "tutorial",
+      visualStyle: "handdrawn",
+      layout: "flow",
+      palette: "pastel",
+      customColor: "#14b8a6",
+      topic: "鍋氫竴寮犻€傚悎鍛ㄦ湯鍑鸿鐨勬姹夊煄甯傛极姝ヨ矾绾垮浘",
+      audience: "灏忕孩涔︾敤鎴?,
+      keyMessage: "鐢?3 涓楠ゅ揩閫熺悊瑙ｄ富棰樸€侀鏍煎拰鐢诲箙",
+      visibleText: "姝︽眽婕\n鍗婃棩璺嚎",
+      scene: "绀句氦濯掍綋灏侀潰鍜岀煡璇嗗垎浜?,
+      avoid: "浣庢竻鏅板害銆佹潅涔卞厓绱?,
+      aspectRatio: "9:16",
+      quality: "normal",
+    },
+  },
+  {
+    id: "color-guide",
+    title: "閰嶈壊閬垮潙鎸囧崡",
+    description: "楂樿瘑鍒害鐭ヨ瘑鍗＄墖锛岄€傚悎璁捐鏂版墜蹇€熺悊瑙ｅ姣斿拰閫夋嫨銆?,
+    thumbnailUrl: "/cases/case-04-color-guide.png",
+    templateData: {
+      version: 1,
+      contentType: "knowledge-card",
+      visualStyle: "bold",
+      layout: "contrast",
+      palette: "auto",
+      customColor: "#14b8a6",
+      topic: "缁欒璁℃柊鎵嬪仛涓€寮犻厤鑹查伩鍧戞寚鍗?,
+      audience: "璁捐甯?,
+      keyMessage: "鐢ㄥ姣斿府鍔╃敤鎴峰揩閫熷仛閫夋嫨",
+      visibleText: "閰嶈壊閬垮潙\n鎸囧崡",
+      scene: "璇剧▼閰嶅浘",
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "16:9",
+      quality: "normal",
+    },
+  },
+  {
+    id: "old-bookstore-still-life",
+    title: "鏃т功搴楃伆灏橀潤鐗?,
+    description: "澶嶅彜闈欑墿鐢婚潰锛岄€傚悎鏃堕棿銆侀仐蹇樸€侀槄璇诲拰娌绘剤涓婚銆?,
+    thumbnailUrl: "/cases/case-05-old-bookstore.png",
+    templateData: {
+      version: 1,
+      contentType: "缇庤鐨勫浘鐗?,
+      visualStyle: "retro",
+      layout: "balanced",
+      palette: "auto",
+      customColor: "#14b8a6",
+      topic: "鍋氫竴寮犲叧浜庢椂闂村拰閬楀繕鐨勬棫涔﹀簵瑙掕惤鐨勭伆灏橀潤鐗╁浘",
+      audience: "鏂版墜鍒涗綔鑰?,
+      keyMessage: "寮鸿皟鎯呯华姘涘洿鍜岃蹇嗙偣",
+      visibleText: "",
+      scene: "娌绘剤鍥剧墖",
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "16:9",
+      quality: "normal",
+    },
+  },
+  {
+    id: "growth-quote-poster",
+    title: "鎴愰暱閲戝彞娴锋姤",
+    description: "鐣欑櫧鍏呰冻鐨勬儏缁捣鎶ワ紝閫傚悎鎴愰暱銆佽嚜寰嬪拰鏈嬪弸鍦堝垎浜€?,
+    thumbnailUrl: "/cases/case-06-growth-poster.png",
+    templateData: {
+      version: 1,
+      contentType: "quote-poster",
+      visualStyle: "minimal",
+      layout: "sparse",
+      palette: "warm",
+      customColor: "#14b8a6",
+      topic: "鍋氫竴寮犲叧浜庢垚闀垮拰鑷緥鐨勬俯鏌旈噾鍙ユ捣鎶?,
+      audience: "鑱屽満浜?,
+      keyMessage: "寮鸿皟鎯呯华姘涘洿鍜岃蹇嗙偣",
+      visibleText: "鎱㈡參鏉n姣旇緝蹇?,
+      scene: "鏈嬪弸鍦堝垎浜?,
+      avoid: "姘村嵃銆佷簩缁寸爜銆佸搧鐗屾爣蹇?,
+      aspectRatio: "3:4",
+      quality: "normal",
+    },
+  },
+  {
+    id: "kids-english-cover",
+    title: "灏戝効鑻辫鍗氫富灏侀潰",
+    description: "榛戞澘鏉夸功椋庢牸锛岄€傚悎鐭ヨ瘑鍗氫富鎶婂鏉傚唴瀹规媶鎴愭竻妤氭ā鍧椼€?,
+    thumbnailUrl: "/cases/case-07-kids-english.png",
+    templateData: {
+      version: 1,
+      contentType: "xiaohongshu-cover",
+      visualStyle: "blackboard",
+      layout: "balanced",
+      palette: "auto",
+      customColor: "#14b8a6",
+      topic: "灏戝効鑻辫鍗氫富",
+      audience: "鏂版墜鍒涗綔鑰?,
+      keyMessage: "鎶婂鏉傛蹇垫媶鎴愭竻妤氭ā鍧?,
+      visibleText: "灏戝効鑻辫\n杞绘澗鍏ラ棬",
+      scene: "绀句氦濯掍綋灏侀潰鍜岀煡璇嗗垎浜?,
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "16:9",
+      quality: "normal",
+    },
+  },
+  {
+    id: "beauty-product-cover",
+    title: "缇庡瑙嗛浜у搧灏侀潰",
+    description: "娓呮柊鏄庝寒鐨勪骇鍝佸崠鐐瑰浘锛岄€傚悎瑙嗛灏侀潰鍜岀鑽夊唴瀹广€?,
+    thumbnailUrl: "/cases/case-08-beauty-cover.png",
+    templateData: {
+      version: 1,
+      contentType: "product-card",
+      visualStyle: "fresh",
+      layout: "sparse",
+      palette: "auto",
+      customColor: "#14b8a6",
+      topic: "鐢熸垚涓€寮犵編濡嗗崥涓诲寲濡嗗搧瑙嗛鐨勫皝闈?,
+      audience: "鑱屽満浜?,
+      keyMessage: "璁╃敤鎴蜂竴鐪肩湅鎳傛牳蹇冪粨璁?,
+      visibleText: "閫氬嫟濡嗗\n蹇€熷嚭闂?,
+      scene: "灏忕孩涔﹀皝闈?,
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "1:1",
+      quality: "normal",
+    },
+  },
+  {
+    id: "study-comparison",
+    title: "楂樻晥瀛︿範瀵规瘮鍥?,
+    description: "澶嶅彜闇撹櫣瀵规瘮娴锋姤锛岀敤宸﹀彸宸紓蹇€熷缓绔嬭蹇嗙偣銆?,
+    thumbnailUrl: "/cases/case-09-study-comparison.png",
+    templateData: {
+      version: 1,
+      contentType: "quote-poster",
+      visualStyle: "retro",
+      layout: "contrast",
+      palette: "neon",
+      customColor: "#14b8a6",
+      topic: "楂樻晥瀛︿範 vs 浣庢晥瀛︿範锛屽鍙ら湏铏瑰姣旀捣鎶?,
+      audience: "瀛︾敓",
+      keyMessage: "鐢ㄥ姣斿府鍔╃敤鎴峰揩閫熷仛閫夋嫨",
+      visibleText: "楂樻晥瀛︿範\n浣庢晥瀛︿範",
+      scene: "绀句氦濯掍綋灏侀潰鍜岀煡璇嗗垎浜?,
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "16:9",
+      quality: "normal",
+    },
+  },
+  {
+    id: "cat-checklist",
+    title: "鏂版墜鍏荤尗鍑嗗娓呭崟",
+    description: "鍙敹钘忕殑娓呭崟寮忕煡璇嗗崱锛岄€傚悎瀹犵墿绉戞櫘鍜屾柊鎵嬫寚鍗椼€?,
+    thumbnailUrl: "/cases/case-10-cat-checklist.png",
+    templateData: {
+      version: 1,
+      contentType: "knowledge-card",
+      visualStyle: "cute",
+      layout: "list",
+      palette: "pastel",
+      customColor: "#14b8a6",
+      topic: "缁欐柊鎵嬮摬灞庡畼鍋氫竴寮犲吇鐚噯澶囨竻鍗?,
+      audience: "鏂版墜鍒涗綔鑰?,
+      keyMessage: "鎶婂鏉傛蹇垫媶鎴愭竻妤氭ā鍧?,
+      visibleText: "鏂版墜鍏荤尗\n鍑嗗娓呭崟",
+      scene: "鐭ヨ瘑鍗＄墖",
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "3:4",
+      quality: "2k",
+    },
+  },
+  {
+    id: "featured-visual",
+    title: "绮鹃€夎瑙夋渚?,
+    description: "浠庢渶杩戠敓鎴愮粨鏋滄矇娣€鍑虹殑閫氱敤妗堜緥锛屽彲浣滀负鏂颁綔鍝佺殑瑙嗚璧风偣銆?,
+    thumbnailUrl: "/cases/case-11-featured-visual.png",
+    templateData: {
+      version: 1,
+      contentType: "knowledge-card",
+      visualStyle: "fresh",
+      layout: "balanced",
+      palette: "auto",
+      customColor: "#14b8a6",
+      topic: "鍋氫竴寮犻€傚悎绀句氦濯掍綋鍙戝竷鐨勭簿閫夎瑙夋渚嬪浘",
+      audience: "鏂版墜鍒涗綔鑰?,
+      keyMessage: "璁╃敤鎴蜂竴鐪肩湅鎳傛牳蹇冪粨璁?,
+      visibleText: "鐏垫劅妗堜緥",
+      scene: "绀句氦濯掍綋灏侀潰鍜岀煡璇嗗垎浜?,
+      avoid: "浣庢竻鏅板害銆佹潅涔卞厓绱?,
+      aspectRatio: "16:9",
+      quality: "2k",
+    },
+  },
+  {
+    id: "featured-cover",
+    title: "绮鹃€夊皝闈㈡渚?,
+    description: "閫傚悎鏍囬绐佸嚭鐨勫皝闈㈡柟鍚戯紝鑳藉揩閫熷鐢ㄥ埌鐭ヨ瘑鍒嗕韩鍜屽浘鏂囧唴瀹广€?,
+    thumbnailUrl: "/cases/case-12-featured-cover.png",
+    templateData: {
+      version: 1,
+      contentType: "xiaohongshu-cover",
+      visualStyle: "bold",
+      layout: "balanced",
+      palette: "bluegreen",
+      customColor: "#14b8a6",
+      topic: "鍋氫竴寮犻€傚悎灏忕孩涔﹀彂甯冪殑绮鹃€夊皝闈㈠浘",
+      audience: "灏忕孩涔︾敤鎴?,
+      keyMessage: "绐佸嚭涓€涓槑纭殑琛屽姩寤鸿",
+      visibleText: "浠婂ぉ灏辫兘鐢?,
+      scene: "灏忕孩涔﹀皝闈?,
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "3:4",
+      quality: "2k",
+    },
+  },
+  {
+    id: "first-image-tutorial",
+    title: "绗竴寮?AI 鍥炬暀绋?,
+    description: "鎵嬬粯绗旇椋庢暀绋嬪浘锛岄€傚悎鎶婃祦绋嬫媶鎴愬彲鎵ц姝ラ銆?,
+    thumbnailUrl: "/cases/case-13-ai-guide-card.png",
+    templateData: {
+      version: 1,
+      contentType: "tutorial",
+      visualStyle: "handdrawn",
+      layout: "flow",
+      palette: "pastel",
+      customColor: "#14b8a6",
+      topic: "浠?0 鍒?1 鍋氬嚭绗竴寮?AI 鍥?,
+      audience: "鏂版墜鍒涗綔鑰?,
+      keyMessage: "鐢?3 涓楠ゅ揩閫熺悊瑙ｄ富棰樸€侀鏍煎拰鐢诲箙",
+      visibleText: "绗竴寮?AI 鍥綷n3 姝ュ畬鎴?,
+      scene: "璇剧▼閰嶅浘",
+      avoid: "浜虹墿鍙樺舰銆侀敊鍒瓧銆佷贡鐮?,
+      aspectRatio: "3:4",
+      quality: "2k",
+    },
+  },
+];
+
+const creativeInspirations: CreativeInspiration[] = [
+  {
+    id: "parent-english-steps",
+    title: "鑻辫鍚挋 3 姝ヨ蛋",
+    description: "缁欏闀跨湅鐨勫皯鍎胯嫳璇惎钂欏皝闈紝閲嶇偣鏄畝鍗曘€佸彲淇°€佽兘绔嬪埢鐓у仛銆?,
+    tip: "鏍囬淇濇寔鐭紝姝ラ鎺у埗鍦?3 涓紝鐢婚潰鍙互鍔犲叆璇惧爞鎴栭粦鏉垮厓绱犮€?,
+    templateData: {
+      version: 1,
+      contentType: "xiaohongshu-cover",
+      visualStyle: "blackboard",
+      layout: "flow",
+      palette: "auto",
+      customColor: "#14b8a6",
+      topic: "缁欏疂濡堝仛涓€寮犲皯鍎胯嫳璇惎钂欏皝闈?,
+      audience: "瀹堕暱",
+      keyMessage: "鐢?3 涓楠ゅ揩閫熺悊瑙ｄ富棰樸€侀鏍煎拰鐢诲箙",
+      visibleText: "鑻辫鍚挋\n3 姝ヨ蛋",
+      scene: "灏忕孩涔﹀皝闈?,
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "3:4",
+      quality: "2k",
+    },
+  },
+  {
+    id: "workplace-focus-card",
+    title: "涓嬬彮鍓嶇殑涓撴敞娓呭崟",
+    description: "閫傚悎鑱屽満鏁堢巼鍗氫富鐨勭煡璇嗗崱鐗囷紝鎶婅鍔ㄥ缓璁媶鎴愭竻妤氭ā鍧椼€?,
+    tip: "鎶婇噸鐐瑰啓鎴愭竻鍗曞紡鐭彞锛岀暀鍑鸿冻澶熺┖鐧借鍐呭鏇村埄钀姐€?,
+    templateData: {
+      version: 1,
+      contentType: "knowledge-card",
+      visualStyle: "notion",
+      layout: "list",
+      palette: "bluegreen",
+      customColor: "#14b8a6",
+      topic: "缁欒亴鍦轰汉鍋氫竴寮犱笅鐝墠涓撴敞娓呭崟",
+      audience: "鑱屽満浜?,
+      keyMessage: "绐佸嚭涓€涓槑纭殑琛屽姩寤鸿",
+      visibleText: "涓嬬彮鍓峔n涓撴敞娓呭崟",
+      scene: "绀句氦濯掍綋灏侀潰鍜岀煡璇嗗垎浜?,
+      avoid: "杩囧害瑁呴グ銆佷俊鎭嫢鎸?,
+      aspectRatio: "1:1",
+      quality: "2k",
+    },
+  },
+  {
+    id: "beauty-commute-cover",
+    title: "3 鍒嗛挓閫氬嫟濡?,
+    description: "缇庡瑙嗛灏侀潰鏂瑰悜锛屽己璋冨揩閫熴€佸共鍑€鍜屾垚鐗囬珮绾ф劅銆?,
+    tip: "鐢婚潰鏂囧瓧涓嶈澶锛岀獊鍑轰竴涓富缁撴灉鍜屼竴涓娇鐢ㄥ満鏅€?,
+    templateData: {
+      version: 1,
+      contentType: "product-card",
+      visualStyle: "fresh",
+      layout: "sparse",
+      palette: "pastel",
+      customColor: "#14b8a6",
+      topic: "缁欑編濡嗗崥涓诲仛涓€寮?3 鍒嗛挓閫氬嫟濡嗚棰戝皝闈?,
+      audience: "灏忕孩涔︾敤鎴?,
+      keyMessage: "璁╃敤鎴蜂竴鐪肩湅鎳傛牳蹇冪粨璁?,
+      visibleText: "3 鍒嗛挓\n閫氬嫟濡?,
+      scene: "灏忕孩涔﹀皝闈?,
+      avoid: "浜虹墿鍙樺舰銆侀敊鍒瓧銆佷贡鐮?,
+      aspectRatio: "1:1",
+      quality: "2k",
+    },
+  },
+  {
+    id: "study-vs-scroll",
+    title: "瀛︿範 vs 鍒锋墜鏈?,
+    description: "瀵规瘮鍨嬩俊鎭浘锛岀敤寮哄姣斿府鍔╁鐢熷揩閫熺悊瑙ｅ樊寮傘€?,
+    tip: "宸﹀彸淇℃伅閲忎繚鎸佹帴杩戯紝宸紓鐐逛笉瑕佽秴杩?4 涓€?,
+    templateData: {
+      version: 1,
+      contentType: "comparison",
+      visualStyle: "bold",
+      layout: "contrast",
+      palette: "neon",
+      customColor: "#14b8a6",
+      topic: "瀛︿範 30 鍒嗛挓 vs 鍒锋墜鏈?30 鍒嗛挓鐨勫姣斿垎鏋愬浘",
+      audience: "瀛︾敓",
+      keyMessage: "鐢ㄥ姣斿府鍔╃敤鎴峰揩閫熷仛閫夋嫨",
+      visibleText: "瀛︿範 30 鍒嗛挓\n鍒锋墜鏈?30 鍒嗛挓",
+      scene: "璇剧▼閰嶅浘",
+      avoid: "浣庢竻鏅板害銆佹潅涔卞厓绱?,
+      aspectRatio: "16:9",
+      quality: "2k",
+    },
+  },
+  {
+    id: "ai-prompt-starter",
+    title: "Prompt 鏂版墜鍏紡",
+    description: "AI 缁樼敾鍏ラ棬鏁欑▼鍥撅紝鎶婃彁绀鸿瘝鏂规硶璁叉垚瀹规槗璁颁綇鐨勫叕寮忋€?,
+    tip: "寤鸿浣跨敤娴佺▼甯冨眬锛岃璇昏€呬粠涓婚銆侀鏍笺€佺敾骞呬竴璺涓嬪幓銆?,
+    templateData: {
+      version: 1,
+      contentType: "tutorial",
+      visualStyle: "handdrawn",
+      layout: "flow",
+      palette: "pastel",
+      customColor: "#14b8a6",
+      topic: "缁?AI 缁樼敾鏂版墜鍋氫竴寮?Prompt 鍏ラ棬鍏紡鏁欑▼鍥?,
+      audience: "鏂版墜鍒涗綔鑰?,
+      keyMessage: "鎶婂鏉傛蹇垫媶鎴愭竻妤氭ā鍧?,
+      visibleText: "Prompt 鍏紡\n鏂版墜涔熻兘鐢?,
+      scene: "鐭ヨ瘑鍗＄墖",
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "3:4",
+      quality: "2k",
+    },
+  },
+  {
+    id: "growth-soft-poster",
+    title: "鎱㈡參鏉ユ瘮杈冨揩",
+    description: "娓╂煍鎴愰暱涓婚閲戝彞娴锋姤锛岄€傚悎鏈嬪弸鍦堝拰鎯呯华浠峰€煎唴瀹广€?,
+    tip: "璁╄儗鏅湇鍔℃儏缁紝鏍囬涓よ浠ュ唴锛屼繚鐣欏懠鍚告劅銆?,
+    templateData: {
+      version: 1,
+      contentType: "quote-poster",
+      visualStyle: "minimal",
+      layout: "sparse",
+      palette: "warm",
+      customColor: "#14b8a6",
+      topic: "鍋氫竴寮犲叧浜庢垚闀垮拰鑷緥鐨勬俯鏌旈噾鍙ユ捣鎶?,
+      audience: "鑱屽満浜?,
+      keyMessage: "寮鸿皟鎯呯华姘涘洿鍜岃蹇嗙偣",
+      visibleText: "鎱㈡參鏉n姣旇緝蹇?,
+      scene: "鏈嬪弸鍦堝垎浜?,
+      avoid: "姘村嵃銆佷簩缁寸爜銆佸搧鐗屾爣蹇?,
+      aspectRatio: "3:4",
+      quality: "2k",
+    },
+  },
+  {
+    id: "product-launch-card",
+    title: "鏂板搧鍗栫偣涓€鐪兼噦",
+    description: "閫傚悎浜у搧鍙戝竷鍜屽崠鐐硅鏄庯紝鎶婁环鍊笺€佸満鏅拰琛屽姩寤鸿鏀惧湪鍚屼竴寮犲浘閲屻€?,
+    tip: "涓诲崠鐐瑰彧淇濈暀涓€涓紝杈呭姪璇存槑涓嶈秴杩囦笁鏉°€?,
+    templateData: {
+      version: 1,
+      contentType: "product-card",
+      visualStyle: "minimal",
+      layout: "balanced",
+      palette: "bluegreen",
+      customColor: "#14b8a6",
+      topic: "缁欎竴娆炬柊涓婄嚎鐨勬晥鐜囧伐鍏峰仛浜у搧鍗栫偣鍥?,
+      audience: "浜у搧鐢ㄦ埛",
+      keyMessage: "璁╃敤鎴蜂竴鐪肩湅鎳傛牳蹇冪粨璁?,
+      visibleText: "鏂板搧涓婄嚎\n鏁堢巼缈诲€?,
+      scene: "浜у搧浠嬬粛",
+      avoid: "杩囧害瑁呴グ銆佷俊鎭嫢鎸?,
+      aspectRatio: "16:9",
+      quality: "2k",
+    },
+  },
+  {
+    id: "parent-reading-plan",
+    title: "浜插瓙闃呰璁″垝",
+    description: "缁欏闀跨湅鐨勬俯鍜岀煡璇嗗崱锛屾妸闃呰鏂规硶鍋氭垚瀹规槗鍧氭寔鐨勮鍒掕〃銆?,
+    tip: "鍙互鍔犲叆鏃ュ巻銆佷功鏈€佷究绛惧厓绱狅紝浣嗕笉瑕佽鑳屾櫙鎶㈡枃瀛椼€?,
+    templateData: {
+      version: 1,
+      contentType: "knowledge-card",
+      visualStyle: "cute",
+      layout: "list",
+      palette: "pastel",
+      customColor: "#14b8a6",
+      topic: "缁欏闀垮仛涓€寮?7 澶╀翰瀛愰槄璇昏鍒掔煡璇嗗崱",
+      audience: "瀹堕暱",
+      keyMessage: "鎶婂鏉傛蹇垫媶鎴愭竻妤氭ā鍧?,
+      visibleText: "7 澶╀翰瀛愰槄璇籠n杞绘澗寮€濮?,
+      scene: "鐭ヨ瘑鍗＄墖",
+      avoid: "浣庢竻鏅板害銆佹潅涔卞厓绱?,
+      aspectRatio: "3:4",
+      quality: "2k",
+    },
+  },
+  {
+    id: "designer-color-guide",
+    title: "閰嶈壊閬垮潙鎸囧崡",
+    description: "閫傚悎璁捐甯堝拰鍐呭鍒涗綔鑰呯殑鏁欑▼鍥撅紝鐢ㄥ姣旇В閲婂ソ鐪嬩笌鏉備贡鐨勫尯鍒€?,
+    tip: "鐢ㄤ竴缁勬鍙嶄緥鏈€鏈夋晥锛屾爣棰樿鐩存帴缁欏嚭缁撹銆?,
+    templateData: {
+      version: 1,
+      contentType: "comparison",
+      visualStyle: "bold",
+      layout: "contrast",
+      palette: "mono",
+      customColor: "#14b8a6",
+      topic: "缁欒璁℃柊鎵嬪仛涓€寮犻厤鑹查伩鍧戞寚鍗?,
+      audience: "璁捐甯?,
+      keyMessage: "鐢ㄥ姣斿府鍔╃敤鎴峰揩閫熷仛閫夋嫨",
+      visibleText: "閰嶈壊閬垮潙\n杩欐牱鏇撮珮绾?,
+      scene: "璇剧▼閰嶅浘",
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "4:3",
+      quality: "2k",
+    },
+  },
+  {
+    id: "xiaohongshu-hook-cover",
+    title: "灏忕孩涔﹀紑澶撮挬瀛?,
+    description: "缁欏唴瀹瑰崥涓荤殑灏侀潰鏂瑰悜锛岄噸鐐规槸璁╃敤鎴风涓€鐪肩煡閬撲负浠€涔堣鐐瑰紑銆?,
+    tip: "鏍囬瑕佸儚涓€鍙ュ己缁撹锛岀敾闈㈠彧鏈嶅姟涓€涓挬瀛愩€?,
+    templateData: {
+      version: 1,
+      contentType: "xiaohongshu-cover",
+      visualStyle: "bold",
+      layout: "balanced",
+      palette: "neon",
+      customColor: "#14b8a6",
+      topic: "缁欏皬绾功鍗氫富鍋氫竴寮犵垎娆惧紑澶撮挬瀛愬皝闈?,
+      audience: "鐭ヨ瘑鍗氫富",
+      keyMessage: "绐佸嚭涓€涓槑纭殑琛屽姩寤鸿",
+      visibleText: "鍒啀杩欐牱寮€澶碶n3 绉掓姄浣忎汉",
+      scene: "灏忕孩涔﹀皝闈?,
+      avoid: "姘村嵃銆佷簩缁寸爜銆佸搧鐗屾爣蹇?,
+      aspectRatio: "3:4",
+      quality: "2k",
+    },
+  },
+  {
+    id: "student-review-map",
+    title: "鏈熸湯澶嶄範鍦板浘",
+    description: "鎶婂涔犱换鍔″仛鎴愯矾绾垮浘锛岄€傚悎瀛︾敓蹇€熻鍒掓帴涓嬫潵鐨勫涔犺妭濂忋€?,
+    tip: "娴佺▼涓嶈瓒呰繃浜旀锛岃姣忎竴姝ラ兘鏈夋竻妤氬姩浣溿€?,
+    templateData: {
+      version: 1,
+      contentType: "tutorial",
+      visualStyle: "handdrawn",
+      layout: "flow",
+      palette: "pastel",
+      customColor: "#14b8a6",
+      topic: "缁欏鐢熷仛涓€寮犳湡鏈涔犺矾绾垮浘",
+      audience: "瀛︾敓",
+      keyMessage: "鐢?3 涓楠ゅ揩閫熺悊瑙ｄ富棰樸€侀鏍煎拰鐢诲箙",
+      visibleText: "鏈熸湯澶嶄範\n璺嚎鍥?,
+      scene: "璇剧▼閰嶅浘",
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "16:9",
+      quality: "2k",
+    },
+  },
+  {
+    id: "healing-night-poster",
+    title: "鐫″墠娌绘剤娴锋姤",
+    description: "閫傚悎鎯呯华浠峰€煎唴瀹癸紝鐢ㄤ綆鍣偣鐢婚潰鍜岀煭鍙ヨ惀閫犲畨闈欐皼鍥淬€?,
+    tip: "鐢婚潰鏂囧瓧瓒婄煭瓒婂ソ锛岀暀鐧藉氨鏄儏缁殑涓€閮ㄥ垎銆?,
+    templateData: {
+      version: 1,
+      contentType: "quote-poster",
+      visualStyle: "fresh",
+      layout: "sparse",
+      palette: "warm",
+      customColor: "#14b8a6",
+      topic: "鍋氫竴寮犵潯鍓嶆不鎰堜富棰樼殑娓╂煍閲戝彞娴锋姤",
+      audience: "灏忕孩涔︾敤鎴?,
+      keyMessage: "寮鸿皟鎯呯华姘涘洿鍜岃蹇嗙偣",
+      visibleText: "浠婃櫄\n涔熻緵鑻︿簡",
+      scene: "鏈嬪弸鍦堝垎浜?,
+      avoid: "姘村嵃銆佷簩缁寸爜銆佸搧鐗屾爣蹇?,
+      aspectRatio: "9:16",
+      quality: "2k",
+    },
+  },
+  {
+    id: "coffee-shop-guide",
+    title: "鍛ㄦ湯鍜栧暋鎺㈠簵",
+    description: "閫傚悎鐢熸椿鏂瑰紡鍗氫富鐨勬帰搴楀皝闈紝绐佸嚭姘涘洿銆佽矾绾垮拰鎺ㄨ崘鐞嗙敱銆?,
+    tip: "璁╃敾闈㈠厛缁欏嚭姘斿懗鍜屽厜绾匡紝鏂囧瓧鍙繚鐣欏簵鍚嶃€佽矾绾垮拰涓€涓寒鐐广€?,
+    templateData: {
+      version: 1,
+      contentType: "xiaohongshu-cover",
+      visualStyle: "fresh",
+      layout: "balanced",
+      palette: "warm",
+      customColor: "#14b8a6",
+      topic: "缁欑敓娲绘柟寮忓崥涓诲仛涓€寮犲懆鏈挅鍟℃帰搴楀皝闈?,
+      audience: "灏忕孩涔︾敤鎴?,
+      keyMessage: "璁╃敤鎴蜂竴鐪肩湅鎳傛牳蹇冪粨璁?,
+      visibleText: "鍛ㄦ湯鍜栧暋\n鎺㈠簵鍦板浘",
+      scene: "灏忕孩涔﹀皝闈?,
+      avoid: "姘村嵃銆佷簩缁寸爜銆佸搧鐗屾爣蹇?,
+      aspectRatio: "3:4",
+      quality: "2k",
+    },
+  },
+  {
+    id: "city-walk-route",
+    title: "鍩庡競婕璺嚎",
+    description: "鏃呰鍜屾湰鍦扮敓娲诲唴瀹圭殑璺嚎鍥撅紝鎶婂湴鐐广€佽妭濂忓拰鐪嬬偣涓茶捣鏉ャ€?,
+    tip: "璺嚎鍥捐鏈夋竻妤氳捣鐐瑰拰缁堢偣锛屽湴鐐逛笉瑕佽秴杩囦簲涓€?,
+    templateData: {
+      version: 1,
+      contentType: "tutorial",
+      visualStyle: "handdrawn",
+      layout: "flow",
+      palette: "pastel",
+      customColor: "#14b8a6",
+      topic: "鍋氫竴寮犻€傚悎鍛ㄦ湯鍑鸿鐨勫煄甯傛极姝ヨ矾绾垮浘",
+      audience: "灏忕孩涔︾敤鎴?,
+      keyMessage: "鐢?3 涓楠ゅ揩閫熺悊瑙ｄ富棰樸€侀鏍煎拰鐢诲箙",
+      visibleText: "鍩庡競婕\n鍗婃棩璺嚎",
+      scene: "绀句氦濯掍綋灏侀潰鍜岀煡璇嗗垎浜?,
+      avoid: "浣庢竻鏅板害銆佹潅涔卞厓绱?,
+      aspectRatio: "9:16",
+      quality: "2k",
+    },
+  },
+  {
+    id: "fitness-beginner-plan",
+    title: "鏂版墜鍋ヨ韩璁″垝",
+    description: "鍋ヨ韩鍏ラ棬鐭ヨ瘑鍗★紝閫傚悎鎶婂姩浣溿€侀鐜囧拰娉ㄦ剰浜嬮」璁叉竻妤氥€?,
+    tip: "鍔ㄤ綔鏁伴噺灏戜竴鐐癸紝閲嶇偣缁欏嚭鍙墽琛岀殑绗竴鍛ㄥ畨鎺掋€?,
+    templateData: {
+      version: 1,
+      contentType: "knowledge-card",
+      visualStyle: "bold",
+      layout: "list",
+      palette: "bluegreen",
+      customColor: "#14b8a6",
+      topic: "缁欏仴韬柊鎵嬪仛涓€寮犵涓€鍛ㄨ缁冭鍒掔煡璇嗗崱",
+      audience: "鏂版墜鍒涗綔鑰?,
+      keyMessage: "绐佸嚭涓€涓槑纭殑琛屽姩寤鸿",
+      visibleText: "鍋ヨ韩鏂版墜\n绗竴鍛ㄨ鍒?,
+      scene: "鐭ヨ瘑鍗＄墖",
+      avoid: "浜虹墿鍙樺舰銆侀敊鍒瓧銆佷贡鐮?,
+      aspectRatio: "1:1",
+      quality: "2k",
+    },
+  },
+  {
+    id: "recruitment-poster",
+    title: "鍥㈤槦鎷涙柊娴锋姤",
+    description: "閫傚悎绀剧兢銆佹牎鍥拰椤圭洰缁勬嫑鏂扮殑娴锋姤鏂瑰悜锛屽己璋冨姞鍏ョ悊鐢便€?,
+    tip: "鎶婂矖浣嶃€佷寒鐐瑰拰琛屽姩鍏ュ彛鏀惧湪涓変釜娓呮櫚灞傜骇閲屻€?,
+    templateData: {
+      version: 1,
+      contentType: "quote-poster",
+      visualStyle: "bold",
+      layout: "balanced",
+      palette: "neon",
+      customColor: "#14b8a6",
+      topic: "缁欎竴涓垱浣滆€呯ぞ缇ゅ仛涓€寮犲洟闃熸嫑鏂版捣鎶?,
+      audience: "瀛︾敓",
+      keyMessage: "绐佸嚭涓€涓槑纭殑琛屽姩寤鸿",
+      visibleText: "涓€璧峰仛鐐筡n鏈夋剰鎬濈殑浜?,
+      scene: "娴锋姤瀹ｄ紶",
+      avoid: "姘村嵃銆佷簩缁寸爜銆佸搧鐗屾爣蹇?,
+      aspectRatio: "3:4",
+      quality: "2k",
+    },
+  },
+  {
+    id: "online-course-value",
+    title: "璇剧▼浠峰€兼竻鍗?,
+    description: "璇剧▼瀹ｄ紶鍗栫偣鍥撅紝閫傚悎鎶婂涔犳敹鐩娿€侀€傚悎浜虹兢鍜屼氦浠樺唴瀹硅娓呮銆?,
+    tip: "涓嶈缃楀垪澶璇炬椂锛屼紭鍏堢獊鍑哄瀹岃兘瑙ｅ喅浠€涔堥棶棰樸€?,
+    templateData: {
+      version: 1,
+      contentType: "product-card",
+      visualStyle: "minimal",
+      layout: "balanced",
+      palette: "bluegreen",
+      customColor: "#14b8a6",
+      topic: "缁欎竴闂ㄧ嚎涓婅绋嬪仛涓€寮犺绋嬩环鍊兼竻鍗?,
+      audience: "鑱屽満浜?,
+      keyMessage: "璁╃敤鎴蜂竴鐪肩湅鎳傛牳蹇冪粨璁?,
+      visibleText: "瀛﹀畬杩欓棬璇綷n浣犱細寰楀埌浠€涔?,
+      scene: "浜у搧浠嬬粛",
+      avoid: "杩囧害瑁呴グ銆佷俊鎭嫢鎸?,
+      aspectRatio: "16:9",
+      quality: "2k",
+    },
+  },
+  {
+    id: "livestream-preview",
+    title: "鐩存挱棰勫憡灏侀潰",
+    description: "閫傚悎鐩存挱闂淬€佸叕寮€璇惧拰娲诲姩棰勫憡锛岄噸鐐规槸鏃堕棿銆佷富棰樺拰鏈熷緟鎰熴€?,
+    tip: "鏃堕棿淇℃伅瑕侀啋鐩紝鑳屾櫙鍙互鏇存湁鑸炲彴鎰熶絾涓嶈鐩栦綇鏍囬銆?,
+    templateData: {
+      version: 1,
+      contentType: "xiaohongshu-cover",
+      visualStyle: "bold",
+      layout: "balanced",
+      palette: "neon",
+      customColor: "#14b8a6",
+      topic: "缁欎竴鍦?AI 缁樼敾鍏紑璇惧仛鐩存挱棰勫憡灏侀潰",
+      audience: "鏂版墜鍒涗綔鑰?,
+      keyMessage: "绐佸嚭涓€涓槑纭殑琛屽姩寤鸿",
+      visibleText: "浠婃櫄 8 鐐筡nAI 缁樼敾鍏紑璇?,
+      scene: "娴锋姤瀹ｄ紶",
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "16:9",
+      quality: "2k",
+    },
+  },
+  {
+    id: "year-review-card",
+    title: "骞村害澶嶇洏鍗＄墖",
+    description: "閫傚悎涓汉鎴愰暱鍜岃亴鍦哄鐩橈紝鎶婃垚鏋溿€侀仐鎲惧拰涓嬩竴姝ユ暣鐞嗘垚涓€椤点€?,
+    tip: "鐢ㄦā鍧楀寲缁撴瀯鎵胯浇淇℃伅锛屾爣棰樺厛缁欏嚭杩欎竴骞寸殑鍏抽敭璇嶃€?,
+    templateData: {
+      version: 1,
+      contentType: "knowledge-card",
+      visualStyle: "notion",
+      layout: "dense",
+      palette: "mono",
+      customColor: "#14b8a6",
+      topic: "鍋氫竴寮犱釜浜哄勾搴﹀鐩樻€荤粨鍗＄墖",
+      audience: "鑱屽満浜?,
+      keyMessage: "鎶婂鏉傛蹇垫媶鎴愭竻妤氭ā鍧?,
+      visibleText: "骞村害澶嶇洏\n鎴戠殑鍏抽敭璇?,
+      scene: "鏈嬪弸鍦堝垎浜?,
+      avoid: "杩囧害瑁呴グ銆佷俊鎭嫢鎸?,
+      aspectRatio: "1:1",
+      quality: "2k",
+    },
+  },
+  {
+    id: "podcast-cover",
+    title: "鎾鍗曢泦灏侀潰",
+    description: "閫傚悎鎾鍜岄暱鍐呭鎽樿锛屾妸鏈湡涓婚鍋氭垚娓呮櫚鐨勮瑙夊叆鍙ｃ€?,
+    tip: "灏侀潰瑕佺獊鍑轰竴涓鐐癸紝涓嶈鎶婃暣鏈熷ぇ绾查兘濉炶繘鍘汇€?,
+    templateData: {
+      version: 1,
+      contentType: "xiaohongshu-cover",
+      visualStyle: "retro",
+      layout: "sparse",
+      palette: "warm",
+      customColor: "#14b8a6",
+      topic: "缁欎竴闆嗗叧浜庤亴鍦烘垚闀跨殑鎾鍋氬皝闈?,
+      audience: "鑱屽満浜?,
+      keyMessage: "寮鸿皟鎯呯华姘涘洿鍜岃蹇嗙偣",
+      visibleText: "鑱屽満鎴愰暱\n鍒€ョ潃璇佹槑鑷繁",
+      scene: "绀句氦濯掍綋灏侀潰鍜岀煡璇嗗垎浜?,
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "1:1",
+      quality: "2k",
+    },
+  },
+  {
+    id: "pet-care-guide",
+    title: "鏂版墜鍏荤尗鎸囧崡",
+    description: "瀹犵墿鐭ヨ瘑鍗℃柟鍚戯紝閫傚悎鎶婂噯澶囨竻鍗曞拰閬垮潙浜嬮」鍋氬緱杞绘澗鍙埍銆?,
+    tip: "鍙互鐢ㄥ彲鐖遍锛屼絾淇℃伅灞傜骇瑕佹竻妤氾紝閬垮厤杩囧害瑁呴グ銆?,
+    templateData: {
+      version: 1,
+      contentType: "knowledge-card",
+      visualStyle: "cute",
+      layout: "list",
+      palette: "pastel",
+      customColor: "#14b8a6",
+      topic: "缁欐柊鎵嬮摬灞庡畼鍋氫竴寮犲吇鐚噯澶囨竻鍗?,
+      audience: "鏂版墜鍒涗綔鑰?,
+      keyMessage: "鎶婂鏉傛蹇垫媶鎴愭竻妤氭ā鍧?,
+      visibleText: "鏂版墜鍏荤尗\n鍑嗗娓呭崟",
+      scene: "鐭ヨ瘑鍗＄墖",
+      avoid: "浣庢竻鏅板害銆佹潅涔卞厓绱?,
+      aspectRatio: "3:4",
+      quality: "2k",
+    },
+  },
+  {
+    id: "restaurant-menu-card",
+    title: "鎷涚墝鑿滃崟鎺ㄨ崘",
+    description: "閫傚悎椁愰ギ搴椼€佸皬鍚冩憡鍜屾帰搴楀唴瀹癸紝鎶婃嫑鐗岃彍鍋氭垚涓€鐪兼兂鐐圭殑鍗＄墖銆?,
+    tip: "鑿滃搧涓嶈瓒呰繃涓夋锛屼环鏍煎拰鍗栫偣淇濇寔娓呮鍙銆?,
+    templateData: {
+      version: 1,
+      contentType: "product-card",
+      visualStyle: "fresh",
+      layout: "balanced",
+      palette: "warm",
+      customColor: "#14b8a6",
+      topic: "缁欎竴瀹跺皬椁愰鍋氫竴寮犳嫑鐗岃彍鍗曟帹鑽愬浘",
+      audience: "浜у搧鐢ㄦ埛",
+      keyMessage: "璁╃敤鎴蜂竴鐪肩湅鎳傛牳蹇冪粨璁?,
+      visibleText: "浠婃棩鎷涚墝\n蹇呯偣涓夋牱",
+      scene: "浜у搧浠嬬粛",
+      avoid: "杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?,
+      aspectRatio: "4:3",
+      quality: "2k",
+    },
+  },
+];
+
+function getSmartRecommendation(params: {
+  contentType: string;
+  topic: string;
+  keyMessage: string;
+  visibleText: string;
+}): SmartRecommendation {
+  const text = `${params.topic} ${params.keyMessage} ${params.visibleText}`;
+  const hasSteps = /姝ラ|娴佺▼|鏂规硶|鎸囧崡|鏁欑▼|step|how/i.test(text);
+  const hasProduct = /浜у搧|鍗栫偣|浠锋牸|鍔熻兘|杞寲|璐拱|鍝佺墝/.test(text);
+  const hasQuote = /閲戝彞|璇綍|鍙ュ瓙|鎯呯华|娌绘剤|鎴愰暱/.test(text);
+
+  if (params.contentType === "tutorial" || hasSteps) {
+    return {
+      style: "handdrawn",
+      layout: "flow",
+      palette: "pastel",
+      aspectRatio: "3:4",
+      quality: "2k",
+      reason: "杩欑被鍐呭闇€瑕佹竻妤氱殑闃呰璺緞锛屾祦绋嬪竷灞€鍜屾墜缁樻爣娉ㄦ洿瀹规槗璁╀汉鐓х潃鍋氥€?,
+      tips: ["鎶婃楠ゆ帶鍒跺湪 3 鍒?5 涓?, "鐢婚潰鏂囧瓧灏介噺鐭?, "姣忎竴姝ュ彧琛ㄨ揪涓€涓姩浣?],
+    };
+  }
+
+  if (params.contentType === "product-card" || hasProduct) {
+    return {
+      style: "minimal",
+      layout: "balanced",
+      palette: "bluegreen",
+      aspectRatio: "1:1",
+      quality: "2k",
+      reason: "浜у搧鍗栫偣鍥炬洿閫傚悎绋冲畾銆佹竻鏅般€佸彲淇＄殑琛ㄨ揪锛屽噺灏戣楗拌兘璁╂牳蹇冧环鍊兼洿绐佸嚭銆?,
+      tips: ["淇濈暀涓€涓富鍗栫偣", "浣跨敤鍦烘櫙瑕佸叿浣?, "閬垮厤鍚屾椂濉炶繘澶鍔熻兘"],
+    };
+  }
+
+  if (params.contentType === "quote-poster" || hasQuote) {
+    return {
+      style: "fresh",
+      layout: "sparse",
+      palette: "warm",
+      aspectRatio: "3:4",
+      quality: "2k",
+      reason: "閲戝彞娴锋姤闇€瑕佹儏缁拰鐣欑櫧锛岀█鐤忓竷灞€鑳界粰鏂囧瓧鏇村鍛煎惛鎰熴€?,
+      tips: ["鐢婚潰鏂囧瓧涓嶈瓒呰繃涓よ", "璁╄儗鏅湇鍔′簬鎯呯华", "淇濈暀瓒冲鐣欑櫧"],
+    };
+  }
+
+  if (params.contentType === "comparison") {
+    return {
+      style: "bold",
+      layout: "contrast",
+      palette: "mono",
+      aspectRatio: "16:9",
+      quality: "2k",
+      reason: "瀵规瘮鍐呭闇€瑕佸揩閫熺湅鍑哄樊寮傦紝楂樺姣斿拰鍒嗗尯甯冨眬鑳介檷浣庣悊瑙ｆ垚鏈€?,
+      tips: ["宸﹀彸涓や晶淇℃伅閲忎繚鎸佹帴杩?, "瀵规瘮缁村害涓嶈秴杩?4 涓?, "鐢ㄩ鑹插己璋冨叧閿樊寮?],
+    };
+  }
+
+  if (params.contentType === "knowledge-card") {
+    return {
+      style: "notion",
+      layout: "list",
+      palette: "bluegreen",
+      aspectRatio: "1:1",
+      quality: "2k",
+      reason: "鐭ヨ瘑鍗＄墖閲嶅湪缁撴瀯鍖栧拰鏀惰棌浠峰€硷紝鍒楄〃甯冨眬鏇村埄浜庡揩閫熸壂璇汇€?,
+      tips: ["鏍囬鍏堢粰缁撹", "姝ｆ枃鐢ㄧ煭鍙?, "鎶婃蹇垫媶鎴愭竻妤氭ā鍧?],
+    };
+  }
+
+  return {
+    style: "fresh",
+    layout: "balanced",
+    palette: "pastel",
+    aspectRatio: "3:4",
+    quality: "2k",
+    reason: "灏侀潰鍐呭闇€瑕佺涓€鐪煎ソ鐪嬨€佷俊鎭泦涓紝娓呮柊椋庢牸鍜岀珫鐗堝崱鐗囨洿閫傚悎绀句氦濯掍綋銆?,
+    tips: ["鏍囬淇濇寔閱掔洰", "涓讳綋涓嶈澶潬杈?, "鐢ㄤ竴澶勫皬瑁呴グ鍒堕€犺蹇嗙偣"],
+  };
+}
+
+function findPrompt(options: Option[], value: string): string {
+  return options.find((item) => item.value === value)?.prompt || "";
+}
+
+function findLabel(options: Option[], value: string): string {
+  return options.find((item) => item.value === value)?.label || value;
+}
+
+function isProjectData(value: unknown): value is ProjectData {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Record<string, unknown>;
+  return (
+    data.version === 1 &&
+    typeof data.contentType === "string" &&
+    typeof data.visualStyle === "string" &&
+    typeof data.layout === "string" &&
+    typeof data.palette === "string" &&
+    typeof data.topic === "string"
+  );
+}
+
+function buildGuidedPrompt(params: {
+  contentType: string;
+  style: string;
+  layout: string;
+  palette: string;
+  customColor: string;
+  topic: string;
+  audience: string;
+  keyMessage: string;
+  visibleText: string;
+  scene: string;
+  avoid: string;
+  aspectRatio: string;
+}): string {
+  const parts = [
+    `璇风敓鎴愪竴寮犱腑鏂囪瑙夎璁″浘銆傜被鍨嬶細${findLabel(contentTypes, params.contentType)}銆俙,
+    `涓婚锛?{params.topic.trim() || starterIdea}銆俙,
+    params.audience.trim() ? `鐩爣鍙椾紬锛?{params.audience.trim()}銆俙 : "",
+    params.keyMessage.trim() ? `鏍稿績淇℃伅锛?{params.keyMessage.trim()}銆俙 : "",
+    params.visibleText.trim() ? `鐢婚潰涓渶瑕佸嚭鐜扮殑涓枃鏂囧瓧锛?{params.visibleText.trim()}銆傝淇濊瘉鏂囧瓧娓呮櫚銆佷笉瑕佷贡鐮併€佷笉瑕侀敊鍒瓧銆俙 : "",
+    params.scene.trim() ? `浣跨敤鍦烘櫙锛?{params.scene.trim()}銆俙 : "",
+    `鍐呭褰㈠紡瑕佹眰锛?{findPrompt(contentTypes, params.contentType)}銆俙,
+    `瑙嗚椋庢牸锛?{findPrompt(styleOptions, params.style)}銆俙,
+    `甯冨眬瑕佹眰锛?{findPrompt(layoutOptions, params.layout)}銆俙,
+    `閰嶈壊瑕佹眰锛?{findPrompt(paletteOptions, params.palette)}${params.palette === "custom" && params.customColor.trim() ? `锛屼富鑹插弬鑰?${params.customColor.trim()}` : ""}銆俙,
+    `鐢诲箙锛?{params.aspectRatio}锛?{aspectRatioLabels[params.aspectRatio] || "閫傚悎鍐呭鐨勭敾骞?}銆俙,
+    "璇锋妸鐢ㄦ埛濉啓鐨勫唴瀹硅浆鍖栦负楂樿川閲忚瑙夎璁★紝涓嶈鎶婃彁绀鸿瘝璇存槑銆佸弬鏁板悕鎴栧唴閮ㄧ敓鎴愰€昏緫鍐欏埌鐢婚潰閲屻€?,
+    "鐢婚潰闇€瑕佹湁瀹屾暣鐨勮璁℃劅銆佹竻鏅扮殑淇℃伅灞傜骇銆佹暣娲佽竟璺濆拰鍙鎺掔増銆?,
+    "涓嶈鍑虹幇姘村嵃銆佸搧鐗屾爣蹇椼€佷簩缁寸爜銆佺湡瀹炰釜浜轰俊鎭€佹潅涔辫儗鏅垨鍙樺舰鏂囧瓧銆?,
+    params.avoid.trim() ? `棰濆閬垮厤锛?{params.avoid.trim()}銆俙 : "",
+  ];
+
+  return parts.filter(Boolean).join("\n");
+}
+
+function upsertJob(list: GenerationJob[], nextJob: GenerationJob): GenerationJob[] {
+  const rest = list.filter((item) => item.id !== nextJob.id);
+  return [nextJob, ...rest].filter((item) => item.provider === "kie").slice(0, 20);
+}
+
+function shortId(id: string): string {
+  return id.slice(0, 8);
+}
+
+function formatTime(value?: string): string {
+  if (!value) return "鍒氬垰";
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function buildDownloadName(job: GenerationJob): string {
+  const date = new Date(job.createdAt || Date.now());
+  const stamp = new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(date)
+    .replace(/[^\d]/g, "")
+    .slice(0, 12);
+  return `banana2-${stamp}-${shortId(job.id)}.png`;
+}
+
+function getShortError(message: string): string {
+  return message.length > 72 ? `${message.slice(0, 72)}...` : message;
+}
+
+function getJobTitle(job: GenerationJob): string {
+  if (isProjectData(job.projectData) && job.projectData.topic.trim()) {
+    return job.projectData.topic.trim();
+  }
+  return `浣滃搧 ${shortId(job.id)}`;
+}
+
+function getJobMeta(job: GenerationJob): string {
+  if (!isProjectData(job.projectData)) {
+    return `棣欒晧 2 路 ${statusLabels[job.status]} 路 ${job.aspectRatio || "1:1"} 路 ${formatTime(job.createdAt)}`;
+  }
+
+  const data = job.projectData;
+  return [
+    findLabel(contentTypes, data.contentType),
+    findLabel(styleOptions, data.visualStyle),
+    findLabel(layoutOptions, data.layout),
+    findLabel(paletteOptions, data.palette),
+    statusLabels[job.status],
+    formatTime(job.createdAt),
+  ].join(" 路 ");
+}
+
+function App() {
+  const [config, setConfig] = useState<ConfigResponse | null>(null);
+  const [contentType, setContentType] = useState("xiaohongshu-cover");
+  const [visualStyle, setVisualStyle] = useState("fresh");
+  const [layout, setLayout] = useState("balanced");
+  const [palette, setPalette] = useState("auto");
+  const [customColor, setCustomColor] = useState("#14b8a6");
+  const [topic, setTopic] = useState(starterIdea);
+  const [audience, setAudience] = useState("鏂版墜鍒涗綔鑰?);
+  const [keyMessage, setKeyMessage] = useState("鐢?3 涓楠ゅ揩閫熺悊瑙ｄ富棰樸€侀鏍煎拰鐢诲箙");
+  const [visibleText, setVisibleText] = useState("AI 缁樼敾鍏ラ棬\n3 姝ュ仛鍑虹涓€寮犲浘");
+  const [scene, setScene] = useState("绀句氦濯掍綋灏侀潰鍜岀煡璇嗗垎浜?);
+  const [avoid, setAvoid] = useState("杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?);
+  const [aspectRatio, setAspectRatio] = useState("1:1");
+  const [quality, setQuality] = useState("2k");
+  const [job, setJob] = useState<GenerationJob | null>(null);
+  const [history, setHistory] = useState<GenerationJob[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+  const [previewJob, setPreviewJob] = useState<GenerationJob | null>(null);
+  const [previewCase, setPreviewCase] = useState<CaseStudy | null>(null);
+  const [currentInspiration, setCurrentInspiration] = useState<CreativeInspiration | null>(null);
+  const pollTimer = useRef<number | null>(null);
+
+  const generatedPrompt = useMemo(
+    () =>
+      buildGuidedPrompt({
+        contentType,
+        style: visualStyle,
+        layout,
+        palette,
+        customColor,
+        topic,
+        audience,
+        keyMessage,
+        visibleText,
+        scene,
+        avoid,
+        aspectRatio,
+      }),
+    [contentType, visualStyle, layout, palette, customColor, topic, audience, keyMessage, visibleText, scene, avoid, aspectRatio],
+  );
+
+  const smartRecommendation = useMemo(
+    () =>
+      getSmartRecommendation({
+        contentType,
+        topic,
+        keyMessage,
+        visibleText,
+      }),
+    [contentType, topic, keyMessage, visibleText],
+  );
+
+  const projectData = useMemo<ProjectData>(
+    () => ({
+      version: 1,
+      contentType,
+      visualStyle,
+      layout,
+      palette,
+      customColor,
+      topic,
+      audience,
+      keyMessage,
+      visibleText,
+      scene,
+      avoid,
+      aspectRatio,
+      quality,
+    }),
+    [contentType, visualStyle, layout, palette, customColor, topic, audience, keyMessage, visibleText, scene, avoid, aspectRatio, quality],
+  );
+
+  const isBusy = job?.status === "queued" || job?.status === "running" || isSubmitting;
+  const imageUrl = job?.outputUrl ? job.outputUrl : null;
+  const isGenerating = isSubmitting || job?.status === "queued" || job?.status === "running";
+  const showCaseGallery = !job && !imageUrl;
+  const statusText = useMemo(() => {
+    if (isSubmitting) return "鎻愪氦涓?;
+    if (!job) return "鍑嗗灏辩华";
+    return statusLabels[job.status];
+  }, [isSubmitting, job]);
+
+  useEffect(() => {
+    fetchConfig();
+    fetchHistory();
+    return () => {
+      if (pollTimer.current) window.clearTimeout(pollTimer.current);
+    };
+  }, []);
+
+  async function fetchConfig() {
+    try {
+      const res = await fetch("/api/config");
+      if (!res.ok) throw new Error(`璇诲彇閰嶇疆澶辫触锛?{res.status}`);
+      const nextConfig = (await res.json()) as ConfigResponse;
+      setConfig(nextConfig);
+      setAspectRatio(nextConfig.aspectRatios.includes("1:1") ? "1:1" : nextConfig.aspectRatios[0] || "1:1");
+      setQuality(nextConfig.qualities.includes("2k") ? "2k" : nextConfig.qualities[0] || "normal");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
+  }
+
+  async function fetchHistory() {
+    setIsHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const res = await fetch("/api/generations?limit=20");
+      if (!res.ok) throw new Error(`璇诲彇鍘嗗彶澶辫触锛?{res.status}`);
+      const data = (await res.json()) as HistoryResponse;
+      const bananaJobs = data.jobs.filter((item) => item.provider === "kie");
+      setHistory(bananaJobs);
+    } catch (caught) {
+      setHistoryError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }
+
+  async function pollJob(jobId: string) {
+    const res = await fetch(`/api/generations/${jobId}`);
+    if (!res.ok) throw new Error(`璇诲彇浠诲姟澶辫触锛?{res.status}`);
+    const nextJob = (await res.json()) as GenerationJob;
+    setJob(nextJob);
+    setHistory((current) => upsertJob(current, nextJob));
+
+    if (nextJob.status === "queued" || nextJob.status === "running") {
+      pollTimer.current = window.setTimeout(() => {
+        void pollJob(jobId).catch((caught) => {
+          setError(caught instanceof Error ? caught.message : String(caught));
+        });
+      }, 1800);
+    }
+  }
+
+  async function submitGeneration(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const cleanPrompt = generatedPrompt.trim();
+    if (!cleanPrompt) {
+      setError("璇峰厛濉啓涓婚");
+      return;
+    }
+
+    setError(null);
+    setIsSubmitting(true);
+    setJob(null);
+    if (pollTimer.current) window.clearTimeout(pollTimer.current);
+
+    try {
+      const form = new FormData();
+      form.set("prompt", cleanPrompt);
+      form.set("provider", "kie");
+      form.set("model", "nano-banana-2");
+      form.set("aspectRatio", aspectRatio);
+      form.set("quality", quality);
+      form.set("projectData", JSON.stringify(projectData));
+
+      const res = await fetch("/api/generations", {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `鍒涘缓鐢熸垚浠诲姟澶辫触锛?{res.status}`);
+      }
+
+      const created = (await res.json()) as CreateGenerationResponse;
+      setJob(created.job);
+      setHistory((current) => upsertJob(current, created.job));
+      await pollJob(created.jobId);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function selectHistoryItem(nextJob: GenerationJob) {
+    setError(null);
+    setJob(nextJob);
+    if (isProjectData(nextJob.projectData)) {
+      setContentType(nextJob.projectData.contentType);
+      setVisualStyle(nextJob.projectData.visualStyle);
+      setLayout(nextJob.projectData.layout);
+      setPalette(nextJob.projectData.palette);
+      setCustomColor(nextJob.projectData.customColor);
+      setTopic(nextJob.projectData.topic);
+      setAudience(nextJob.projectData.audience);
+      setKeyMessage(nextJob.projectData.keyMessage);
+      setVisibleText(nextJob.projectData.visibleText);
+      setScene(nextJob.projectData.scene);
+      setAvoid(nextJob.projectData.avoid);
+      setAspectRatio(nextJob.projectData.aspectRatio);
+      setQuality(nextJob.projectData.quality);
+    } else {
+      setAspectRatio(nextJob.aspectRatio || "1:1");
+      setQuality(nextJob.quality === "normal" ? "normal" : "2k");
+    }
+    if (nextJob.status === "queued" || nextJob.status === "running") {
+      if (pollTimer.current) window.clearTimeout(pollTimer.current);
+      void pollJob(nextJob.id).catch((caught) => {
+        setError(caught instanceof Error ? caught.message : String(caught));
+      });
+    }
+  }
+
+  function applySmartRecommendation() {
+    setVisualStyle(smartRecommendation.style);
+    setLayout(smartRecommendation.layout);
+    setPalette(smartRecommendation.palette);
+    setAspectRatio(smartRecommendation.aspectRatio);
+    setQuality(smartRecommendation.quality);
+    setError(null);
+  }
+
+  function applyCaseTemplate(caseStudy: CaseStudy) {
+    const data = caseStudy.templateData;
+    if (pollTimer.current) window.clearTimeout(pollTimer.current);
+    setContentType(data.contentType);
+    setVisualStyle(data.visualStyle);
+    setLayout(data.layout);
+    setPalette(data.palette);
+    setCustomColor(data.customColor);
+    setTopic(data.topic);
+    setAudience(data.audience);
+    setKeyMessage(data.keyMessage);
+    setVisibleText(data.visibleText);
+    setScene(data.scene);
+    setAvoid(data.avoid);
+    setAspectRatio(data.aspectRatio);
+    setQuality(data.quality);
+    setJob(null);
+    setPreviewCase(null);
+    setCurrentInspiration(null);
+    setError(null);
+    setHistoryError(null);
+  }
+
+  function applyCreativeInspiration() {
+    const pool = currentInspiration && creativeInspirations.length > 1
+      ? creativeInspirations.filter((item) => item.id !== currentInspiration.id)
+      : creativeInspirations;
+    const next = pool[Math.floor(Math.random() * pool.length)];
+    const data = next.templateData;
+    if (pollTimer.current) window.clearTimeout(pollTimer.current);
+    setCurrentInspiration(next);
+    setContentType(data.contentType);
+    setVisualStyle(data.visualStyle);
+    setLayout(data.layout);
+    setPalette(data.palette);
+    setCustomColor(data.customColor);
+    setTopic(data.topic);
+    setAudience(data.audience);
+    setKeyMessage(data.keyMessage);
+    setVisibleText(data.visibleText);
+    setScene(data.scene);
+    setAvoid(data.avoid);
+    setAspectRatio(data.aspectRatio);
+    setQuality(data.quality);
+    setJob(null);
+    setPreviewCase(null);
+    setError(null);
+    setHistoryError(null);
+  }
+
+  function startNewProject() {
+    if (pollTimer.current) window.clearTimeout(pollTimer.current);
+    setContentType("xiaohongshu-cover");
+    setVisualStyle("fresh");
+    setLayout("balanced");
+    setPalette("auto");
+    setCustomColor("#14b8a6");
+    setTopic("");
+    setAudience("鏂版墜鍒涗綔鑰?);
+    setKeyMessage("鐢?3 涓楠ゅ揩閫熺悊瑙ｄ富棰樸€侀鏍煎拰鐢诲箙");
+    setVisibleText("");
+    setScene("绀句氦濯掍綋灏侀潰鍜岀煡璇嗗垎浜?);
+    setAvoid("杩囧鑻辨枃銆佹ā绯婂皬瀛椼€佸鏉傝儗鏅?);
+    setAspectRatio(config?.aspectRatios.includes("3:4") ? "3:4" : config?.aspectRatios[0] || "1:1");
+    setQuality(config?.qualities.includes("2k") ? "2k" : config?.qualities[0] || "normal");
+    setJob(null);
+    setPreviewJob(null);
+    setPreviewCase(null);
+    setCurrentInspiration(null);
+    setError(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function deleteHistoryItem(target: GenerationJob, event?: React.MouseEvent<HTMLButtonElement>) {
+    event?.stopPropagation();
+    if (target.status === "queued" || target.status === "running") {
+      setError("鐢熸垚涓殑浠诲姟鏆傛椂涓嶈兘鍒犻櫎銆?);
+      return;
+    }
+
+    setDeletingJobId(target.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/generations/${target.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `鍒犻櫎澶辫触锛?{res.status}`);
+      }
+
+      setHistory((current) => current.filter((item) => item.id !== target.id));
+      if (job?.id === target.id) {
+        setJob(null);
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setDeletingJobId(null);
+    }
+  }
+
+  const aspectRatioChoices = [...(config?.aspectRatios || ["1:1", "16:9", "9:16", "4:3", "3:4"]), "auto"];
+  const qualityChoices = config?.qualities || ["normal", "2k"];
+  const isCustomContentType = !contentTypes.some((item) => item.value === contentType);
+  const isCustomStyle = !styleOptions.some((item) => item.value === visualStyle);
+  const isCustomLayout = !layoutOptions.some((item) => item.value === layout);
+  const isCustomPalette = !paletteOptions.some((item) => item.value === palette);
+  const isCustomAspectRatio = !aspectRatioChoices.includes(aspectRatio);
+  const isCustomQuality = !qualityChoices.includes(quality as "normal" | "2k");
+  const isCustomAudience = !audienceOptions.includes(audience);
+  const isCustomScene = !sceneOptions.includes(scene);
+  const isCustomKeyMessage = !keyMessageOptions.includes(keyMessage);
+  const isCustomAvoid = !avoidOptions.includes(avoid);
+
+  return (
+    <main className="app-shell">
+      <div className="ambient-layer ambient-layer-left" aria-hidden="true" />
+      <div className="ambient-layer ambient-layer-right" aria-hidden="true" />
+      <aside className="sidebar" aria-label="宸ヤ綔鍙板鑸?>
+        <div className="brand-block">
+          <div className="brand-mark" aria-hidden="true">
+            <img className="brand-logo" src="/logo.png" alt="" />
+          </div>
+          <div>
+            <strong>椴稿垱浼犲獟楂樿川閲忔枃鐢熷浘</strong>
+            <span>绁炵粡瑙嗚宸ヤ綔鍙?/span>
+          </div>
+        </div>
+
+        <button className="nav-action" type="button" onClick={startNewProject}>
+          鏂板缓浣滃搧
+        </button>
+
+        <div className="history-panel" aria-label="鐢熸垚鍘嗗彶">
+          <div className="history-header">
+            <div>
+              <p className="eyebrow">鍘嗗彶璁板綍</p>
+              <h2>鏈€杩戠敓鎴?/h2>
+            </div>
+          </div>
+
+          {historyError && <p className="error-message">{historyError}</p>}
+
+          {history.length === 0 ? (
+            <div className="history-empty">
+              {isHistoryLoading ? "姝ｅ湪璇诲彇鍘嗗彶..." : "杩樻病鏈変綔鍝?}
+            </div>
+          ) : (
+            <div className="history-list">
+              {history.map((item) => (
+                <button
+                  className={`history-item ${job?.id === item.id ? "is-active" : ""}`}
+                  key={item.id}
+                  type="button"
+                  onClick={() => selectHistoryItem(item)}
+                >
+                  <div className="history-thumb">
+                    {item.outputUrl ? <img src={item.outputUrl} alt="鍘嗗彶缂╃暐鍥? /> : <span>{statusLabels[item.status]}</span>}
+                  </div>
+                  <div className="history-copy">
+                    <strong>{getJobTitle(item)}</strong>
+                    <span>{getJobMeta(item)}</span>
+                    {item.error && <small>{getShortError(item.error)}</small>}
+                  </div>
+                  <div className="history-actions">
+                    {item.outputUrl && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setPreviewJob(item);
+                        }}
+                      >
+                        棰勮
+                      </button>
+                    )}
+                    <button
+                      disabled={deletingJobId === item.id || item.status === "queued" || item.status === "running"}
+                      type="button"
+                      onClick={(event) => void deleteHistoryItem(item, event)}
+                    >
+                      {deletingJobId === item.id ? "鍒犻櫎涓? : "鍒犻櫎"}
+                    </button>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </aside>
+
+      <section className="main-stage">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">妯″瀷</p>
+            <h1>BaoYu 鍒涗綔鐏靛</h1>
+          </div>
+          <nav className="top-tabs" aria-label="宸ヤ綔鍖?>
+            <span className="is-active">鍒涗綔</span>
+            <span>浣滃搧搴?/span>
+            <span>鍙傛暟</span>
+          </nav>
+          <div className={`status-pill status-${job?.status || "ready"}`}>{statusText}</div>
+        </header>
+
+        <div className="canvas-ambient" aria-hidden="true">
+          <span className="canvas-ambient__orbit canvas-ambient__orbit--one" />
+          <span className="canvas-ambient__orbit canvas-ambient__orbit--two" />
+          <span className="canvas-ambient__beam canvas-ambient__beam--left" />
+          <span className="canvas-ambient__beam canvas-ambient__beam--right" />
+        </div>
+
+        <section className="workspace" aria-label="鍥剧墖鐢熸垚宸ヤ綔鍙?>
+          <form className="control-surface" onSubmit={submitGeneration}>
+            <section className="composer-panel" aria-label="涓诲垱浣滆緭鍏?>
+              <div className="section-heading">
+                <p className="eyebrow">寮€濮嬪垱浣?/p>
+                <h2>浣犳兂鐢熸垚浠€涔?/h2>
+              </div>
+              <label className="field">
+                <span>涓昏緭鍏?/span>
+                <textarea
+                  className="main-composer"
+                  value={topic}
+                  onChange={(event) => setTopic(event.target.value)}
+                  rows={6}
+                  placeholder="渚嬪锛氬仛涓€寮犵粰 AI 缁樼敾鏂版墜鐪嬬殑鍏ラ棬鎸囧崡锛岀敾闈㈣娓呯埥銆佹湁姝ラ鎰燂紝閫傚悎鍙戝皬绾功銆?
+                />
+              </label>
+            </section>
+
+            <section className="guide-block compact-guide" aria-label="鍒涗綔鍙傛暟">
+              <div className="section-heading">
+                <p className="eyebrow">鍙傛暟</p>
+                <h2>浣滃搧璁剧疆</h2>
+              </div>
+
+              <div className="select-row">
+                <label className="field">
+                  <span>浣滃搧绫诲瀷</span>
+                  <select
+                    value={isCustomContentType ? customOptionValue : contentType}
+                    onChange={(event) => setContentType(event.target.value === customOptionValue ? "" : event.target.value)}
+                  >
+                    {contentTypes.map((item) => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
+                    ))}
+                    <option value={customOptionValue}>鑷畾涔夎緭鍏?/option>
+                  </select>
+                  {isCustomContentType && (
+                    <input className="custom-field-input" value={contentType} onChange={(event) => setContentType(event.target.value)} placeholder="杈撳叆鑷畾涔変綔鍝佺被鍨? />
+                  )}
+                </label>
+
+                <label className="field">
+                  <span>椋庢牸</span>
+                  <select
+                    value={isCustomStyle ? customOptionValue : visualStyle}
+                    onChange={(event) => setVisualStyle(event.target.value === customOptionValue ? "" : event.target.value)}
+                  >
+                    {styleOptions.map((item) => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
+                    ))}
+                    <option value={customOptionValue}>鑷畾涔夎緭鍏?/option>
+                  </select>
+                  {isCustomStyle && (
+                    <input className="custom-field-input" value={visualStyle} onChange={(event) => setVisualStyle(event.target.value)} placeholder="杈撳叆鑷畾涔夐鏍? />
+                  )}
+                </label>
+              </div>
+
+              <div className="select-row">
+                <label className="field">
+                  <span>甯冨眬</span>
+                  <select
+                    value={isCustomLayout ? customOptionValue : layout}
+                    onChange={(event) => setLayout(event.target.value === customOptionValue ? "" : event.target.value)}
+                  >
+                    {layoutOptions.map((item) => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
+                    ))}
+                    <option value={customOptionValue}>鑷畾涔夎緭鍏?/option>
+                  </select>
+                  {isCustomLayout && (
+                    <input className="custom-field-input" value={layout} onChange={(event) => setLayout(event.target.value)} placeholder="杈撳叆鑷畾涔夊竷灞€" />
+                  )}
+                </label>
+
+                <label className="field">
+                  <span>閰嶈壊</span>
+                  <select
+                    value={isCustomPalette ? customOptionValue : palette}
+                    onChange={(event) => setPalette(event.target.value === customOptionValue ? "" : event.target.value)}
+                  >
+                    {paletteOptions.map((item) => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
+                    ))}
+                    <option value={customOptionValue}>鑷畾涔夎緭鍏?/option>
+                  </select>
+                  {isCustomPalette && (
+                    <input className="custom-field-input" value={palette} onChange={(event) => setPalette(event.target.value)} placeholder="杈撳叆鑷畾涔夐厤鑹? />
+                  )}
+                </label>
+              </div>
+
+              <div className="select-row">
+                <label className="field">
+                  <span>鐢婚潰姣斾緥</span>
+                  <select
+                    value={isCustomAspectRatio ? customOptionValue : aspectRatio}
+                    onChange={(event) => setAspectRatio(event.target.value === customOptionValue ? "" : event.target.value)}
+                  >
+                    {aspectRatioChoices.map((item) => (
+                      <option key={item} value={item}>{aspectRatioLabels[item] ? `${item} 路 ${aspectRatioLabels[item]}` : item}</option>
+                    ))}
+                    <option value={customOptionValue}>鑷畾涔夎緭鍏?/option>
+                  </select>
+                  {isCustomAspectRatio && (
+                    <input className="custom-field-input" value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value)} placeholder="杈撳叆鑷畾涔夋瘮渚? />
+                  )}
+                </label>
+
+                <label className="field">
+                  <span>娓呮櫚搴?/span>
+                  <select
+                    value={isCustomQuality ? customOptionValue : quality}
+                    onChange={(event) => setQuality(event.target.value === customOptionValue ? "" : event.target.value)}
+                  >
+                    {qualityChoices.map((item) => (
+                      <option key={item} value={item}>{item === "2k" ? "2K 楂樻竻" : "鏍囧噯"}</option>
+                    ))}
+                    <option value={customOptionValue}>鑷畾涔夎緭鍏?/option>
+                  </select>
+                  {isCustomQuality && (
+                    <input className="custom-field-input" value={quality} onChange={(event) => setQuality(event.target.value)} placeholder="杈撳叆鑷畾涔夋竻鏅板害" />
+                  )}
+                </label>
+              </div>
+
+              {palette === "custom" && (
+                <label className="field">
+                  <span>涓昏壊</span>
+                  <input value={customColor} onChange={(event) => setCustomColor(event.target.value)} placeholder="#14b8a6 鎴?闈掔豢鑹? />
+                </label>
+              )}
+
+              <div className="select-row">
+                <label className="field">
+                  <span>鐩爣鍙椾紬</span>
+                  <select
+                    value={isCustomAudience ? customOptionValue : audience}
+                    onChange={(event) => setAudience(event.target.value === customOptionValue ? "" : event.target.value)}
+                  >
+                    {audienceOptions.map((item) => (
+                      <option key={item} value={item}>{item}</option>
+                    ))}
+                    <option value={customOptionValue}>鑷畾涔夎緭鍏?/option>
+                  </select>
+                  {isCustomAudience && (
+                    <input className="custom-field-input" value={audience} onChange={(event) => setAudience(event.target.value)} placeholder="杈撳叆鑷畾涔夊彈浼? />
+                  )}
+                </label>
+
+                <label className="field">
+                  <span>浣跨敤鍦烘櫙</span>
+                  <select
+                    value={isCustomScene ? customOptionValue : scene}
+                    onChange={(event) => setScene(event.target.value === customOptionValue ? "" : event.target.value)}
+                  >
+                    {sceneOptions.map((item) => (
+                      <option key={item} value={item}>{item}</option>
+                    ))}
+                    <option value={customOptionValue}>鑷畾涔夎緭鍏?/option>
+                  </select>
+                  {isCustomScene && (
+                    <input className="custom-field-input" value={scene} onChange={(event) => setScene(event.target.value)} placeholder="杈撳叆鑷畾涔夊満鏅? />
+                  )}
+                </label>
+              </div>
+
+              <label className="field">
+                <span>鏍稿績琛ㄨ揪</span>
+                <select
+                  value={isCustomKeyMessage ? customOptionValue : keyMessage}
+                  onChange={(event) => setKeyMessage(event.target.value === customOptionValue ? "" : event.target.value)}
+                >
+                  {keyMessageOptions.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                  <option value={customOptionValue}>鑷畾涔夎緭鍏?/option>
+                </select>
+                {isCustomKeyMessage && (
+                  <input className="custom-field-input" value={keyMessage} onChange={(event) => setKeyMessage(event.target.value)} placeholder="杈撳叆鑷畾涔夋牳蹇冭〃杈? />
+                )}
+              </label>
+
+              <label className="field">
+                <span>鐢婚潰鏍囬</span>
+                <input value={visibleText} onChange={(event) => setVisibleText(event.target.value)} placeholder="甯屾湜鍑虹幇鍦ㄥ浘閲岀殑鏍囬鎴栫煭鍙? />
+              </label>
+
+              <label className="field">
+                <span>閬垮厤鍐呭</span>
+                <select
+                  value={isCustomAvoid ? customOptionValue : avoid}
+                  onChange={(event) => setAvoid(event.target.value === customOptionValue ? "" : event.target.value)}
+                >
+                  {avoidOptions.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                  <option value={customOptionValue}>鑷畾涔夎緭鍏?/option>
+                </select>
+                {isCustomAvoid && (
+                  <input className="custom-field-input" value={avoid} onChange={(event) => setAvoid(event.target.value)} placeholder="杈撳叆鑷畾涔夐伩鍏嶅唴瀹? />
+                )}
+              </label>
+
+              <div className="recommendation-panel">
+                <div>
+                  <p className="eyebrow">鏅鸿兘寤鸿</p>
+                  <strong>
+                    {findLabel(styleOptions, smartRecommendation.style)} 路 {findLabel(layoutOptions, smartRecommendation.layout)} 路{" "}
+                    {findLabel(paletteOptions, smartRecommendation.palette)}
+                  </strong>
+                </div>
+                <button className="secondary-button" type="button" onClick={applySmartRecommendation}>
+                  搴旂敤寤鸿
+                </button>
+              </div>
+            </section>
+
+            <button className="primary-button" disabled={isBusy || !topic.trim()} type="submit">
+              {isBusy ? "姝ｅ湪鐢熸垚" : "鐢熸垚楂樻竻鍥剧墖"}
+            </button>
+          </form>
+
+          <section className={`result-surface ${showCaseGallery ? "is-start-mode" : ""}`} aria-live="polite">
+            {showCaseGallery ? (
+              <div className="start-studio">
+                <header className="start-hero">
+                  <p className="eyebrow">妗堜緥鐏垫劅</p>
+                  <h2>浠庝竴涓渚嬪紑濮?/h2>
+                  <p>鍏堝€熶竴鏉熷厜锛屽啀闀垮嚭鑷繁鐨勭敾闈€?/p>
+                </header>
+
+                <div className="case-gallery" aria-label="妗堜緥鐏垫劅搴?>
+                  <div className="case-marquee" aria-label="鑷姩婊戝姩鐨勬渚?>
+                    <div className="case-track">
+                      {[...caseStudies, ...caseStudies].map((item, index) => (
+                        <article className="case-card" key={`${item.id}-${index}`} aria-hidden={index >= caseStudies.length}>
+                          <button
+                            className="case-image-button"
+                            tabIndex={index >= caseStudies.length ? -1 : undefined}
+                            type="button"
+                            onClick={() => setPreviewCase(item)}
+                          >
+                            <img
+                              src={item.thumbnailUrl}
+                              alt={item.title}
+                              loading={index < 4 ? "eager" : "lazy"}
+                              decoding="async"
+                            />
+                            <span className="case-preview-chip">Preview</span>
+                          </button>
+                          <div className="case-card-copy">
+                            <div className="case-tags">
+                              <span>{findLabel(contentTypes, item.templateData.contentType)}</span>
+                              <span>{findLabel(styleOptions, item.templateData.visualStyle)}</span>
+                            </div>
+                            <h3>{item.title}</h3>
+                            <p>{item.description}</p>
+                          </div>
+                          <div className="case-card-actions">
+                            <button
+                              className="secondary-button"
+                              tabIndex={index >= caseStudies.length ? -1 : undefined}
+                              type="button"
+                              onClick={() => setPreviewCase(item)}
+                            >
+                              Preview
+                            </button>
+                            <button
+                              className="primary-button"
+                              tabIndex={index >= caseStudies.length ? -1 : undefined}
+                              type="button"
+                              onClick={() => applyCaseTemplate(item)}
+                            >
+                              浣跨敤妯℃澘
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <section className="inspiration-panel" aria-label="鍒涙剰鐏垫劅闈㈡澘">
+                  <div className="inspiration-copy">
+                    <p className="eyebrow">鍒涙剰鐏垫劅</p>
+                    <h2>涓嶇煡閬撳仛浠€涔堬紵璁╃郴缁熷厛缁欎綘涓€涓柟鍚戙€?/h2>
+                    <p>鐐瑰嚮鍚庝細闅忔満鐢熸垚涓婚銆佹爣棰樺拰涓嬫媺妗嗛厤缃紝骞跺悓姝ュ埌宸︿晶琛ㄥ崟銆?/p>
+                    <button className="primary-button" type="button" onClick={applyCreativeInspiration}>
+                      {currentInspiration ? "鎹竴涓伒鎰? : "鐢熸垚鐏垫劅"}
+                    </button>
+                  </div>
+
+                  <div className="inspiration-result">
+                    {currentInspiration ? (
+                      <>
+                        <span>鏈鐏垫劅</span>
+                        <strong>{currentInspiration.title}</strong>
+                        <p>{currentInspiration.description}</p>
+                        <div className="inspiration-tags">
+                          <span>{findLabel(contentTypes, currentInspiration.templateData.contentType)}</span>
+                          <span>{findLabel(styleOptions, currentInspiration.templateData.visualStyle)}</span>
+                          <span>{findLabel(layoutOptions, currentInspiration.templateData.layout)}</span>
+                          <span>{currentInspiration.templateData.aspectRatio}</span>
+                          <span>{currentInspiration.templateData.quality === "2k" ? "2K" : "鏍囧噯"}</span>
+                        </div>
+                        <small>{currentInspiration.tip}</small>
+                      </>
+                    ) : (
+                      <>
+                        <span>鍑嗗灏辩华</span>
+                        <strong>涓€閿敓鎴愬彲缂栬緫鐨勫垱浣滄柟鍚?/strong>
+                        <p>鐏垫劅浼氬～鍏ヤ富杈撳叆銆佺敾闈㈡爣棰樸€佸彈浼椼€佸満鏅€侀鏍笺€佸竷灞€銆侀厤鑹层€佹瘮渚嬪拰娓呮櫚搴︺€?/p>
+                        <div className="inspiration-tags">
+                          <span>涓婚</span>
+                          <span>椋庢牸</span>
+                          <span>甯冨眬</span>
+                          <span>鏍囬</span>
+                          <span>鐢诲箙</span>
+                        </div>
+                        <small>鐢熸垚鍚庝綘鍙互缁х画寰皟锛屽啀鐐瑰嚮宸︿晶鐢熸垚楂樻竻鍥剧墖銆?/small>
+                      </>
+                    )}
+                  </div>
+                </section>
+              </div>
+            ) : (
+              <>
+                <div className="result-header">
+                  <div>
+                    <p className="eyebrow">杈撳嚭鐢诲竷</p>
+                    <h2>{job ? getJobTitle(job) : "绛夊緟鐢熸垚"}</h2>
+                  </div>
+                  <div className="result-actions">
+                    {imageUrl && (
+                      <a className="download-link" href={imageUrl} download={job ? buildDownloadName(job) : "banana2.png"}>
+                        涓嬭浇鍥剧墖
+                      </a>
+                    )}
+                    {job?.outputUrl && (
+                      <button className="secondary-button" type="button" onClick={() => setPreviewJob(job)}>
+                        鏌ョ湅澶у浘
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="image-stage">
+                  {imageUrl ? (
+                    <img className="result-image" src={imageUrl} alt="鐢熸垚缁撴灉" />
+                  ) : isGenerating ? (
+                    <div className="generating-canvas" role="status" aria-live="polite">
+                      <div className="generating-blur" aria-hidden="true" />
+                      <button className="generating-spinner-button" disabled type="button">
+                        <span className="generating-spinner" aria-hidden="true" />
+                        鐢熸垚涓?                      </button>
+                      <div className="generating-copy">
+                        <strong>姝ｅ湪鍔姏鐢熸垚锛岃鑰愬績绛夊緟.....</strong>
+                        <p>棣欒晧 2 姝ｅ湪澶勭悊鐢婚潰缁嗚妭锛岀粨鏋滃畬鎴愬悗浼氳嚜鍔ㄦ樉绀哄湪杩欓噷銆?/p>
+                      </div>
+                      <div className="generating-steps" aria-hidden="true">
+                        <span>瑙ｆ瀽涓婚</span>
+                        <span>缁勭粐鏋勫浘</span>
+                        <span>娓叉煋楂樻竻鍥?/span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="empty-result">
+                      <strong>{statusText}</strong>
+                      <p>{job?.status === "failed" ? "鏈璇锋眰澶辫触锛岃缁嗕俊鎭涓嬨€? : "璁剧疆浣滃搧鍙傛暟鍚庯紝楂樻竻缁撴灉浼氶摵鍦ㄨ繖閲屻€?}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="job-details">
+                  <div>
+                    <span>妯″瀷</span>
+                    <strong>棣欒晧 2</strong>
+                  </div>
+                  <div>
+                    <span>姣斾緥</span>
+                    <strong>{job?.aspectRatio || aspectRatio}</strong>
+                  </div>
+                  <div>
+                    <span>娓呮櫚搴?/span>
+                    <strong>{job?.quality === "normal" ? "鏍囧噯" : job?.quality || quality}</strong>
+                  </div>
+                  <div>
+                    <span>灏濊瘯娆℃暟</span>
+                    <strong>{job?.attempts ?? 0}</strong>
+                  </div>
+                  <div>
+                    <span>鐘舵€?/span>
+                    <strong>{statusText}</strong>
+                  </div>
+                </div>
+
+                {(error || job?.error) && <p className="error-message">{error || job?.error}</p>}
+
+              </>
+            )}
+          </section>
+        </section>
+      </section>
+
+      {previewCase && (
+        <div className="preview-overlay" role="dialog" aria-modal="true" aria-label="妗堜緥棰勮">
+          <div className="preview-dialog">
+            <button className="preview-close" type="button" onClick={() => setPreviewCase(null)}>
+              鍏抽棴
+            </button>
+            <img src={previewCase.thumbnailUrl} alt={previewCase.title} />
+            <div className="preview-meta">
+              <div>
+                <span>妗堜緥淇℃伅</span>
+                <p>{previewCase.title}</p>
+              </div>
+              <p>{previewCase.description}</p>
+              <div className="project-summary">
+                <div>
+                  <span>绫诲瀷</span>
+                  <strong>{findLabel(contentTypes, previewCase.templateData.contentType)}</strong>
+                </div>
+                <div>
+                  <span>椋庢牸</span>
+                  <strong>{findLabel(styleOptions, previewCase.templateData.visualStyle)}</strong>
+                </div>
+                <div>
+                  <span>甯冨眬</span>
+                  <strong>{findLabel(layoutOptions, previewCase.templateData.layout)}</strong>
+                </div>
+                <div>
+                  <span>閰嶈壊</span>
+                  <strong>{findLabel(paletteOptions, previewCase.templateData.palette)}</strong>
+                </div>
+                <div>
+                  <span>姣斾緥</span>
+                  <strong>{previewCase.templateData.aspectRatio}</strong>
+                </div>
+                <div>
+                  <span>娓呮櫚搴?/span>
+                  <strong>{previewCase.templateData.quality === "2k" ? "2K 楂樻竻" : "鏍囧噯"}</strong>
+                </div>
+              </div>
+              <div className="preview-actions">
+                <button className="primary-button" type="button" onClick={() => applyCaseTemplate(previewCase)}>
+                  浣跨敤姝ゆā鏉?                </button>
+              </div>
+              <small>濂楃敤鍚庝細濉厖宸︿晶鍙傛暟锛屼笉浼氳嚜鍔ㄦ彁浜ょ敓鎴愩€?/small>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {previewJob?.outputUrl && (
+        <div className="preview-overlay" role="dialog" aria-modal="true" aria-label="浣滃搧棰勮">
+          <div className="preview-dialog">
+            <button className="preview-close" type="button" onClick={() => setPreviewJob(null)}>
+              鍏抽棴
+            </button>
+            <img src={previewJob.outputUrl} alt="浣滃搧棰勮" />
+            <div className="preview-meta">
+              <div>
+                <span>浣滃搧淇℃伅</span>
+                <p>{getJobTitle(previewJob)}</p>
+              </div>
+              {isProjectData(previewJob.projectData) && (
+                <div className="project-summary">
+                  <div>
+                    <span>绫诲瀷</span>
+                    <strong>{findLabel(contentTypes, previewJob.projectData.contentType)}</strong>
+                  </div>
+                  <div>
+                    <span>椋庢牸</span>
+                    <strong>{findLabel(styleOptions, previewJob.projectData.visualStyle)}</strong>
+                  </div>
+                  <div>
+                    <span>甯冨眬</span>
+                    <strong>{findLabel(layoutOptions, previewJob.projectData.layout)}</strong>
+                  </div>
+                  <div>
+                    <span>閰嶈壊</span>
+                    <strong>{findLabel(paletteOptions, previewJob.projectData.palette)}</strong>
+                  </div>
+                </div>
+              )}
+              <div className="preview-actions">
+                <a href={previewJob.outputUrl} download={buildDownloadName(previewJob)}>
+                  涓嬭浇鍥剧墖
+                </a>
+              </div>
+              <small>
+                棣欒晧 2 路 {previewJob.aspectRatio || "1:1"} 路 {previewJob.quality || "2k"} 路 {formatTime(previewJob.createdAt)}
+              </small>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
+
+const root = createRoot(document.getElementById("root")!);
+root.render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
+

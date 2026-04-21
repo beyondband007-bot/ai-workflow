@@ -27,22 +27,22 @@
 
       .wf-head h1 {
         margin: 6px 0 10px;
-        color: #f3f8ff;
+        color: var(--text);
         font-size: clamp(32px, 5vw, 56px);
       }
 
       .wf-head p {
         margin: 0;
         max-width: 760px;
-        color: #94aac7;
+        color: var(--muted);
         line-height: 1.7;
       }
 
       .wf-panel {
-        background: rgba(10, 20, 36, 0.9);
-        border: 1px solid rgba(106, 150, 214, 0.18);
+        background: var(--panel);
+        border: 1px solid var(--line);
         border-radius: 28px;
-        box-shadow: 0 24px 60px rgba(3, 8, 20, 0.35);
+        box-shadow: var(--shadow);
         padding: 24px;
       }
 
@@ -54,7 +54,7 @@
       .wf-form label {
         display: grid;
         gap: 10px;
-        color: #d7e4f4;
+        color: var(--text);
         font-weight: 600;
       }
 
@@ -62,18 +62,22 @@
         width: 100%;
         min-height: 170px;
         resize: vertical;
-        border: 1px solid rgba(109, 155, 226, 0.26);
+        border: 1px solid var(--line);
         border-radius: 18px;
-        background: rgba(7, 15, 30, 0.96);
-        color: #f3f8ff;
+        background: var(--panel-soft);
+        color: var(--text);
         padding: 16px 18px;
         font: inherit;
       }
 
+      .wf-form textarea::placeholder {
+        color: var(--muted);
+      }
+
       .wf-form textarea:focus {
         outline: none;
-        border-color: rgba(123, 204, 255, 0.82);
-        box-shadow: 0 0 0 4px rgba(82, 183, 255, 0.14);
+        border-color: rgba(25, 197, 107, 0.46);
+        box-shadow: 0 0 0 4px rgba(25, 197, 107, 0.14);
       }
 
       .wf-actions {
@@ -91,13 +95,13 @@
 
       .wf-status-card {
         border-radius: 18px;
-        background: rgba(12, 24, 44, 0.88);
-        border: 1px solid rgba(91, 139, 208, 0.18);
+        background: var(--panel-soft);
+        border: 1px solid var(--line);
         padding: 16px;
       }
 
       .wf-status-card span {
-        color: #89a3c7;
+        color: var(--muted);
         font-size: 12px;
         letter-spacing: 0.12em;
         text-transform: uppercase;
@@ -106,13 +110,13 @@
       .wf-status-card strong {
         display: block;
         margin-top: 8px;
-        color: #f3f8ff;
+        color: var(--text);
         font-size: 20px;
         word-break: break-word;
       }
 
       .wf-summary {
-        color: #c8d8ea;
+        color: var(--text);
         margin: 0 0 16px;
       }
 
@@ -126,8 +130,8 @@
       .wf-gallery-item {
         overflow: hidden;
         border-radius: 24px;
-        border: 1px solid rgba(86, 134, 204, 0.18);
-        background: rgba(8, 18, 32, 0.88);
+        border: 1px solid var(--line);
+        background: var(--panel-soft);
       }
 
       .wf-gallery-item img {
@@ -140,7 +144,7 @@
       .wf-gallery-item a {
         display: block;
         padding: 12px;
-        color: #7cd6ff;
+        color: var(--teal);
         text-decoration: none;
       }
 
@@ -148,9 +152,17 @@
         margin-top: 18px;
         padding: 56px 24px;
         border-radius: 18px;
-        border: 1px dashed rgba(109, 154, 224, 0.28);
-        color: #89a1c2;
+        border: 1px dashed var(--line);
+        color: var(--muted);
         text-align: center;
+      }
+
+      body[data-theme="dark"] .wf-summary {
+        color: #cfe2f6;
+      }
+
+      body[data-theme="dark"] .wf-form textarea {
+        background: rgba(8, 21, 36, 0.84);
       }
 
       @media (max-width: 860px) {

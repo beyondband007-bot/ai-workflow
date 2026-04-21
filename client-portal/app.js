@@ -33,6 +33,27 @@ function resolveWf003PortalUrl() {
   return "https://mycar.deepsix.store/";
 }
 
+function resolveWf002PortalUrl() {
+  const { protocol, hostname, port } = window.location;
+
+  if (protocol === "file:") {
+    return "http://127.0.0.1:5173/";
+  }
+
+  const normalizedHost = String(hostname || "").toLowerCase();
+  if (
+    normalizedHost === "127.0.0.1" ||
+    normalizedHost === "localhost" ||
+    normalizedHost === "0.0.0.0" ||
+    port === "8080" ||
+    port === "3003"
+  ) {
+    return `${protocol}//${hostname || "127.0.0.1"}:5173/`;
+  }
+
+  return `${protocol}//${hostname || window.location.host}:5173/`;
+}
+
 function resolveAuthEntryUrl() {
   const { protocol, hostname, port } = window.location;
 
@@ -950,16 +971,27 @@ function attachWorkflowButtons() {
         return;
       }
 
-      if (workflowCode === "WF-001" || workflowCode === "WF-002") {
+      if (workflowCode === "WF-001") {
         const token = getToken();
-        const pageName =
-          workflowCode === "WF-001"
-            ? "wf001.html"
-            : "wf002.html";
+        const pageName = "wf001.html";
         const targetUrl = token
           ? `./${pageName}?token=${encodeURIComponent(token)}`
           : `./${pageName}`;
         window.open(targetUrl, "_blank", "noopener,noreferrer");
+        button.disabled = false;
+        button.textContent = originalText;
+        return;
+      }
+
+      if (workflowCode === "WF-002") {
+        const token = getToken();
+        if (!token) {
+          throw new Error("Missing auth token. Please log in before opening WF-002.");
+        }
+
+        const wf002Url = new URL(resolveWf002PortalUrl());
+        wf002Url.searchParams.set("token", token);
+        window.open(wf002Url.toString(), "_blank", "noopener,noreferrer");
         button.disabled = false;
         button.textContent = originalText;
         return;

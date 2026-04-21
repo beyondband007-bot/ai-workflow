@@ -17,11 +17,11 @@ export const WORKFLOW_CATALOG: WorkflowDefinition[] = [
     workflow_name: '高质量文生图',
     current_status: '已运行',
     metering_mode: '固定积分',
-    base_points: 30,
+    base_points: 50,
     unit_points: null,
     description: '面向纯 Webhook 触发链路，强调中台登记、执行回写和结果沉淀。',
     max_estimated_count: 1,
-    max_frozen_points: 30,
+    max_frozen_points: 50,
   },
   {
     workflow_code: 'WF-003',

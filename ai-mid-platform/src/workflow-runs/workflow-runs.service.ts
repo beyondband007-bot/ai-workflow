@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -568,6 +569,34 @@ export class WorkflowRunsService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async callbackAuth(currentUser: AuthUser, payload: CallbackPayload) {
+    const runId = payload.run_id?.trim();
+
+    if (!runId) {
+      throw new BadRequestException('run_id is required');
+    }
+
+    const [run] = await this.dataSource.query(
+      `
+        SELECT user_id
+        FROM workflow_runs
+        WHERE run_id = ?
+        LIMIT 1
+      `,
+      [runId],
+    );
+
+    if (!run) {
+      throw new NotFoundException(`Run ${runId} not found`);
+    }
+
+    if (Number(run.user_id) !== currentUser.userId) {
+      throw new ForbiddenException('run_id does not belong to current user');
+    }
+
+    return this.callback(payload);
   }
 
   async wf003RegisterTask(payload: Wf003RegisterTaskPayload) {

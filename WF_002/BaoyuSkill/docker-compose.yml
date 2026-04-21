@@ -1,0 +1,60 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: baoyu-image-gen-mysql
+    environment:
+      MYSQL_DATABASE: baoyu_image_gen
+      MYSQL_USER: baoyu
+      MYSQL_PASSWORD: baoyu_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: node:24-alpine
+    container_name: baoyu-image-gen-api
+    working_dir: /app
+    command: sh -c "npm install && npm run build -w packages/core && npm run prisma:generate -w apps/api && npm run prisma:deploy -w apps/api && npm run dev:api"
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 3001
+      DATABASE_URL: mysql://baoyu:baoyu_password@mysql:3306/baoyu_image_gen
+      KIE_API_KEY: ${KIE_API_KEY:-}
+      KIE_IMAGE_MODEL: ${KIE_IMAGE_MODEL:-nano-banana-2}
+    ports:
+      - "3003:3001"
+    volumes:
+      - .:/app
+      - api-node-modules:/app/node_modules
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  web:
+    image: node:24-alpine
+    container_name: baoyu-image-gen-web
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -w apps/web -- --host 0.0.0.0"
+    environment:
+      WEB_PORT: 5173
+      VITE_API_BASE_URL: http://api:3001
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - web-node-modules:/app/node_modules
+    depends_on:
+      - api
+
+volumes:
+  mysql-data:
+  api-node-modules:
+  web-node-modules:

@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum GenerationJobStatus {
+  queued
+  running
+  succeeded
+  failed
+}
+
+enum GenerationAssetKind {
+  reference
+  output
+}
+
+model GenerationJob {
+  id          String              @id @db.VarChar(36)
+  status      GenerationJobStatus @default(queued)
+  prompt      String              @db.Text
+  provider    String              @db.VarChar(32)
+  model       String?             @db.VarChar(255)
+  aspectRatio String?             @map("aspect_ratio") @db.VarChar(32)
+  quality     String?             @db.VarChar(32)
+  imageSize   String?             @map("image_size") @db.VarChar(32)
+  size        String?             @db.VarChar(32)
+  projectData Json?               @map("project_data")
+  outputPath  String?             @map("output_path") @db.VarChar(1024)
+  outputUrl   String?             @map("output_url") @db.VarChar(1024)
+  attempts    Int                 @default(0)
+  error       String?             @db.Text
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  startedAt   DateTime?           @map("started_at")
+  finishedAt  DateTime?           @map("finished_at")
+  assets      GenerationAsset[]
+
+  @@index([status, createdAt])
+  @@index([createdAt])
+  @@map("generation_jobs")
+}
+
+model GenerationAsset {
+  id        String              @id @db.VarChar(36)
+  jobId     String              @map("job_id") @db.VarChar(36)
+  kind      GenerationAssetKind
+  filePath  String              @map("file_path") @db.VarChar(1024)
+  mimeType  String              @map("mime_type") @db.VarChar(255)
+  sizeBytes BigInt              @map("size_bytes")
+  createdAt DateTime            @default(now()) @map("created_at")
+  job       GenerationJob       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, kind])
+  @@map("generation_assets")
+}
