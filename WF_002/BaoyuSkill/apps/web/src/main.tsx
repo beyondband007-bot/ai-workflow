@@ -99,6 +99,7 @@ type WorkflowBillingMeta = {
 };
 
 const AUTH_TOKEN_KEY = "auth_demo_token";
+const BRAND_ASSET_VERSION = "20260425b";
 
 function resolveAuthApiBase() {
   const { protocol, hostname, port } = window.location;
@@ -1806,10 +1807,10 @@ function App() {
       <aside className="sidebar" aria-label="工作台导航">
         <div className="brand-block">
           <div className="brand-mark" aria-hidden="true">
-            <img className="brand-logo" src="/logo.png" alt="" />
+            <img className="brand-logo" src={`/logo.png?v=${BRAND_ASSET_VERSION}`} alt="" />
           </div>
           <div>
-            <strong>鲸创传媒高质量文生图</strong>
+            <strong>GETRUE 图片大师</strong>
             <span>神经视觉工作台</span>
           </div>
         </div>
@@ -1880,7 +1881,7 @@ function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">模型</p>
-            <h1>BaoYu 创作灵境</h1>
+            <h1>GETRUE 图片大师</h1>
           </div>
           <nav className="top-tabs" aria-label="工作区">
             <span className="is-active">创作</span>
@@ -2405,4 +2406,3 @@ root.render(
     </AuthGate>
   </StrictMode>,
 );
-
