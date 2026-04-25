@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 ﻿import { StrictMode, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
@@ -100,6 +101,11 @@ type WorkflowBillingMeta = {
 
 const AUTH_TOKEN_KEY = "auth_demo_token";
 const BRAND_ASSET_VERSION = "20260425b";
+const APP_BASE = import.meta.env.BASE_URL;
+
+function toAppPath(path: string) {
+  return `${APP_BASE}${path.replace(/^\/+/, "")}`;
+}
 
 function resolveAuthApiBase() {
   const { protocol, hostname, port } = window.location;
@@ -119,7 +125,7 @@ function resolveAuthApiBase() {
     return `${protocol}//${hostname || "127.0.0.1"}:3002`;
   }
 
-  return "";
+  return window.location.origin;
 }
 
 function resolveAuthEntryUrl() {
@@ -215,7 +221,7 @@ function buildClientRequestId() {
 function toAbsoluteResultUrl(outputUrl: string | null) {
   if (!outputUrl) return null;
   if (/^https?:\/\//i.test(outputUrl)) return outputUrl;
-  return `${window.location.origin}${outputUrl.startsWith("/") ? outputUrl : `/${outputUrl}`}`;
+  return `${window.location.origin}${toAppPath(outputUrl)}`;
 }
 
 function getBillingMeta(projectData: ProjectData | null): WorkflowBillingMeta | null {
@@ -317,7 +323,7 @@ const caseStudies: CaseStudy[] = [
     id: "old-photo-shadow",
     title: "旧巷影子叙事图",
     description: "旧照片质感的情绪场景，适合做成长、回忆和人生转折主题。",
-    thumbnailUrl: "/cases/case-01-old-photo-shadow.png",
+    thumbnailUrl: toAppPath("/cases/case-01-old-photo-shadow.png"),
     templateData: {
       version: 1,
       contentType: "伤感",
@@ -339,7 +345,7 @@ const caseStudies: CaseStudy[] = [
     id: "late-night-radio-cover",
     title: "深夜电台封面",
     description: "柔和暗恋氛围的情绪封面，适合错过、怀念和深夜独白内容。",
-    thumbnailUrl: "/cases/case-02-late-night-radio.png",
+    thumbnailUrl: toAppPath("/cases/case-02-late-night-radio.png"),
     templateData: {
       version: 1,
       contentType: "伤感",
@@ -361,7 +367,7 @@ const caseStudies: CaseStudy[] = [
     id: "wuhan-city-walk",
     title: "武汉城市漫步路线",
     description: "手绘路线教程图，适合城市攻略、周末出行和收藏型内容。",
-    thumbnailUrl: "/cases/case-03-wuhan-city-walk.png",
+    thumbnailUrl: toAppPath("/cases/case-03-wuhan-city-walk.png"),
     templateData: {
       version: 1,
       contentType: "tutorial",
@@ -383,7 +389,7 @@ const caseStudies: CaseStudy[] = [
     id: "color-guide",
     title: "配色避坑指南",
     description: "高识别度知识卡片，适合设计新手快速理解对比和选择。",
-    thumbnailUrl: "/cases/case-04-color-guide.png",
+    thumbnailUrl: toAppPath("/cases/case-04-color-guide.png"),
     templateData: {
       version: 1,
       contentType: "knowledge-card",
@@ -405,7 +411,7 @@ const caseStudies: CaseStudy[] = [
     id: "old-bookstore-still-life",
     title: "旧书店灰尘静物",
     description: "复古静物画面，适合时间、遗忘、阅读和治愈主题。",
-    thumbnailUrl: "/cases/case-05-old-bookstore.png",
+    thumbnailUrl: toAppPath("/cases/case-05-old-bookstore.png"),
     templateData: {
       version: 1,
       contentType: "美观的图片",
@@ -427,7 +433,7 @@ const caseStudies: CaseStudy[] = [
     id: "growth-quote-poster",
     title: "成长金句海报",
     description: "留白充足的情绪海报，适合成长、自律和朋友圈分享。",
-    thumbnailUrl: "/cases/case-06-growth-poster.png",
+    thumbnailUrl: toAppPath("/cases/case-06-growth-poster.png"),
     templateData: {
       version: 1,
       contentType: "quote-poster",
@@ -449,7 +455,7 @@ const caseStudies: CaseStudy[] = [
     id: "kids-english-cover",
     title: "少儿英语博主封面",
     description: "黑板板书风格，适合知识博主把复杂内容拆成清楚模块。",
-    thumbnailUrl: "/cases/case-07-kids-english.png",
+    thumbnailUrl: toAppPath("/cases/case-07-kids-english.png"),
     templateData: {
       version: 1,
       contentType: "xiaohongshu-cover",
@@ -471,7 +477,7 @@ const caseStudies: CaseStudy[] = [
     id: "beauty-product-cover",
     title: "美妆视频产品封面",
     description: "清新明亮的产品卖点图，适合视频封面和种草内容。",
-    thumbnailUrl: "/cases/case-08-beauty-cover.png",
+    thumbnailUrl: toAppPath("/cases/case-08-beauty-cover.png"),
     templateData: {
       version: 1,
       contentType: "product-card",
@@ -493,7 +499,7 @@ const caseStudies: CaseStudy[] = [
     id: "study-comparison",
     title: "高效学习对比图",
     description: "复古霓虹对比海报，用左右差异快速建立记忆点。",
-    thumbnailUrl: "/cases/case-09-study-comparison.png",
+    thumbnailUrl: toAppPath("/cases/case-09-study-comparison.png"),
     templateData: {
       version: 1,
       contentType: "quote-poster",
@@ -515,7 +521,7 @@ const caseStudies: CaseStudy[] = [
     id: "cat-checklist",
     title: "新手养猫准备清单",
     description: "可收藏的清单式知识卡，适合宠物科普和新手指南。",
-    thumbnailUrl: "/cases/case-10-cat-checklist.png",
+    thumbnailUrl: toAppPath("/cases/case-10-cat-checklist.png"),
     templateData: {
       version: 1,
       contentType: "knowledge-card",
@@ -537,7 +543,7 @@ const caseStudies: CaseStudy[] = [
     id: "featured-visual",
     title: "精选视觉案例",
     description: "从最近生成结果沉淀出的通用案例，可作为新作品的视觉起点。",
-    thumbnailUrl: "/cases/case-11-featured-visual.png",
+    thumbnailUrl: toAppPath("/cases/case-11-featured-visual.png"),
     templateData: {
       version: 1,
       contentType: "knowledge-card",
@@ -559,7 +565,7 @@ const caseStudies: CaseStudy[] = [
     id: "featured-cover",
     title: "精选封面案例",
     description: "适合标题突出的封面方向，能快速套用到知识分享和图文内容。",
-    thumbnailUrl: "/cases/case-12-featured-cover.png",
+    thumbnailUrl: toAppPath("/cases/case-12-featured-cover.png"),
     templateData: {
       version: 1,
       contentType: "xiaohongshu-cover",
@@ -581,7 +587,7 @@ const caseStudies: CaseStudy[] = [
     id: "first-image-tutorial",
     title: "第一张 AI 图教程",
     description: "手绘笔记风教程图，适合把流程拆成可执行步骤。",
-    thumbnailUrl: "/cases/case-13-ai-guide-card.png",
+    thumbnailUrl: toAppPath("/cases/case-13-ai-guide-card.png"),
     templateData: {
       version: 1,
       contentType: "tutorial",
@@ -1368,7 +1374,7 @@ function App() {
   );
 
   const isBusy = job?.status === "queued" || job?.status === "running" || isSubmitting;
-  const imageUrl = job?.outputUrl ? job.outputUrl : null;
+  const imageUrl = toAbsoluteResultUrl(job?.outputUrl ?? null);
   const isGenerating = isSubmitting || job?.status === "queued" || job?.status === "running";
   const showCaseGallery = !job && !imageUrl;
   const statusText = useMemo(() => {
@@ -1522,7 +1528,7 @@ function App() {
 
   async function fetchConfig() {
     try {
-      const res = await fetch("/api/config");
+      const res = await fetch(toAppPath("/api/config"));
       if (!res.ok) throw new Error(`读取配置失败：${res.status}`);
       const nextConfig = (await res.json()) as ConfigResponse;
       setConfig(nextConfig);
@@ -1537,7 +1543,7 @@ function App() {
     setIsHistoryLoading(true);
     setHistoryError(null);
     try {
-      const res = await fetch("/api/generations?limit=20");
+      const res = await fetch(toAppPath("/api/generations?limit=20"));
       if (!res.ok) throw new Error(`读取历史失败：${res.status}`);
       const data = (await res.json()) as HistoryResponse;
       const bananaJobs = data.jobs.filter((item) => item.provider === "kie");
@@ -1550,7 +1556,7 @@ function App() {
   }
 
   async function pollJob(jobId: string) {
-    const res = await fetch(`/api/generations/${jobId}`);
+      const res = await fetch(toAppPath(`/api/generations/${jobId}`));
     if (!res.ok) throw new Error(`读取任务失败：${res.status}`);
     const nextJob = (await res.json()) as GenerationJob;
     setJob(nextJob);
@@ -1600,7 +1606,7 @@ function App() {
       form.set("quality", quality);
       form.set("projectData", JSON.stringify({ ...projectData, __wf002Billing: billingMeta }));
 
-      const res = await fetch("/api/generations", {
+      const res = await fetch(toAppPath("/api/generations"), {
         method: "POST",
         body: form,
       });
@@ -1768,7 +1774,7 @@ function App() {
     setDeletingJobId(target.id);
     setError(null);
     try {
-      const res = await fetch(`/api/generations/${target.id}`, {
+      const res = await fetch(toAppPath(`/api/generations/${target.id}`), {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -1807,7 +1813,7 @@ function App() {
       <aside className="sidebar" aria-label="工作台导航">
         <div className="brand-block">
           <div className="brand-mark" aria-hidden="true">
-            <img className="brand-logo" src={`/logo.png?v=${BRAND_ASSET_VERSION}`} alt="" />
+            <img className="brand-logo" src={`${toAppPath("/logo.png")}?v=${BRAND_ASSET_VERSION}`} alt="" />
           </div>
           <div>
             <strong>GETRUE 图片大师</strong>
@@ -1843,7 +1849,7 @@ function App() {
                   onClick={() => selectHistoryItem(item)}
                 >
                   <div className="history-thumb">
-                    {item.outputUrl ? <img src={item.outputUrl} alt="历史缩略图" /> : <span>{statusLabels[item.status]}</span>}
+                    {item.outputUrl ? <img src={toAbsoluteResultUrl(item.outputUrl) || item.outputUrl} alt="历史缩略图" /> : <span>{statusLabels[item.status]}</span>}
                   </div>
                   <div className="history-copy">
                     <strong>{getJobTitle(item)}</strong>
@@ -2120,6 +2126,8 @@ function App() {
             <button className="primary-button" disabled={isBusy || !topic.trim()} type="submit">
               {isBusy ? "正在生成" : "生成高清图片"}
             </button>
+
+            {error && <p className="error-message">{error}</p>}
           </form>
 
           <section className={`result-surface ${showCaseGallery ? "is-start-mode" : ""}`} aria-live="polite">
@@ -2233,7 +2241,7 @@ function App() {
                         下载图片
                       </a>
                     )}
-                    {job?.outputUrl && (
+                    {imageUrl && (
                       <button className="secondary-button" type="button" onClick={() => setPreviewJob(job)}>
                         查看大图
                       </button>
@@ -2292,7 +2300,7 @@ function App() {
                   </div>
                 </div>
 
-                {(error || job?.error) && <p className="error-message">{error || job?.error}</p>}
+                {job?.error && <p className="error-message">{job.error}</p>}
 
               </>
             )}
@@ -2356,7 +2364,7 @@ function App() {
             <button className="preview-close" type="button" onClick={() => setPreviewJob(null)}>
               关闭
             </button>
-            <img src={previewJob.outputUrl} alt="作品预览" />
+            <img src={toAbsoluteResultUrl(previewJob.outputUrl) || previewJob.outputUrl} alt="作品预览" />
             <div className="preview-meta">
               <div>
                 <span>作品信息</span>
@@ -2383,7 +2391,7 @@ function App() {
                 </div>
               )}
               <div className="preview-actions">
-                <a href={previewJob.outputUrl} download={buildDownloadName(previewJob)}>
+                <a href={toAbsoluteResultUrl(previewJob.outputUrl) || previewJob.outputUrl} download={buildDownloadName(previewJob)}>
                   下载图片
                 </a>
               </div>

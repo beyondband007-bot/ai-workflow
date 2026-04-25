@@ -37,7 +37,7 @@ function resolveWf002PortalUrl() {
   const { protocol, hostname, port } = window.location;
 
   if (protocol === "file:") {
-    return "http://127.0.0.1:5173/";
+    return "http://127.0.0.1:8080/portal/wf002/";
   }
 
   const normalizedHost = String(hostname || "").toLowerCase();
@@ -48,10 +48,10 @@ function resolveWf002PortalUrl() {
     port === "8080" ||
     port === "3003"
   ) {
-    return `${protocol}//${hostname || "127.0.0.1"}:5173/`;
+    return `${protocol}//${hostname || "127.0.0.1"}:8080/portal/wf002/`;
   }
 
-  return `${protocol}//${hostname || window.location.host}:5173/`;
+  return `${window.location.origin}/portal/wf002/`;
 }
 
 function resolveAuthEntryUrl() {

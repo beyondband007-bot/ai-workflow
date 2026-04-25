@@ -42,14 +42,37 @@ services:
       args:
         NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-docker.m.daocloud.io/library/node:20.20.0-bookworm}
         NGINX_BASE_IMAGE: ${NGINX_IMAGE:-docker.m.daocloud.io/library/nginx:1.24.0}
+        WF002_NODE_BASE_IMAGE: ${WF002_NODE_BASE_IMAGE:-docker.m.daocloud.io/library/node:24-alpine}
     container_name: ai-workflow-web
     restart: unless-stopped
     depends_on:
       - app
+      - wf002-api
     ports:
       - "8080:80"
     volumes:
       - ./client-portal/avatar:/srv/portal/avatar
+
+  wf002-api:
+    image: ${WF002_NODE_BASE_IMAGE:-docker.m.daocloud.io/library/node:24-alpine}
+    container_name: ai-workflow-wf002-api
+    restart: unless-stopped
+    working_dir: /app
+    env_file:
+      - .env.docker
+    command: sh -lc "npm install && npm run build -w packages/core && npm run prisma:generate -w apps/api && npm exec -w apps/api prisma db push -- --schema prisma/schema.prisma && npm run start -w apps/api"
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 3001
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD:-RootDemo123!}@db:3306/baoyu_image_gen
+      DATA_DIR: /app/data
+      KIE_IMAGE_MODEL: ${KIE_IMAGE_MODEL:-nano-banana-2}
+    depends_on:
+      - db
+    volumes:
+      - ./WF_002/BaoyuSkill:/app
+      - wf002_api_node_modules:/app/node_modules
+      - ./WF_002/BaoyuSkill/data:/app/data
 
   wf003:
     build:
@@ -75,3 +98,4 @@ services:
 
 volumes:
   mysql_data:
+  wf002_api_node_modules:
