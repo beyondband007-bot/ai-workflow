@@ -2,6 +2,8 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import type { CliArgs } from "../types.js";
 
+const GPT_IMAGE_2_ALIAS = "gpt-image-2-text-to-image";
+
 export function getDefaultModel(): string {
   return process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5";
 }
@@ -23,11 +25,24 @@ type SizeMapping = {
   portrait: string;
 };
 
+function normalizeModel(model: string): string {
+  return model === GPT_IMAGE_2_ALIAS ? "gpt-image-2" : model;
+}
+
+function mapOpenAIQuality(model: string, quality: CliArgs["quality"]): "medium" | "high" | undefined {
+  if (!model.includes("gpt-image")) return undefined;
+  return quality === "2k" ? "high" : "medium";
+}
+
 function getOpenAISize(
   model: string,
   ar: string | null,
   quality: CliArgs["quality"]
 ): string {
+  if (model.includes("gpt-image-2")) {
+    return getGptImage2Size(ar, quality);
+  }
+
   const isDalle3 = model.includes("dall-e-3");
   const isDalle2 = model.includes("dall-e-2");
 
@@ -60,11 +75,47 @@ function getOpenAISize(
   return sizes.square;
 }
 
+function getGptImage2Size(ar: string | null, quality: CliArgs["quality"]): string {
+  if (!ar) return quality === "2k" ? "2048x2048" : "1024x1024";
+
+  const parsed = parseAspectRatio(ar);
+  if (!parsed) return quality === "2k" ? "2048x2048" : "1024x1024";
+
+  const ratio = parsed.width / parsed.height;
+  const baseLongEdge = quality === "2k" ? 2048 : 1536;
+  const baseShortEdge = quality === "2k" ? 1536 : 1024;
+
+  if (Math.abs(ratio - 1) < 0.02) {
+    const edge = quality === "2k" ? 2048 : 1024;
+    return `${edge}x${edge}`;
+  }
+
+  if (ratio > 1) {
+    const width = snapToMultipleOf16(baseLongEdge);
+    const height = snapToMultipleOf16(width / ratio);
+    return `${width}x${height}`;
+  }
+
+  const height = snapToMultipleOf16(baseLongEdge);
+  const width = snapToMultipleOf16(height * ratio);
+  if (width < baseShortEdge) {
+    const adjustedWidth = snapToMultipleOf16(baseShortEdge);
+    const adjustedHeight = snapToMultipleOf16(adjustedWidth / ratio);
+    return `${adjustedWidth}x${adjustedHeight}`;
+  }
+  return `${width}x${height}`;
+}
+
+function snapToMultipleOf16(value: number): number {
+  return Math.max(16, Math.round(value / 16) * 16);
+}
+
 export async function generateImage(
   prompt: string,
   model: string,
   args: CliArgs
 ): Promise<Uint8Array> {
+  const normalizedModel = normalizeModel(model);
   const baseURL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -75,21 +126,21 @@ export async function generateImage(
   }
 
   if (process.env.OPENAI_IMAGE_USE_CHAT === "true") {
-    return generateWithChatCompletions(baseURL, apiKey, prompt, model);
+    return generateWithChatCompletions(baseURL, apiKey, prompt, normalizedModel);
   }
 
-  const size = args.size || getOpenAISize(model, args.aspectRatio, args.quality);
+  const size = args.size || getOpenAISize(normalizedModel, args.aspectRatio, args.quality);
 
   if (args.referenceImages.length > 0) {
-    if (model.includes("dall-e-2") || model.includes("dall-e-3")) {
+    if (normalizedModel.includes("dall-e-2") || normalizedModel.includes("dall-e-3")) {
       throw new Error(
         "Reference images with OpenAI in this skill require GPT Image models. Use --model gpt-image-1.5 (or another gpt-image model)."
       );
     }
-    return generateWithOpenAIEdits(baseURL, apiKey, prompt, model, size, args.referenceImages, args.quality);
+    return generateWithOpenAIEdits(baseURL, apiKey, prompt, normalizedModel, size, args.referenceImages, args.quality);
   }
 
-  return generateWithOpenAIGenerations(baseURL, apiKey, prompt, model, size, args.quality);
+  return generateWithOpenAIGenerations(baseURL, apiKey, prompt, normalizedModel, size, args.quality);
 }
 
 async function generateWithChatCompletions(
@@ -135,9 +186,13 @@ async function generateWithOpenAIGenerations(
   quality: CliArgs["quality"]
 ): Promise<Uint8Array> {
   const body: Record<string, any> = { model, prompt, size };
+  const mappedQuality = mapOpenAIQuality(model, quality);
 
   if (model.includes("dall-e-3")) {
     body.quality = quality === "2k" ? "hd" : "standard";
+  }
+  if (mappedQuality) {
+    body.quality = mappedQuality;
   }
 
   const res = await fetch(`${baseURL}/images/generations`, {
@@ -172,8 +227,9 @@ async function generateWithOpenAIEdits(
   form.append("prompt", prompt);
   form.append("size", size);
 
-  if (model.includes("gpt-image")) {
-    form.append("quality", quality === "2k" ? "high" : "medium");
+  const mappedQuality = mapOpenAIQuality(model, quality);
+  if (mappedQuality) {
+    form.append("quality", mappedQuality);
   }
 
   for (const refPath of referenceImages) {

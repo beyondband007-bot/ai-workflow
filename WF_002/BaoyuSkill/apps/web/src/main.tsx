@@ -102,6 +102,9 @@ type WorkflowBillingMeta = {
 const AUTH_TOKEN_KEY = "auth_demo_token";
 const BRAND_ASSET_VERSION = "20260425b";
 const APP_BASE = import.meta.env.BASE_URL;
+const WF002_PROVIDER: Provider = "kie";
+const WF002_LEGACY_MODEL = "nano-banana-2";
+const WF002_GPT_IMAGE_2_MODEL = "gpt-image-2-text-to-image";
 
 function toAppPath(path: string) {
   return `${APP_BASE}${path.replace(/^\/+/, "")}`;
@@ -1234,7 +1237,7 @@ function buildGuidedPrompt(params: {
 
 function upsertJob(list: GenerationJob[], nextJob: GenerationJob): GenerationJob[] {
   const rest = list.filter((item) => item.id !== nextJob.id);
-  return [nextJob, ...rest].filter((item) => item.provider === "kie").slice(0, 20);
+  return [nextJob, ...rest].filter(isWf002Job).slice(0, 20);
 }
 
 function shortId(id: string): string {
@@ -1264,7 +1267,7 @@ function buildDownloadName(job: GenerationJob): string {
     .format(date)
     .replace(/[^\d]/g, "")
     .slice(0, 12);
-  return `banana2-${stamp}-${shortId(job.id)}.png`;
+  return `wf002-${stamp}-${shortId(job.id)}.png`;
 }
 
 function getShortError(message: string): string {
@@ -1280,7 +1283,7 @@ function getJobTitle(job: GenerationJob): string {
 
 function getJobMeta(job: GenerationJob): string {
   if (!isProjectData(job.projectData)) {
-    return `香蕉 2 · ${statusLabels[job.status]} · ${job.aspectRatio || "1:1"} · ${formatTime(job.createdAt)}`;
+    return `${getWorkflowModelLabel(job)} · ${statusLabels[job.status]} · ${job.aspectRatio || "1:1"} · ${formatTime(job.createdAt)}`;
   }
 
   const data = job.projectData;
@@ -1292,6 +1295,25 @@ function getJobMeta(job: GenerationJob): string {
     statusLabels[job.status],
     formatTime(job.createdAt),
   ].join(" · ");
+}
+
+function isWf002Job(job: GenerationJob): boolean {
+  const billing = getBillingMeta(job.projectData);
+  if (billing?.workflowCode === "WF-002") {
+    return true;
+  }
+
+  return (
+    (job.provider === WF002_PROVIDER && job.model === WF002_LEGACY_MODEL) ||
+    (job.provider === WF002_PROVIDER && job.model === WF002_GPT_IMAGE_2_MODEL)
+  );
+}
+
+function getWorkflowModelLabel(job: GenerationJob): string {
+  if (job.provider === WF002_PROVIDER && job.model === WF002_GPT_IMAGE_2_MODEL) {
+    return "GPT Image 2";
+  }
+  return "香蕉 2";
 }
 
 function App() {
@@ -1546,8 +1568,7 @@ function App() {
       const res = await fetch(toAppPath("/api/generations?limit=20"));
       if (!res.ok) throw new Error(`读取历史失败：${res.status}`);
       const data = (await res.json()) as HistoryResponse;
-      const bananaJobs = data.jobs.filter((item) => item.provider === "kie");
-      setHistory(bananaJobs);
+      setHistory(data.jobs.filter(isWf002Job));
     } catch (caught) {
       setHistoryError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -1600,8 +1621,8 @@ function App() {
 
       const form = new FormData();
       form.set("prompt", cleanPrompt);
-      form.set("provider", "kie");
-      form.set("model", "nano-banana-2");
+      form.set("provider", WF002_PROVIDER);
+      form.set("model", WF002_GPT_IMAGE_2_MODEL);
       form.set("aspectRatio", aspectRatio);
       form.set("quality", quality);
       form.set("projectData", JSON.stringify({ ...projectData, __wf002Billing: billingMeta }));
@@ -2237,7 +2258,7 @@ function App() {
                   </div>
                   <div className="result-actions">
                     {imageUrl && (
-                      <a className="download-link" href={imageUrl} download={job ? buildDownloadName(job) : "banana2.png"}>
+                      <a className="download-link" href={imageUrl} download={job ? buildDownloadName(job) : "wf002.png"}>
                         下载图片
                       </a>
                     )}

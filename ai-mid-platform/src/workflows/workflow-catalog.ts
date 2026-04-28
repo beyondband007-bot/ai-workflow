@@ -6,11 +6,11 @@ export const WORKFLOW_CATALOG: WorkflowDefinition[] = [
     workflow_name: '性价比文生图',
     current_status: '测试',
     metering_mode: '固定积分',
-    base_points: 10,
+    base_points: 30,
     unit_points: null,
     description: '用于基础链路验证和能力展示，适合作为轻量入口或内部测试流。',
     max_estimated_count: 1,
-    max_frozen_points: 10,
+    max_frozen_points: 30,
   },
   {
     workflow_code: 'WF-002',

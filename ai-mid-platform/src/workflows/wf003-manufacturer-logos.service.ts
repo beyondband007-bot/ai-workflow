@@ -61,7 +61,7 @@ export class Wf003ManufacturerLogosService {
 
   resolveLogoUrl(logo: Wf003ManufacturerLogo, request?: Request) {
     const publicUrl = logo.logoPublicUrl?.trim();
-    if (publicUrl) {
+    if (publicUrl && !this.isEphemeralTempfileUrl(publicUrl)) {
       return publicUrl;
     }
 
@@ -70,6 +70,15 @@ export class Wf003ManufacturerLogosService {
 
   private normalizeManufacturerCode(manufacturerCode: string) {
     return manufacturerCode.trim().toLowerCase();
+  }
+
+  private isEphemeralTempfileUrl(url: string) {
+    try {
+      const parsed = new URL(url);
+      return parsed.hostname === 'tempfile.redpandaai.co';
+    } catch {
+      return false;
+    }
   }
 
   private resolvePublicBaseUrl(request?: Request) {

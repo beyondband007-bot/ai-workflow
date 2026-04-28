@@ -38,7 +38,7 @@ export class WorkflowExecutionService {
     workflowCode: string,
     currentUser: AuthUser,
     authorizationHeader: string,
-    payload: { prompt?: string; image?: string },
+    payload: { prompt?: string; image?: string; aspect_ratio?: string },
   ) {
     if (workflowCode === 'WF-001') {
       return this.executeWf001(
@@ -785,7 +785,7 @@ export class WorkflowExecutionService {
     workflowCode: string,
     currentUser: AuthUser,
     authorizationHeader: string,
-    payload: { prompt?: string; image?: string },
+    payload: { prompt?: string; image?: string; aspect_ratio?: string },
   ) {
     this.workflowsService.getByCodeOrThrow(workflowCode);
 
@@ -799,6 +799,17 @@ export class WorkflowExecutionService {
       throw new InternalServerErrorException('WF_001_SCRIPT_PATH is not set');
     }
 
+    const aspectRatio = payload.aspect_ratio?.trim() || '1:1';
+    if (
+      !ALLOWED_WF002_ASPECT_RATIOS.includes(
+        aspectRatio as (typeof ALLOWED_WF002_ASPECT_RATIOS)[number],
+      )
+    ) {
+      throw new BadRequestException(
+        `aspect_ratio must be one of: ${ALLOWED_WF002_ASPECT_RATIOS.join(', ')}`,
+      );
+    }
+
     const clientRequestId = `wf001_exec_${Date.now()}`;
     const args = [
       scriptPath,
@@ -806,6 +817,8 @@ export class WorkflowExecutionService {
       clientRequestId,
       '--prompt',
       payload.prompt?.trim() || 'Run WF-001 from client portal',
+      '--aspect-ratio',
+      aspectRatio,
       '--mock-mode',
       mockMode,
     ];

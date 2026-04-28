@@ -36,7 +36,7 @@ export class WorkflowsController {
     @Param('workflowCode') workflowCode: string,
     @CurrentUser() currentUser: AuthUser,
     @Req() request: Request,
-    @Body() body: { prompt?: string; image?: string },
+    @Body() body: { prompt?: string; image?: string; aspect_ratio?: string },
   ) {
     return this.workflowExecutionService.execute(
       workflowCode,

@@ -203,6 +203,16 @@
               提示词
               <textarea id="promptInput" placeholder="例如：生成一张电影感很强的中国美女写真，柔光，细节清晰，时尚杂志风格。"></textarea>
             </label>
+            <label for="aspectRatioSelect">
+              图像比例
+              <select id="aspectRatioSelect">
+                <option value="1:1">1:1</option>
+                <option value="4:3">4:3</option>
+                <option value="3:4" selected>3:4</option>
+                <option value="16:9">16:9</option>
+                <option value="9:16">9:16</option>
+              </select>
+            </label>
             <div class="wf-actions">
               <button class="primary-button" id="submitButton" type="submit">开始生成</button>
               <button class="secondary-button" id="fillDemoPrompt" type="button">填入示例</button>

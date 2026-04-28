@@ -15,6 +15,7 @@ function resolveApiBase() {
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = "auth_demo_token";
 const THEME_KEY = "client_portal_theme";
+const ALLOWED_ASPECT_RATIOS = ["1:1", "4:3", "3:4", "16:9", "9:16"];
 
 function applyTheme(theme) {
   const nextTheme = theme === "dark" ? "dark" : "light";
@@ -154,12 +155,12 @@ function renderGallery(urls) {
     .join("");
 }
 
-function renderRunning(prompt) {
+function renderRunning(prompt, aspectRatio) {
   setText("runIdValue", "-");
   setText("runStatusValue", "执行中");
   setText("billingStatusValue", "处理中");
   setText("chargePointsValue", "0");
-  setText("summaryText", `正在处理提示词：${prompt}`);
+  setText("summaryText", `正在处理提示词：${prompt}，比例：${aspectRatio}`);
   renderGallery([]);
 }
 
@@ -204,6 +205,7 @@ function buildBackLink() {
 function bindDemoPrompt() {
   const button = document.getElementById("fillDemoPrompt");
   const promptInput = document.getElementById("promptInput");
+  const aspectRatioSelect = document.getElementById("aspectRatioSelect");
   if (!button || !promptInput) {
     return;
   }
@@ -211,30 +213,40 @@ function bindDemoPrompt() {
   button.addEventListener("click", () => {
     promptInput.value =
       "生成一张电影感很强的中国美女写真，柔光，时尚杂志风格，细节清晰，人物自然，背景干净。";
+    if (aspectRatioSelect) {
+      aspectRatioSelect.value = "3:4";
+    }
   });
 }
 
 function bindForm() {
   const form = document.getElementById("wf001Form");
   const promptInput = document.getElementById("promptInput");
+  const aspectRatioSelect = document.getElementById("aspectRatioSelect");
   const submitButton = document.getElementById("submitButton");
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const prompt = promptInput.value.trim();
+    const aspectRatio = aspectRatioSelect.value;
     if (!prompt) {
       window.alert("请先输入提示词。");
       promptInput.focus();
       return;
     }
+    if (!ALLOWED_ASPECT_RATIOS.includes(aspectRatio)) {
+      window.alert("请选择有效的图像比例。");
+      aspectRatioSelect.focus();
+      return;
+    }
 
     submitButton.disabled = true;
     submitButton.textContent = "生成中...";
-    renderRunning(prompt);
+    renderRunning(prompt, aspectRatio);
 
     try {
-      const result = await executeWorkflowRequest({ prompt });
+      const result = await executeWorkflowRequest({ prompt, aspect_ratio: aspectRatio });
       renderResult(result);
     } catch (error) {
       setText("runStatusValue", "失败");
@@ -252,9 +264,10 @@ function bindForm() {
 function bindFormSafe() {
   const form = document.getElementById("wf001Form");
   const promptInput = document.getElementById("promptInput");
+  const aspectRatioSelect = document.getElementById("aspectRatioSelect");
   const submitButton = document.getElementById("submitButton");
 
-  if (!form || !promptInput || !submitButton) {
+  if (!form || !promptInput || !aspectRatioSelect || !submitButton) {
     return;
   }
 
@@ -262,18 +275,24 @@ function bindFormSafe() {
     event.preventDefault();
 
     const prompt = promptInput.value.trim();
+    const aspectRatio = aspectRatioSelect.value;
     if (!prompt) {
       window.alert("请先输入提示词。");
       promptInput.focus();
       return;
     }
+    if (!ALLOWED_ASPECT_RATIOS.includes(aspectRatio)) {
+      window.alert("请选择有效的图像比例。");
+      aspectRatioSelect.focus();
+      return;
+    }
 
     submitButton.disabled = true;
     submitButton.textContent = "生成中...";
-    renderRunning(prompt);
+    renderRunning(prompt, aspectRatio);
 
     try {
-      const result = await executeWorkflowRequest({ prompt });
+      const result = await executeWorkflowRequest({ prompt, aspect_ratio: aspectRatio });
       renderResult(result);
     } catch (error) {
       try {

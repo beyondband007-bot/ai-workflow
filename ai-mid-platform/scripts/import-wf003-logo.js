@@ -209,6 +209,7 @@ async function main() {
           manufacturer_name = VALUES(manufacturer_name),
           logo_file_name = VALUES(logo_file_name),
           logo_mime_type = VALUES(logo_mime_type),
+          logo_public_url = NULL,
           logo_content = VALUES(logo_content),
           logo_sha256 = VALUES(logo_sha256),
           is_active = 1,

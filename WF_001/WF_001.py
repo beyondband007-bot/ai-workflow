@@ -24,6 +24,7 @@ CALLBACK_URL = os.getenv("KIE_AI_CALLBACK_URL", "").strip()
 OUTPUT_DIR = os.getenv(
     "WF_001_OUTPUT_DIR", os.path.dirname(os.path.abspath(__file__))
 )
+ALLOWED_ASPECT_RATIOS = ("1:1", "4:3", "3:4", "16:9", "9:16")
 
 
 def upload_image(local_path: str) -> str:
@@ -65,17 +66,17 @@ def upload_image(local_path: str) -> str:
     return payload["data"]["url"]
 
 
-def create_task(prompt: str, image_url: str = "") -> str:
+def create_task(prompt: str, aspect_ratio: str, image_url: str = "") -> str:
     input_payload = {
         "prompt": prompt,
-        "aspect_ratio": "1:1",
+        "aspect_ratio": aspect_ratio,
         "nsfw_checker": True,
     }
 
     if image_url:
         input_payload["image_url"] = image_url
 
-    payload = {"model": "z-image", "input": input_payload}
+    payload = {"model": "gpt-image-2-text-to-image", "input": input_payload}
     if CALLBACK_URL:
         payload["callBackUrl"] = CALLBACK_URL
 
@@ -280,7 +281,7 @@ def callback_run(
     )
 
 
-def prompt_user_inputs(args: argparse.Namespace) -> tuple[str, str]:
+def prompt_user_inputs(args: argparse.Namespace) -> tuple[str, str, str]:
     prompt = args.prompt.strip() if args.prompt else ""
     if not prompt:
         print("Enter prompt for WF-001. Press Enter to use the default prompt:")
@@ -297,13 +298,20 @@ def prompt_user_inputs(args: argparse.Namespace) -> tuple[str, str]:
         print("Optional reference image path. Press Enter to skip:")
         image_path = input(">>> ").strip().strip('"').strip("'")
 
-    return prompt, image_path
+    aspect_ratio = args.aspect_ratio.strip() if args.aspect_ratio else "1:1"
+    if aspect_ratio not in ALLOWED_ASPECT_RATIOS:
+        raise ValueError(
+            f"Invalid aspect ratio: {aspect_ratio}. Allowed values: {', '.join(ALLOWED_ASPECT_RATIOS)}"
+        )
+
+    return prompt, image_path, aspect_ratio
 
 
-def build_request_summary(prompt: str, image_path: str) -> dict:
+def build_request_summary(prompt: str, image_path: str, aspect_ratio: str) -> dict:
     return {
         "workflow_code": WORKFLOW_CODE,
         "prompt_preview": prompt[:120],
+        "aspect_ratio": aspect_ratio,
         "has_reference_image": bool(image_path),
         "reference_image_path": image_path or "",
         "executor_type": "python",
@@ -316,6 +324,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prompt", default="", help="Prompt text")
     parser.add_argument("--image", default="", help="Local reference image path")
     parser.add_argument("--client-request-id", default="", help="Idempotent request id")
+    parser.add_argument(
+        "--aspect-ratio",
+        default="1:1",
+        choices=ALLOWED_ASPECT_RATIOS,
+        help="Output aspect ratio",
+    )
     parser.add_argument("--poll-interval", type=int, default=5, help="Task poll interval seconds")
     parser.add_argument("--timeout", type=int, default=300, help="Task timeout seconds")
     parser.add_argument("--no-image", action="store_true", help="Skip image prompt")
@@ -331,9 +345,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    prompt, image_path = prompt_user_inputs(args)
+    prompt, image_path, aspect_ratio = prompt_user_inputs(args)
 
-    request_summary = build_request_summary(prompt, image_path)
+    request_summary = build_request_summary(prompt, image_path, aspect_ratio)
     client_request_id = args.client_request_id or f"wf001_{uuid.uuid4().hex[:12]}"
 
     print("\n[1/4] register to middleware")
@@ -363,7 +377,7 @@ def main() -> int:
             return 0 if callback_status == "success" else 1
 
         image_url = upload_image(image_path) if image_path else ""
-        task_id = create_task(prompt, image_url)
+        task_id = create_task(prompt, aspect_ratio, image_url)
         print(f"task_id: {task_id}")
 
         print("\n[3/4] wait result")
