@@ -71,7 +71,7 @@ function resolveAuthEntryUrl() {
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = "auth_demo_token";
 const PROFILE_STORAGE_KEY = "client_portal_profile";
-const STATIC_ASSET_VERSION = "20260425b";
+const STATIC_ASSET_VERSION = "20260428a";
 const DEFAULT_AVATAR_SRC = `./logo.png?v=${STATIC_ASSET_VERSION}`;
 let latestWorkflowRuns = [];
 let latestRecordFilter = "all";
@@ -262,12 +262,25 @@ function ensureProfileFormFields() {
     addressField.className = "profile-field";
     addressField.innerHTML =
       '<span>地址</span><input id="profileAddressInput" name="address" type="text" maxlength="255" placeholder="请输入地址" />';
-    if (formHint) {
-      form.insertBefore(addressField, formHint);
+    const insertionPoint =
+      formHint ||
+      form.querySelector(".profile-form-error") ||
+      form.querySelector(".profile-form-actions");
+    if (insertionPoint) {
+      form.insertBefore(addressField, insertionPoint);
     } else {
       form.appendChild(addressField);
     }
     addressInput = addressField.querySelector("input");
+  }
+
+  const addressFieldLabel = addressInput?.closest(".profile-field")?.querySelector("span");
+  if (addressFieldLabel) {
+    addressFieldLabel.textContent = "地址";
+  }
+  if (addressInput) {
+    addressInput.placeholder = "请输入地址";
+    addressInput.maxLength = 255;
   }
 }
 

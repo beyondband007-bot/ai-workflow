@@ -25,7 +25,7 @@ export const WORKFLOW_CATALOG: WorkflowDefinition[] = [
   },
   {
     workflow_code: 'WF-003',
-    workflow_name: '二手车出海图生图',
+    workflow_name: '跨境电商图生图',
     current_status: '已运行',
     metering_mode: '按结果计量',
     base_points: null,

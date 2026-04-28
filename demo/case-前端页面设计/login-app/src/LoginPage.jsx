@@ -1001,11 +1001,7 @@ export default function LoginPage() {
                 <img src={wikiLogo1} alt="logo1" style={S.leftLogoImg} />
               </div>
               <h1 style={S.leftTitle}>
-                鲸创传媒集团
-                <br />
-                <small>
-                  智能工作流平台积分系统客户端
-                </small>
+                鲸创AI 超级Token聚合中台
               </h1>
               <p style={S.leftSub}>
                 助力企业降本增效。深度整合资源，优化运营流程，以创新管理模式全方位助力企业降低运营成本；同时通过技术赋能提升效率，实现企业可持续的降本增效与高质量发展。
