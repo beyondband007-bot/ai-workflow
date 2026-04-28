@@ -45,6 +45,7 @@ logs/
 *.sqlite3
 tmp/
 temp/
+.tools/
 
 # Nested repos that should not be committed as part of this repo
 demo/.git/
