@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>超级Token聚合器 - 鲸创传媒集团</title>
-<link rel="icon" type="image/x-icon" href="./favicon.ico?v=20260425b">
-<link rel="stylesheet" href="./styles.css?v=20260425b" />
+<link rel="icon" type="image/x-icon" href="./favicon.ico?v=20260428a">
+<link rel="stylesheet" href="./styles.css?v=20260428a" />
 </head>
 <body>
 <div class="ambient ambient-a"></div>
@@ -15,7 +15,7 @@
 	<div class="overflow-auto sidebar1">
 		<aside class="sidebar">
 			<div class="brand-block">
-				<div class="brand-mark"><img src="./logo.png?v=20260425b" alt="logo"></div>
+				<div class="brand-mark"><img src="./logo.png?v=20260428a" alt="logo"></div>
 				<div>
 					<p class="eyebrow">Workflow Points</p>
 					<h1>超级Token聚合器</h1>
@@ -163,7 +163,7 @@
 				</button>
 				<div class="profile-menu" id="profileMenu">
 					<button class="topbar-profile profile-menu-trigger" id="profileMenuTrigger" type="button" aria-haspopup="menu" aria-expanded="false">
-						<div class="topbar-avatar"><img id="profileAvatarImage" src="./logo.png?v=20260425b" alt="avatar" /></div>
+						<div class="topbar-avatar"><img id="profileAvatarImage" src="./logo.png?v=20260428a" alt="avatar" /></div>
 						<div class="topbar-profile-copy">
 						<span>鲸创传媒</span>
 						<strong>Online</strong>
@@ -171,7 +171,7 @@
 					</button>
 					<div class="profile-menu-dropdown" id="profileMenuDropdown" role="menu" aria-hidden="true">
 						<div class="profile-menu-summary">
-							<div class="topbar-avatar profile-menu-avatar"><img id="profileMenuAvatarImage" src="./logo.png?v=20260425b" alt="avatar" /></div>
+							<div class="topbar-avatar profile-menu-avatar"><img id="profileMenuAvatarImage" src="./logo.png?v=20260428a" alt="avatar" /></div>
 							<div class="profile-menu-copy">
 								<strong id="profileMenuDisplayName">椴稿垱浼犲獟</strong>
 								<span id="profileMenuUsername">@workflow_points</span>
@@ -188,7 +188,7 @@
 			<header class="hero-card" id="overview">
 				<div class="hero-copy">
 					<p class="eyebrow">Client Console</p>
-					<h2>鲸创智能工作流平台<br><span class="secondary">积分系统客户端</span></h2>
+					<h2>鲸创 AI超级Token聚合中台</h2>
 					<p class="hero-text">
 						登录后先看账户状态，再进入具体业务工作流。调用记录、积分流水和结果状态统一沉淀在这里，
 						让客户端首页更像业务控制台，而不是普通后台列表页。
@@ -373,12 +373,12 @@
 	<div class="profile-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
 		<div class="profile-modal-head">
 			<h3 id="profileModalTitle">编辑个人资料</h3>
-			<button class="profile-modal-close" id="profileModalClose" type="button" aria-label="Close">x</button>
+			<button class="profile-modal-close" id="profileModalClose" type="button" aria-label="Close">✕</button>
 		</div>
 		<form class="profile-form" id="profileForm">
 			<div class="profile-avatar-editor">
 				<div class="profile-avatar-preview">
-					<img id="profileAvatarPreview" src="./logo.png?v=20260425b" alt="avatar preview" />
+					<img id="profileAvatarPreview" src="./logo.png?v=20260428a" alt="avatar preview" />
 				</div>
 				<input class="sr-only" id="profileAvatarInput" type="file" accept="image/*" />
 				<button class="profile-avatar-upload" id="profileAvatarUpload" type="button">更换头像</button>
@@ -395,6 +395,10 @@
 				<span>手机号</span>
 				<input id="profilePhoneInput" name="phone" type="text" maxlength="15" placeholder="请输入手机号" required />
 			</label>
+			<label class="profile-field">
+				<span>地址</span>
+				<input id="profileAddressInput" name="address" type="text" maxlength="255" placeholder="请输入地址" />
+			</label>
 			<p class="profile-form-error" id="profileFormError" hidden></p>
 			<div class="profile-form-actions">
 				<button class="secondary-button profile-form-cancel" id="profileModalCancel" type="button">取消</button>
@@ -403,7 +407,7 @@
 		</form>
 	</div>
 </div>
-<script src="./app.js"></script>
+<script src="./app.js?v=20260428a"></script>
 <script>
 (() => {
 	const THEME_KEY = "client_portal_theme";

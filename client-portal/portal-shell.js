@@ -2,7 +2,7 @@
   const THEME_KEY = "client_portal_theme";
   const TOKEN_KEY = "auth_demo_token";
   const PROFILE_STORAGE_KEY = "client_portal_profile";
-  const STATIC_ASSET_VERSION = "20260425b";
+  const STATIC_ASSET_VERSION = "20260428a";
   const DEFAULT_AVATAR_SRC = `./logo.png?v=${STATIC_ASSET_VERSION}`;
 
   let profileState = null;
