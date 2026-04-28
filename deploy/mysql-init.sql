@@ -108,6 +108,56 @@ CREATE TABLE IF NOT EXISTS workflow_runs (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS wf003_submissions (
+    submission_id          VARCHAR(128) PRIMARY KEY,
+    run_id                 VARCHAR(128) NOT NULL,
+    workflow_code          VARCHAR(32) NOT NULL DEFAULT 'WF-003',
+    client_request_id      VARCHAR(128) NULL,
+    user_id                VARCHAR(64) NULL,
+    callback_url           VARCHAR(1000) NULL,
+    callback_token         VARCHAR(255) NULL,
+    car_name               VARCHAR(255) NULL,
+    logo                   VARCHAR(1000) NULL,
+    feishu_app_id          VARCHAR(255) NULL,
+    feishu_id              VARCHAR(255) NULL,
+    expected_tasks         INT NOT NULL DEFAULT 0,
+    finalized              TINYINT(1) NOT NULL DEFAULT 0,
+    finalize_in_progress   TINYINT(1) NOT NULL DEFAULT 0,
+    finalize_token         VARCHAR(128) NULL,
+    finalize_requested_at  DATETIME NULL,
+    finalized_at           DATETIME NULL,
+    finalize_error         TEXT NULL,
+    created_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_wf003_submissions_run_id (run_id),
+    INDEX idx_wf003_submissions_finalized (finalized),
+    INDEX idx_wf003_submissions_updated_at (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS wf003_tasks (
+    task_id                 VARCHAR(128) PRIMARY KEY,
+    submission_id           VARCHAR(128) NOT NULL,
+    type                    VARCHAR(32) NOT NULL,
+    task_index              INT NULL,
+    group_index             INT NULL,
+    image_url               VARCHAR(1000) NULL,
+    image_urls_json         JSON NULL,
+    state                   VARCHAR(32) NOT NULL DEFAULT 'submitted',
+    raw_state               VARCHAR(64) NULL,
+    result_url              VARCHAR(1000) NULL,
+    fail_code               VARCHAR(255) NULL,
+    fail_msg                TEXT NULL,
+    callback_payload_json   JSON NULL,
+    last_callback_at        DATETIME NULL,
+    created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_wf003_tasks_submission_id (submission_id),
+    INDEX idx_wf003_tasks_state (state),
+    CONSTRAINT fk_wf003_tasks_submission
+        FOREIGN KEY (submission_id) REFERENCES wf003_submissions(submission_id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS api_call_logs (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id         INT NOT NULL,
