@@ -1,0 +1,726 @@
+{
+  "name": "WF003 JSON Callback",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf003-kie-submit",
+        "responseMode": "lastNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -5552,
+        4992
+      ],
+      "id": "32c56543-3634-49e0-ab15-bdfe04961be5",
+      "name": "Webhook Submit",
+      "webhookId": "ba1b95f0-8853-4c2b-a3d6-5def2dde4bb3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const src = $input.first().json;\nconst body = src.body ?? src;\n\nconst exterior = Array.isArray(body.exterior_images) ? body.exterior_images.filter(Boolean) : [];\nconst interior = Array.isArray(body.interior_images) ? body.interior_images.filter(Boolean) : [];\n\nif (!body.car_name) {\n  throw new Error('car_name is required');\n}\n\nif (exterior.length === 0) {\n  throw new Error('exterior_images is required');\n}\n\nif (interior.length === 0) {\n  throw new Error('interior_images is required');\n}\n\nconst buildInteriorGroups = (images) => {\n  const groups = [];\n  let remaining = [...images];\n\n  while (remaining.length > 0) {\n    if (remaining.length <= 3) {\n      groups.push(remaining);\n      break;\n    }\n\n    if (remaining.length === 4) {\n      groups.push(remaining.slice(0, 2), remaining.slice(2, 4));\n      break;\n    }\n\n    if (remaining.length === 5) {\n      groups.push(remaining.slice(0, 3), remaining.slice(3, 5));\n      break;\n    }\n\n    groups.push(remaining.slice(0, 3));\n    remaining = remaining.slice(3);\n  }\n\n  return groups;\n};\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.wf003Submissions) {\n  staticData.wf003Submissions = {};\n}\n\nconst submissionId = body.run_id || `wf003_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\nconst interiorGroups = buildInteriorGroups(interior);\nconst expectedTasks = exterior.length + interiorGroups.length;\nconst feishuAppId = typeof body.feishu_app_id === 'string' ? body.feishu_app_id.trim() : '';\nconst feishuId = typeof body.feishu_id === 'string' ? body.feishu_id.trim() : '';\n\nstaticData.wf003Submissions[submissionId] = {\n  submissionId,\n  run_id: body.run_id || submissionId,\n  workflow_code: body.workflow_code || 'WF-003',\n  client_request_id: body.client_request_id || '',\n  callback_url: body.callback_url || '',\n  callback_token: body.callback_token || '',\n  car_name: body.car_name,\n  logo: body.logo || '',\n  token: body.token || '',\n  source: body.source || '',\n  submitted_at: body.submitted_at || new Date().toISOString(),\n  feishu_app_id: feishuAppId,\n  feishu_id: feishuId,\n  formMode: src.executionMode === 'test' ? 'test' : 'production',\n  expectedTasks,\n  finalized: false,\n  createdAt: new Date().toISOString(),\n  tasks: {}\n};\n\nreturn [{\n  json: {\n    submissionId,\n    run_id: body.run_id || submissionId,\n    workflow_code: body.workflow_code || 'WF-003',\n    client_request_id: body.client_request_id || '',\n    callback_url: body.callback_url || '',\n    callback_token: body.callback_token || '',\n    car_name: body.car_name,\n    logo: body.logo || '',\n    token: body.token || '',\n    source: body.source || '',\n    submitted_at: body.submitted_at || new Date().toISOString(),\n    feishu_app_id: feishuAppId,\n    feishu_id: feishuId,\n    exterior_images: exterior,\n    interior_images: interior,\n    interior_groups: interiorGroups,\n    expectedTasks\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5328,
+        4992
+      ],
+      "id": "3ed60dc6-2202-4c34-9f50-6d55b758383e",
+      "name": "Normalize Submission"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst tasks = [];\n\n(input.exterior_images || []).forEach((url, index) => {\n  tasks.push({\n    json: {\n      submissionId: input.submissionId,\n      run_id: input.run_id,\n      workflow_code: input.workflow_code,\n      client_request_id: input.client_request_id,\n      callback_url: input.callback_url,\n      callback_token: input.callback_token,\n      car_name: input.car_name,\n      logo: input.logo,\n      feishu_app_id: input.feishu_app_id || '',\n      feishu_id: input.feishu_id || '',\n      expectedTasks: input.expectedTasks,\n      type: 'exterior',\n      index: index + 1,\n      imageUrl: url\n    }\n  });\n});\n\n(input.interior_groups || []).forEach((group, index) => {\n  tasks.push({\n    json: {\n      submissionId: input.submissionId,\n      run_id: input.run_id,\n      workflow_code: input.workflow_code,\n      client_request_id: input.client_request_id,\n      callback_url: input.callback_url,\n      callback_token: input.callback_token,\n      car_name: input.car_name,\n      logo: input.logo,\n      feishu_app_id: input.feishu_app_id || '',\n      feishu_id: input.feishu_id || '',\n      expectedTasks: input.expectedTasks,\n      type: 'interior',\n      groupIndex: index + 1,\n      imageUrls: group\n    }\n  });\n});\n\nreturn tasks;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5104,
+        4992
+      ],
+      "id": "2374640d-2891-4ab9-a611-a87fb9fec25d",
+      "name": "Build Task Items"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -4880,
+        4992
+      ],
+      "id": "798935f5-c1e6-419f-8d83-7c5721522390",
+      "name": "Loop Tasks"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $json;\nconst callbackUrl = 'https://n8n.deepsix.store/webhook/wf003-kie-callback';\n\nif (item.type === 'exterior') {\n  return [{\n    json: {\n      submissionId: item.submissionId,\n      type: item.type,\n      index: item.index,\n      imageUrl: item.imageUrl,\n      requestBody: {\n        model: 'nano-banana-2',\n        callBackUrl: callbackUrl,\n        input: {\n          prompt: 'Generate one output image for each uploaded car exterior reference image. If multiple exterior reference images are provided, every single uploaded exterior image must be processed, and none of them can be skipped or omitted. Maintain a strict one-to-one mapping: one reference image = one generated image. Keep the car body completely unchanged in each image, including body shape, proportions, paint color, trim, wheels, headlights, taillights, windows, mirrors, and all exterior design details. Do not alter the vehicle appearance in any way. Change the scene to a premium pure white luxury automotive showroom with a seamless curved white backdrop, polished white reflective floor, subtle architectural layering, soft ambient reflections, hidden linear ceiling lights, diffused studio lighting, and a clean high-end exhibition atmosphere. The showroom should feel elegant, modern, minimal, premium, and suitable for commercial car advertising, while still keeping the background clean and not distracting from the car. Do not alter the style of the product logo. Add the logo from the second reference image to the license plate area. Also add the same logo in the top-left corner of each generated image. Do not generate multiple angles from one reference. Generate exactly one result for each uploaded reference image. Preserve the original viewing angle and composition of each reference image. Photorealistic, professional automotive photography, ultra-detailed, premium commercial quality. Output size: 1024x1024.',\n          image_input: [item.imageUrl, item.logo],\n          aspect_ratio: '1:1',\n          resolution: '1K',\n          output_format: 'jpg'\n        }\n      }\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    submissionId: item.submissionId,\n    type: item.type,\n    groupIndex: item.groupIndex,\n    imageUrls: item.imageUrls,\n    requestBody: {\n      model: 'nano-banana-2',\n      callBackUrl: callbackUrl,\n      input: {\n        prompt: 'Strictly use the uploaded interior reference images to create collage outputs. Do not change the original camera angle. Do not generate new scenes. Do not crop one image into multiple close-up panels. Each panel must correspond to a different uploaded original image. Each uploaded image can be used only once, and all uploaded images must be used. If 1 to 3 images are uploaded, generate 1 collage. If 4 images are uploaded, generate 2 collages in a 2 plus 2 grouping. If 5 images are uploaded, generate 2 collages in a 3 plus 2 grouping. Use a clean and tidy grid or side-by-side layout with clear separation between panels. Keep the original images complete and sharp, without stretching or overlap. Professional automotive interior collage style. Output size: 1024x1024.',\n        image_input: item.imageUrls,\n        aspect_ratio: '1:1',\n        resolution: '1K',\n        output_format: 'jpg'\n      }\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4640,
+        4992
+      ],
+      "id": "0b1c0b7d-ca3b-4927-b350-9c676deff356",
+      "name": "Prepare Kie Task Payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer c521060b9a55ae31b09cae042a8599fa"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.requestBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -4400,
+        4992
+      ],
+      "id": "28469195-0306-488a-b3d9-af0fc57ceb9f",
+      "name": "Create Kie Task"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nif (!staticData.wf003Submissions) {\n  staticData.wf003Submissions = {};\n}\n\nconst requestMeta = $('Prepare Kie Task Payload').item.json;\nconst createResp = $json || {};\nconst taskId = createResp?.data?.taskId || null;\n\nif (!taskId) {\n  throw new Error('Kie createTask returned no taskId');\n}\n\nconst submission = staticData.wf003Submissions[requestMeta.submissionId];\nif (!submission) {\n  throw new Error(`Submission not found: ${requestMeta.submissionId}`);\n}\n\nsubmission.tasks[taskId] = requestMeta.type === 'exterior'\n  ? {\n      type: 'exterior',\n      index: requestMeta.index,\n      imageUrl: requestMeta.imageUrl,\n      taskId,\n      state: 'submitted',\n      resultUrl: null,\n      createdAt: new Date().toISOString()\n    }\n  : {\n      type: 'interior',\n      groupIndex: requestMeta.groupIndex,\n      imageUrls: requestMeta.imageUrls,\n      taskId,\n      state: 'submitted',\n      resultUrl: null,\n      createdAt: new Date().toISOString()\n    };\n\nreturn [{\n  json: {\n    ok: true,\n    submissionId: requestMeta.submissionId,\n    taskId,\n    type: requestMeta.type,\n    index: requestMeta.index || null,\n    groupIndex: requestMeta.groupIndex || null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4160,
+        4992
+      ],
+      "id": "646b308b-4ab4-46ab-9040-7a1c4118d29d",
+      "name": "Save Submitted Task"
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $('Normalize Submission').first().json;\nreturn [{\n  json: {\n    ok: true,\n    message: 'Tasks submitted to Kie. Waiting for callbacks.',\n    submissionId: source.submissionId,\n    expectedTasks: source.expectedTasks,\n    exteriorCount: (source.exterior_images || []).length,\n    interiorCount: (source.interior_images || []).length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4640,
+        4832
+      ],
+      "id": "e0af3c14-74a3-49b5-9378-08dad6205041",
+      "name": "Respond Submit"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf003-kie-callback",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -5552,
+        5632
+      ],
+      "id": "94d01d5f-2139-4839-990b-5d60d17d37ca",
+      "name": "Webhook Callback",
+      "webhookId": "ee5d39d8-5a71-4bf8-9d55-6dd3b0c80f53"
+    },
+    {
+      "parameters": {
+        "jsCode": "const src = $input.first().json;\nconst body = src.body ?? src;\nconst data = body.data || {};\n\nlet resultJson = {};\ntry {\n  if (typeof data.resultJson === 'string') {\n    resultJson = JSON.parse(data.resultJson);\n  } else if (data.resultJson && typeof data.resultJson === 'object') {\n    resultJson = data.resultJson;\n  }\n} catch (error) {\n  resultJson = {};\n}\n\nconst resultUrls = Array.isArray(resultJson.resultUrls) ? resultJson.resultUrls : [];\nconst resultUrl = resultUrls[0] || body.resultUrl || data.resultUrl || null;\nconst taskId = data.taskId || body.taskId || body.id || null;\nconst rawState = String(data.state || body.state || '').toLowerCase();\nconst failCode = data.failCode || body.failCode || null;\nconst failMsg = data.failMsg || body.failMsg || body.msg || null;\n\nif (!taskId) {\n  throw new Error('Callback contains no taskId');\n}\n\nlet state = rawState || 'unknown';\nif (resultUrl) {\n  state = 'success';\n} else if (['failed', 'fail', 'error'].includes(state)) {\n  state = 'failed';\n}\n\nreturn [{\n  json: {\n    taskId,\n    state,\n    rawState,\n    resultUrl,\n    failCode,\n    failMsg,\n    body\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5328,
+        5632
+      ],
+      "id": "b93182a3-677f-4c0c-8fe1-4e25ce34baa8",
+      "name": "Parse Kie Callback"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst store = staticData.wf003Submissions || {};\nconst callback = $json;\n\nlet submissionId = null;\nlet submission = null;\nlet task = null;\n\nfor (const [key, value] of Object.entries(store)) {\n  if (value?.tasks?.[callback.taskId]) {\n    submissionId = key;\n    submission = value;\n    task = value.tasks[callback.taskId];\n    break;\n  }\n}\n\nif (!submission || !task) {\n  return [{\n    json: {\n      ok: false,\n      accepted: true,\n      reason: 'task_not_found',\n      taskId: callback.taskId,\n      isComplete: false\n    }\n  }];\n}\n\nsubmission.tasks[callback.taskId] = {\n  ...task,\n  state: callback.state,\n  rawState: callback.rawState,\n  resultUrl: callback.resultUrl || task.resultUrl || null,\n  failCode: callback.failCode || null,\n  failMsg: callback.failMsg || null,\n  lastCallbackAt: new Date().toISOString(),\n  callbackPayload: callback.body\n};\n\nconst tasks = Object.values(submission.tasks);\nconst resolvedCount = tasks.filter(t => ['success', 'failed', 'error'].includes(t.state) || !!t.resultUrl).length;\nconst successCount = tasks.filter(t => t.state === 'success' && !!t.resultUrl).length;\nconst failedCount = tasks.filter(t => ['failed', 'error'].includes(t.state)).length;\nconst isComplete = resolvedCount >= submission.expectedTasks && !submission.finalized;\n\nreturn [{\n  json: {\n    ok: true,\n    accepted: true,\n    submissionId,\n    taskId: callback.taskId,\n    taskType: task.type,\n    state: callback.state,\n    resultUrl: callback.resultUrl,\n    failCode: callback.failCode || null,\n    failMsg: callback.failMsg || null,\n    expectedTasks: submission.expectedTasks,\n    resolvedCount,\n    successCount,\n    failedCount,\n    isComplete\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5104,
+        5632
+      ],
+      "id": "99f48bf3-cb0a-4332-8170-5075bbfc48f9",
+      "name": "Update Submission State"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1e4bc17d-62dd-4dc4-a6cc-728213d7c4c2",
+              "leftValue": "={{ $json.isComplete }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -4880,
+        5632
+      ],
+      "id": "2864a91a-8023-444b-a2bc-d37ad452301e",
+      "name": "If Ready To Finalize"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ok: true,\n    accepted: true,\n    finalized: false,\n    submissionId: $json.submissionId || null,\n    taskId: $json.taskId || null,\n    state: $json.state || null,\n    resolvedCount: $json.resolvedCount || 0,\n    expectedTasks: $json.expectedTasks || 0,\n    message: 'callback accepted, finalizing submission and uploading to Feishu'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4640,
+        5520
+      ],
+      "id": "852a8b1c-5e2e-4706-9eac-8984fff3db9b",
+      "name": "Callback Ack Finalizing"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst submissionId = $('Update Submission State').first().json.submissionId;\nconst submission = staticData.wf003Submissions?.[submissionId];\n\nif (!submission) {\n  throw new Error(`Submission not found: ${submissionId}`);\n}\n\nconst tasks = Object.values(submission.tasks || {});\n\nconst exteriorImages = tasks\n  .filter(t => t.type === 'exterior' && t.state === 'success' && t.resultUrl)\n  .sort((a, b) => (a.index || 0) - (b.index || 0))\n  .map((t, i) => ({\n    originalIndex: t.index,\n    imageUrl: t.resultUrl,\n    fileName: `exterior_${i + 1}.jpg`\n  }));\n\nconst interiorImages = tasks\n  .filter(t => t.type === 'interior' && t.state === 'success' && t.resultUrl)\n  .sort((a, b) => (a.groupIndex || 0) - (b.groupIndex || 0))\n  .map((t, i) => ({\n    groupIndex: t.groupIndex,\n    imageUrl: t.resultUrl,\n    fileName: `interior_${i + 1}.jpg`\n  }));\n\nconst failedTasks = tasks\n  .filter(t => ['failed', 'error'].includes(t.state))\n  .map(t => ({\n    type: t.type,\n    index: t.index || t.groupIndex || null,\n    taskId: t.taskId,\n    failCode: t.failCode || null,\n    failMsg: t.failMsg || null\n  }));\n\nsubmission.finalized = true;\nsubmission.finalizedAt = new Date().toISOString();\n\nreturn [{\n  json: {\n    submissionId,\n    run_id: submission.run_id || submissionId,\n    workflow_code: submission.workflow_code || 'WF-003',\n    client_request_id: submission.client_request_id || '',\n    callback_url: submission.callback_url || '',\n    callback_token: submission.callback_token || '',\n    car_name: submission.car_name,\n    feishu_app_id: submission.feishu_app_id || '',\n    feishu_id: submission.feishu_id || '',\n    exteriorImages,\n    interiorImages,\n    totalExterior: exteriorImages.length,\n    totalInterior: interiorImages.length,\n    successCount: tasks.filter(t => t.state === 'success' && t.resultUrl).length,\n    failedCount: failedTasks.length,\n    failedTasks\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4160,
+        5520
+      ],
+      "id": "498e1fcb-5b94-448c-be80-d163a79eefeb",
+      "name": "Build Final Assets"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -4400,
+        5520
+      ],
+      "id": "5b007b32-3a2f-4ac7-b533-b655fe949f86",
+      "name": "Respond Callback Finalizing"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callback_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-workflow-callback-token",
+              "value": "={{ $json.callback_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  run_id: $json.run_id,\n  workflow_code: $json.workflow_code,\n  status: ($json.successCount || 0) > 0 ? 'success' : 'failed',\n  finished_at: new Date().toISOString().slice(0, 19).replace('T', ' '),\n  actual_completed_count: $json.successCount || 0,\n  result_summary: ($json.successCount || 0) > 0\n    ? `WF-003 completed with ${$json.successCount || 0} successful results and ${$json.failedCount || 0} failed results`\n    : 'WF-003 finished with 0 successful results',\n  result_summary_url: ($json.exteriorImages?.[0]?.imageUrl) || ($json.interiorImages?.[0]?.imageUrl) || null,\n  result_urls: [\n    ...(($json.exteriorImages || []).map(item => item.imageUrl)),\n    ...(($json.interiorImages || []).map(item => item.imageUrl))\n  ],\n  external_task_id: $json.client_request_id || $json.submissionId,\n  error_message: (($json.failedTasks || [])\n    .map(task => `${task.type}#${task.index || '-'}: ${task.failMsg || task.failCode || 'failed'}`)\n    .join(' | ') || null)\n} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -4400,
+        5376
+      ],
+      "id": "dde41012-60f6-43e0-8f67-3229d478d235",
+      "name": "Notify Middle Platform"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json || {};\nconst exteriorImages = Array.isArray(input.exteriorImages) ? input.exteriorImages : [];\nconst interiorImages = Array.isArray(input.interiorImages) ? input.interiorImages : [];\nconst groupName = `二手车图片组_${Date.now()}`;\nconst vehicleId = `car_${Date.now()}`;\nconst feishuAppId = input.feishu_app_id || '';\nconst feishuId = input.feishu_id || '';\nconst items = [];\n\nif (!feishuAppId) {\n  throw new Error('feishu_app_id is required for Feishu upload');\n}\n\nif (!feishuId) {\n  throw new Error('feishu_id is required for Create Bitable Record');\n}\n\nexteriorImages.forEach((item, index) => {\n  const url = item.imageUrl || '';\n  if (!url) return;\n  items.push({\n    json: {\n      submissionId: input.submissionId,\n      groupName,\n      vehicleId,\n      feishu_app_id: feishuAppId,\n      feishu_id: feishuId,\n      category: '外观图',\n      order: index + 1,\n      sourceUrl: url,\n      fileName: `exterior_${index + 1}.jpg`\n    }\n  });\n});\n\ninteriorImages.forEach((item, index) => {\n  const url = item.imageUrl || '';\n  if (!url) return;\n  items.push({\n    json: {\n      submissionId: input.submissionId,\n      groupName,\n      vehicleId,\n      feishu_app_id: feishuAppId,\n      feishu_id: feishuId,\n      category: '内饰图',\n      order: index + 1,\n      sourceUrl: url,\n      fileName: `interior_${index + 1}.jpg`\n    }\n  });\n});\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4400,
+        5216
+      ],
+      "id": "49fa2f7a-5376-4353-9c46-d3ceaa083791",
+      "name": "Build Feishu Upload Items"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -4160,
+        5376
+      ],
+      "id": "31c1da97-b875-45be-8cb9-795defc46e55",
+      "name": "Loop Upload Items"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -3920,
+        5632
+      ],
+      "id": "129080dc-7e0c-4f0f-9a88-f5da8e3768c1",
+      "name": "Wait Upload",
+      "webhookId": "8abcb67b-a6dc-423b-9f82-882be970268a"
+    },
+    {
+      "parameters": {
+        "resource": "space",
+        "operation": "space:uploadByUrl",
+        "parent_type": "bitable_file",
+        "parent_node": "={{ $json.feishu_app_id }}",
+        "url": "={{ $json.sourceUrl }}",
+        "file_name": "={{ $json.fileName }}",
+        "options": {}
+      },
+      "type": "@luka-cat-mimi/n8n-nodes-feishu.feishuNode",
+      "typeVersion": 1,
+      "position": [
+        -3680,
+        5632
+      ],
+      "id": "ccc2a0e5-e121-4c71-889d-3b3bd373964f",
+      "name": "Upload Asset By Url",
+      "webhookId": "be026a93-6215-4770-9f8f-bf09965b130c",
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "feishuNodeCredentialsApi": {
+          "id": "N7gKoO8Uf5UsrEV5",
+          "name": "郑AI应用生成工作流凭证"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const uploadItem = $('Loop Upload Items').item.json;\nconst uploadResp = $json || {};\nconst fileToken = uploadResp.data?.file_token || uploadResp.file_token || '';\nconst errorMessage = uploadResp.error?.message || uploadResp.message || uploadResp.error || '';\n\nreturn [{\n  json: {\n    submissionId: uploadItem.submissionId,\n    groupName: uploadItem.groupName,\n    vehicleId: uploadItem.vehicleId,\n    feishu_app_id: uploadItem.feishu_app_id,\n    feishu_id: uploadItem.feishu_id,\n    category: uploadItem.category,\n    order: uploadItem.order,\n    sourceUrl: uploadItem.sourceUrl,\n    fileName: uploadItem.fileName,\n    fileToken,\n    uploadStatus: fileToken ? 'success' : 'failed',\n    uploadError: fileToken ? null : (String(errorMessage || 'Feishu upload returned no file_token after retries'))\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3440,
+        5632
+      ],
+      "id": "4646ddf4-8d44-4b86-a642-f4eeb23ff3a1",
+      "name": "Extract File Token"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst result = {\n  submissionId: items[0]?.json?.submissionId || '',\n  groupName: items[0]?.json?.groupName || `二手车图片组_${Date.now()}`,\n  vehicleId: items[0]?.json?.vehicleId || `car_${Date.now()}`,\n  feishu_app_id: items[0]?.json?.feishu_app_id || '',\n  feishu_id: items[0]?.json?.feishu_id || '',\n  exteriorAttachments: [],\n  interiorAttachments: [],\n  uploadFailures: []\n};\n\nfor (const item of items) {\n  const token = item.json.fileToken;\n\n  if (!token) {\n    result.uploadFailures.push({\n      category: item.json.category || '',\n      order: item.json.order || null,\n      fileName: item.json.fileName || '',\n      sourceUrl: item.json.sourceUrl || '',\n      error: item.json.uploadError || 'Feishu upload failed after retries'\n    });\n    continue;\n  }\n\n  const attachment = { file_token: token };\n\n  if (item.json.category === '外观图') {\n    result.exteriorAttachments.push(attachment);\n  } else if (item.json.category === '内饰图') {\n    result.interiorAttachments.push(attachment);\n  }\n}\n\nresult.uploadSuccessCount = result.exteriorAttachments.length + result.interiorAttachments.length;\nresult.uploadFailedCount = result.uploadFailures.length;\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3920,
+        5376
+      ],
+      "id": "50e7853f-f3cc-4847-9059-4365e70cd97f",
+      "name": "Collect Attachments"
+    },
+    {
+      "parameters": {
+        "resource": "bitable",
+        "operation": "bitable:table:record:add",
+        "app_toke": "={{ $json.feishu_app_id }}",
+        "table_id": "={{ $json.feishu_id }}",
+        "body": "={{\nJSON.stringify({\n  fields: {\n    \"编号\": String(Date.now()),\n    \"车名\": $('Build Final Assets').first().json.car_name || \"\",\n    \"外观附件\": $json.exteriorAttachments || [],\n    \"内饰附件\": $json.interiorAttachments || []\n  }\n})\n}}",
+        "options": {}
+      },
+      "type": "@luka-cat-mimi/n8n-nodes-feishu.feishuNode",
+      "typeVersion": 1,
+      "position": [
+        -3680,
+        5376
+      ],
+      "id": "7b49e660-2e97-4dca-bbbd-20f58f833afa",
+      "name": "Create Bitable Record",
+      "webhookId": "8e779bf0-6d5b-474e-8788-02fb9aca3d10",
+      "executeOnce": false,
+      "credentials": {
+        "feishuNodeCredentialsApi": {
+          "id": "N7gKoO8Uf5UsrEV5",
+          "name": "郑AI应用生成工作流凭证"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst recordResp = $json || {};\nconst finalAssets = $('Build Final Assets').first().json;\nconst uploadSummary = $('Collect Attachments').first().json;\nconst submissionId = finalAssets.submissionId;\n\nif (staticData.wf003Submissions?.[submissionId]) {\n  delete staticData.wf003Submissions[submissionId];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    accepted: true,\n    finalized: true,\n    submissionId,\n    totalExterior: finalAssets.totalExterior,\n    totalInterior: finalAssets.totalInterior,\n    successCount: finalAssets.successCount || 0,\n    failedCount: finalAssets.failedCount || 0,\n    failedTasks: finalAssets.failedTasks || [],\n    uploadSuccessCount: uploadSummary.uploadSuccessCount || 0,\n    uploadFailedCount: uploadSummary.uploadFailedCount || 0,\n    uploadFailures: uploadSummary.uploadFailures || [],\n    recordResponse: recordResp\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3440,
+        5376
+      ],
+      "id": "7e168a42-d035-489e-9f34-19b07a1af634",
+      "name": "Callback Final Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ok: true,\n    accepted: true,\n    finalized: false,\n    submissionId: $json.submissionId || null,\n    taskId: $json.taskId || null,\n    state: $json.state || null,\n    resolvedCount: $json.resolvedCount || 0,\n    expectedTasks: $json.expectedTasks || 0,\n    message: $json.reason === 'task_not_found' ? 'callback accepted but task was not found in staticData' : 'callback accepted, waiting for remaining tasks'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4640,
+        5744
+      ],
+      "id": "7c7e0969-39c7-4bf2-8fc3-9ef4085039b8",
+      "name": "Callback Ack Pending"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -4400,
+        5744
+      ],
+      "id": "6fb402f1-e0be-4846-a672-4f737b5e9a4c",
+      "name": "Respond Callback Pending"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Submit": {
+      "main": [
+        [
+          {
+            "node": "Normalize Submission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Submission": {
+      "main": [
+        [
+          {
+            "node": "Build Task Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Task Items": {
+      "main": [
+        [
+          {
+            "node": "Loop Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Tasks": {
+      "main": [
+        [
+          {
+            "node": "Respond Submit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Kie Task Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Kie Task Payload": {
+      "main": [
+        [
+          {
+            "node": "Create Kie Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Kie Task": {
+      "main": [
+        [
+          {
+            "node": "Save Submitted Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Submitted Task": {
+      "main": [
+        [
+          {
+            "node": "Loop Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Callback": {
+      "main": [
+        [
+          {
+            "node": "Parse Kie Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Kie Callback": {
+      "main": [
+        [
+          {
+            "node": "Update Submission State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Submission State": {
+      "main": [
+        [
+          {
+            "node": "If Ready To Finalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Ready To Finalize": {
+      "main": [
+        [
+          {
+            "node": "Callback Ack Finalizing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Callback Ack Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback Ack Finalizing": {
+      "main": [
+        [
+          {
+            "node": "Respond Callback Finalizing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Callback Finalizing": {
+      "main": [
+        [
+          {
+            "node": "Build Final Assets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Final Assets": {
+      "main": [
+        [
+          {
+            "node": "Notify Middle Platform",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Feishu Upload Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Feishu Upload Items": {
+      "main": [
+        [
+          {
+            "node": "Loop Upload Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Upload Items": {
+      "main": [
+        [
+          {
+            "node": "Collect Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Upload": {
+      "main": [
+        [
+          {
+            "node": "Upload Asset By Url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Asset By Url": {
+      "main": [
+        [
+          {
+            "node": "Extract File Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract File Token": {
+      "main": [
+        [
+          {
+            "node": "Loop Upload Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Attachments": {
+      "main": [
+        [
+          {
+            "node": "Create Bitable Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Bitable Record": {
+      "main": [
+        [
+          {
+            "node": "Callback Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Callback Ack Pending": {
+      "main": [
+        [
+          {
+            "node": "Respond Callback Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9d745f64-386b-4c75-81d2-1bbbb2c82a89",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "106341ccce29d1bd2cb94863cad0cd0a668a99fecc7ebe35dfd2c9e27d67c5ef"
+  },
+  "id": "tyGRRcKvxLFDnfux",
+  "tags": []
+}

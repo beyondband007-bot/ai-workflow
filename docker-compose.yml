@@ -28,8 +28,11 @@ services:
       - .env.docker
     environment:
       CLIENT_PORTAL_AVATAR_DIR: /app/client-portal/avatar
+      WF_003_WEBHOOK_URL: http://wf003-worker:3013/webhook/wf003-kie-submit
+      WF_003_CALLBACK_BASE_URL: http://app:3002
     depends_on:
       - db
+      - wf003-worker
     ports:
       - "3002:3002"
     volumes:
@@ -48,6 +51,7 @@ services:
     depends_on:
       - app
       - wf002-api
+      - wf003-worker
     ports:
       - "8080:80"
     volumes:
@@ -60,7 +64,7 @@ services:
     working_dir: /app
     env_file:
       - .env.docker
-    command: sh -lc "npm install && npm run build -w packages/core && npm run prisma:generate -w apps/api && npm exec -w apps/api prisma db push -- --schema prisma/schema.prisma && npm run start -w apps/api"
+    command: sh -lc "npm ci && npm run build -w packages/core && npm run build -w apps/api && npm run prisma:generate -w apps/api && npm exec -w apps/api prisma db push -- --schema prisma/schema.prisma && npm run start -w apps/api"
     environment:
       API_HOST: 0.0.0.0
       API_PORT: 3001
@@ -73,6 +77,25 @@ services:
       - ./WF_002/BaoyuSkill:/app
       - wf002_api_node_modules:/app/node_modules
       - ./WF_002/BaoyuSkill/data:/app/data
+
+  wf003-worker:
+    build:
+      context: .
+      dockerfile: WF-003/wf003_worker/Dockerfile
+      args:
+        PYTHON_BASE_IMAGE: ${PYTHON_BASE_IMAGE:-docker.m.daocloud.io/library/python:3.12.3-bookworm}
+    container_name: ai-workflow-wf003-worker
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      KIE_CREATE_TASK_URL: ${KIE_CREATE_TASK_URL:-https://api.kie.ai/api/v1/jobs/createTask}
+    depends_on:
+      - db
+    ports:
+      - "3013:3013"
 
   wf003:
     build:
@@ -92,7 +115,7 @@ services:
       # middle-platform container instead of directly to the external n8n webhook.
       WF_003_WEBHOOK_URL: ""
       WF_003_MIDDLE_PLATFORM_URL: http://app:3002/api/v1/workflows/WF-003/json-execute
-      CAR_EXPORT_WEBHOOK_URL: ${CAR_EXPORT_WEBHOOK_URL:-https://n8n.deepsix.store/webhook/bda7b6ac-10b6-4467-b6fd-83dd68c0bbd9}
+      CAR_EXPORT_WEBHOOK_URL: ${CAR_EXPORT_WEBHOOK_URL:-}
     ports:
       - "3001:3001"
 

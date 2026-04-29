@@ -15,7 +15,7 @@ const lightboxImage = document.getElementById("lightboxImage");
 const closeLightboxBtn = document.getElementById("closeLightboxBtn");
 
 const RUNTIME_CONFIG = window.__WF003_CONFIG__ || {};
-const KIE_UPLOAD_URL = RUNTIME_CONFIG.kieUploadUrl || "https://kieai.riftrunnerai.com/api/file-stream-upload";
+const KIE_UPLOAD_URL = RUNTIME_CONFIG.kieUploadUrl || "/api/kie-upload";
 const KIE_API_KEY = RUNTIME_CONFIG.kieApiKey || "";
 const RUNTIME_WEBHOOK_URL = (RUNTIME_CONFIG.workflowWebhookUrl || "").replace(/\/$/, "");
 const RUNTIME_API_BASE = (RUNTIME_CONFIG.workflowApiBase || "").replace(/\/$/, "");
@@ -339,7 +339,8 @@ function validateBeforeSubmit(carName) {
 }
 
 async function uploadToKie(file, uploadPath) {
-  if (!KIE_API_KEY) {
+  const isSameOriginUpload = KIE_UPLOAD_URL.startsWith("/");
+  if (!isSameOriginUpload && !KIE_API_KEY) {
     throw new Error("KIE_API_KEY is not configured");
   }
 
@@ -348,11 +349,14 @@ async function uploadToKie(file, uploadPath) {
   formData.append("uploadPath", uploadPath);
   formData.append("fileName", file.name);
 
+  const headers = {};
+  if (!isSameOriginUpload) {
+    headers.Authorization = `Bearer ${KIE_API_KEY}`;
+  }
+
   const response = await fetch(KIE_UPLOAD_URL, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${KIE_API_KEY}`,
-    },
+    headers,
     body: formData,
   });
 

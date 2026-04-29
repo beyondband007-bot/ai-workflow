@@ -1,0 +1,7 @@
+{
+  "prompt": "test image generation for health check",
+  "provider": "kie",
+  "model": "nano-banana-2",
+  "aspectRatio": "1:1",
+  "quality": "normal"
+}

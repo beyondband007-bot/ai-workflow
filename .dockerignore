@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/.cache
+**/.next
+**/coverage
+**/__pycache__
+**/*.log
+.git
+.cursor
