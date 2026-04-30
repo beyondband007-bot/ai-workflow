@@ -323,11 +323,6 @@ function validateBeforeSubmit(carName) {
     return false;
   }
 
-  if (!state.interior.length) {
-    setStatus("请上传至少1张内饰图", "error");
-    return false;
-  }
-
   const allImages = [...state.main, ...state.interior];
   const oversize = allImages.find((item) => item.file.size > MAX_FILE_SIZE);
   if (oversize) {

@@ -296,10 +296,6 @@ export class WorkflowExecutionService {
       throw new BadRequestException('At least one exterior image is required');
     }
 
-    if (interiorImages.length === 0) {
-      throw new BadRequestException('At least one interior image is required');
-    }
-
     if (exteriorImages.length > 5 || interiorImages.length > 5) {
       throw new BadRequestException(
         'exterior_images and interior_images support up to 5 files each',
@@ -582,10 +578,6 @@ export class WorkflowExecutionService {
 
     if (exteriorImages.length === 0) {
       throw new BadRequestException('At least one exterior image is required');
-    }
-
-    if (interiorImages.length === 0) {
-      throw new BadRequestException('At least one interior image is required');
     }
 
     if (exteriorImages.length > 5 || interiorImages.length > 5) {
