@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>超级Token聚合器 - 积分流水</title>
 <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20260428a">
-<link rel="stylesheet" href="./styles.css?v=20260428a" />
+<link rel="stylesheet" href="./styles.css?v=20260508b" />
 </head>
 <body data-page="ledger">
 <div class="ambient ambient-a"></div>
@@ -46,18 +46,7 @@
                   <circle cx="15" cy="10" r="2.2"></circle>
                 </svg>
               </span>
-              <span>工作流</span>
-            </span>
-          </a>
-          <a href="./index.html#workflows" class="nav-item">
-            <span class="nav-item-main">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 20 20" focusable="false">
-                  <path d="M10 4.2a3 3 0 1 0 0 6a3 3 0 0 0 0-6Z"></path>
-                  <path d="M4.8 15.8a5.7 5.7 0 0 1 10.4 0"></path>
-                </svg>
-              </span>
-              <span>我的工作流</span>
+              <span>应用中心</span>
             </span>
           </a>
           <a href="./records.html" class="nav-item">
@@ -82,13 +71,25 @@
               <span>积分流水</span>
             </span>
           </a>
+          <a href="./recharge.html" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M4 6.5h12A1.5 1.5 0 0 1 17.5 8v6A1.5 1.5 0 0 1 16 15.5H4A1.5 1.5 0 0 1 2.5 14V8A1.5 1.5 0 0 1 4 6.5Z"></path>
+                  <path d="M5.5 5V4A1.5 1.5 0 0 1 7 2.5h6A1.5 1.5 0 0 1 14.5 4v1"></path>
+                  <path d="M7 11h6M10 8.5v5"></path>
+                </svg>
+              </span>
+              <span>充值中心</span>
+            </span>
+          </a>
         </nav>
       </div>
 
       <div class="sidebar-nav-group">
-        <p class="sidebar-section-title">GENERAL</p>
+        <p class="sidebar-section-title">FAQ</p>
         <nav class="side-nav side-nav-secondary">
-          <a href="./index.html#rules" class="nav-item">
+          <a href="./faq.html" class="nav-item">
             <span class="nav-item-main">
               <span class="nav-icon" aria-hidden="true">
                 <svg viewBox="0 0 20 20" focusable="false">
@@ -96,7 +97,7 @@
                   <path d="m7.5 10.1l1.7 1.7l3.3-3.5"></path>
                 </svg>
               </span>
-              <span>结算规则</span>
+              <span>常见问题FAQ</span>
             </span>
           </a>
         </nav>
@@ -104,17 +105,6 @@
 
       <section class="quick-panel">
         <p class="quick-label mt-0">快捷入口</p>
-        <button class="ghost-button side-shortcut-button" type="button">
-          <span class="side-shortcut-content">
-            <span class="quick-icon" aria-hidden="true">
-              <svg viewBox="0 0 20 20" focusable="false">
-                <path d="M6 5.5h8A1.5 1.5 0 0 1 15.5 7v6A1.5 1.5 0 0 1 14 14.5H6A1.5 1.5 0 0 1 4.5 13V7A1.5 1.5 0 0 1 6 5.5Z"></path>
-                <path d="M7.2 10h5.6M10 7.2v5.6"></path>
-              </svg>
-            </span>
-            <span>进入图生图工作流</span>
-          </span>
-        </button>
         <button class="ghost-button side-shortcut-button" type="button">
           <span class="side-shortcut-content">
             <span class="quick-icon" aria-hidden="true">
@@ -306,7 +296,8 @@
   </div>
 </div>
 
-<script src="./portal-shell.js?v=20260428a"></script>
-<script src="./ledger.js?v=20260428a"></script>
+<script src="./auth-state.js?v=20260509a"></script>
+<script src="./portal-shell.js?v=20260509b"></script>
+<script src="./ledger.js?v=20260509b"></script>
 </body>
 </html>
