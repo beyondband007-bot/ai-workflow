@@ -38,6 +38,10 @@
   }
 
   function getToken() {
+    if (window.ClientPortalAuth) {
+      return window.ClientPortalAuth.readToken();
+    }
+
     const urlToken = new URLSearchParams(window.location.search).get("token");
     if (urlToken) {
       window.localStorage.setItem(TOKEN_KEY, urlToken);
@@ -45,6 +49,26 @@
     }
 
     return window.localStorage.getItem(TOKEN_KEY);
+  }
+
+  function clearAuthState() {
+    if (window.ClientPortalAuth) {
+      window.ClientPortalAuth.clearAuthState();
+      return;
+    }
+
+    window.localStorage.removeItem(TOKEN_KEY);
+    window.localStorage.removeItem(PROFILE_STORAGE_KEY);
+  }
+
+  function redirectToLogin() {
+    if (window.ClientPortalAuth) {
+      window.ClientPortalAuth.redirectToLogin();
+      return;
+    }
+
+    clearAuthState();
+    window.location.replace(resolveAuthEntryUrl());
   }
 
   async function requestJson(path, options = {}) {
@@ -61,6 +85,10 @@
     const data = text ? JSON.parse(text) : null;
 
     if (!response.ok) {
+      if (response.status === 401 && options.auth !== false) {
+        redirectToLogin();
+        throw new Error("登录已过期，请重新登录");
+      }
       throw new Error(data?.message || data?.detail || `Request failed: ${response.status}`);
     }
 
@@ -346,8 +374,7 @@
   }
 
   function logout() {
-    window.localStorage.removeItem(TOKEN_KEY);
-    window.location.href = resolveAuthEntryUrl();
+    redirectToLogin();
   }
 
   function initThemeToggle() {
@@ -514,6 +541,7 @@
 
   async function syncCurrentUser() {
     if (!getToken()) {
+      redirectToLogin();
       return;
     }
 

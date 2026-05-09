@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>超级Token聚合器 - 充值中心</title>
+<link rel="icon" type="image/x-icon" href="./favicon.ico?v=20260428a">
+<link rel="stylesheet" href="./styles.css?v=20260509c" />
+</head>
+<body data-page="recharge">
+<div class="ambient ambient-a"></div>
+<div class="ambient ambient-b"></div>
+
+<div class="page-shell">
+  <div class="overflow-auto sidebar1">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-mark"><img src="./logo.png?v=20260428a" alt="logo"></div>
+        <div>
+          <p class="eyebrow">Workflow Points</p>
+          <h1>超级Token聚合器</h1>
+        </div>
+      </div>
+
+      <div class="sidebar-nav-group">
+        <p class="sidebar-section-title">MAIN MENU</p>
+        <nav class="side-nav">
+          <a href="./index.html#overview" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <rect x="3" y="3" width="5" height="5" rx="1.2"></rect>
+                  <rect x="12" y="3" width="5" height="5" rx="1.2"></rect>
+                  <rect x="3" y="12" width="5" height="5" rx="1.2"></rect>
+                  <rect x="12" y="12" width="5" height="5" rx="1.2"></rect>
+                </svg>
+              </span>
+              <span>总览</span>
+            </span>
+          </a>
+          <a href="./index.html#workflows" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M4 5.5h12M4 10h8M4 14.5h12"></path>
+                  <circle cx="15" cy="10" r="2.2"></circle>
+                </svg>
+              </span>
+              <span>工作流</span>
+            </span>
+          </a>
+          <a href="./index.html#workflows" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M10 4.2a3 3 0 1 0 0 6a3 3 0 0 0 0-6Z"></path>
+                  <path d="M4.8 15.8a5.7 5.7 0 0 1 10.4 0"></path>
+                </svg>
+              </span>
+              <span>我的工作流</span>
+            </span>
+          </a>
+          <a href="./records.html" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M5 4h10a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 15 16H5A1.5 1.5 0 0 1 3.5 14.5v-9A1.5 1.5 0 0 1 5 4Z"></path>
+                  <path d="M6.5 7.2h7M6.5 10h7M6.5 12.8h4.5"></path>
+                </svg>
+              </span>
+              <span>调用记录</span>
+            </span>
+          </a>
+          <a href="./ledger.html" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M10 2.8v14.4"></path>
+                  <path d="M13.3 5.5c-.7-.8-1.9-1.3-3.3-1.3c-2 0-3.5 1.1-3.5 2.7c0 1.8 1.6 2.4 3.6 2.9c2 .5 3.4 1 3.4 2.7c0 1.7-1.5 2.9-3.7 2.9c-1.5 0-2.8-.5-3.7-1.5"></path>
+                </svg>
+              </span>
+              <span>积分流水</span>
+            </span>
+          </a>
+          <a href="./recharge.html" class="nav-item is-active">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M4 6.5h12A1.5 1.5 0 0 1 17.5 8v6A1.5 1.5 0 0 1 16 15.5H4A1.5 1.5 0 0 1 2.5 14V8A1.5 1.5 0 0 1 4 6.5Z"></path>
+                  <path d="M5.5 5V4A1.5 1.5 0 0 1 7 2.5h6A1.5 1.5 0 0 1 14.5 4v1"></path>
+                  <path d="M7 11h6M10 8.5v5"></path>
+                </svg>
+              </span>
+              <span>充值中心</span>
+            </span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="sidebar-nav-group">
+        <p class="sidebar-section-title">GENERAL</p>
+        <nav class="side-nav side-nav-secondary">
+          <a href="./index.html#rules" class="nav-item">
+            <span class="nav-item-main">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 20 20" focusable="false">
+                  <path d="M10 3.2l5.8 2.2v4.4c0 3.3-2.2 5.8-5.8 7c-3.6-1.2-5.8-3.7-5.8-7V5.4L10 3.2Z"></path>
+                  <path d="m7.5 10.1l1.7 1.7l3.3-3.5"></path>
+                </svg>
+              </span>
+              <span>结算规则</span>
+            </span>
+          </a>
+        </nav>
+      </div>
+
+      <section class="quick-panel">
+        <p class="quick-label mt-0">快捷入口</p>
+        <a class="ghost-button side-shortcut-button" href="./recharge.html">
+          <span class="side-shortcut-content">
+            <span class="quick-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" focusable="false">
+                <path d="M4 6.5h12A1.5 1.5 0 0 1 17.5 8v6A1.5 1.5 0 0 1 16 15.5H4A1.5 1.5 0 0 1 2.5 14V8A1.5 1.5 0 0 1 4 6.5Z"></path>
+                <path d="M7 11h6M10 8.5v5"></path>
+              </svg>
+            </span>
+            <span>在线充值积分</span>
+          </span>
+        </a>
+        <a class="ghost-button side-shortcut-button" href="./ledger.html">
+          <span class="side-shortcut-content">
+            <span class="quick-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" focusable="false">
+                <path d="M5.5 4.5h9a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 14V6a1.5 1.5 0 0 1 1.5-1.5Z"></path>
+                <path d="M7 8h6M7 10.8h6M7 13.6h3.5"></path>
+              </svg>
+            </span>
+            <span>查看账户流水</span>
+          </span>
+        </a>
+      </section>
+    </aside>
+  </div>
+
+  <div class="overflow-auto main-shell">
+    <header class="topbar">
+      <div class="topbar-path">
+        <div class="topbar-nav">
+          <button class="topbar-icon" type="button" aria-label="Back">←</button>
+          <button class="topbar-icon" type="button" aria-label="Forward">→</button>
+        </div>
+        <div class="topbar-breadcrumb">
+          <span>Workflow Points</span>
+          <span class="topbar-divider">/</span>
+          <strong>充值中心</strong>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false" aria-label="切换白天夜间模式">
+          <span class="theme-toggle-track" aria-hidden="true">
+            <span class="theme-toggle-thumb"></span>
+          </span>
+          <span class="theme-toggle-label">白天模式</span>
+        </button>
+        <div class="profile-menu" id="profileMenu">
+          <button class="topbar-profile profile-menu-trigger" id="profileMenuTrigger" type="button" aria-haspopup="menu" aria-expanded="false">
+            <div class="topbar-avatar"><img id="profileAvatarImage" src="./logo.png?v=20260428a" alt="avatar" /></div>
+            <div class="topbar-profile-copy">
+              <span>Workflow Points</span>
+              <strong>Online</strong>
+            </div>
+          </button>
+          <div class="profile-menu-dropdown" id="profileMenuDropdown" role="menu" aria-hidden="true">
+            <div class="profile-menu-summary">
+              <div class="topbar-avatar profile-menu-avatar"><img id="profileMenuAvatarImage" src="./logo.png?v=20260428a" alt="avatar" /></div>
+              <div class="profile-menu-copy">
+                <strong id="profileMenuDisplayName">Workflow Points</strong>
+                <span id="profileMenuUsername">@workflow_points</span>
+              </div>
+            </div>
+            <button class="profile-menu-item" id="profileEditButton" type="button" role="menuitem">个人中心</button>
+            <button class="profile-menu-item danger" id="profileLogoutButton" type="button" role="menuitem">退出登录</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content recharge-content">
+      <section class="section-head">
+        <div>
+          <p class="eyebrow">Recharge Center</p>
+          <h3>充值中心</h3>
+          <p class="section-note">在线充值按 1 元 = 100 积分入账，线下充值需上传付款截图后提交审核。</p>
+        </div>
+      </section>
+
+      <section class="recharge-summary-grid" aria-label="充值统计">
+        <article class="recharge-summary-card">
+          <span class="summary-icon violet" aria-hidden="true">
+            <svg viewBox="0 0 20 20" focusable="false">
+              <path d="M5 5h10v10H5z"></path>
+              <path d="M8 3v4M12 13v4"></path>
+            </svg>
+          </span>
+          <div>
+            <span>累计充值（元）</span>
+            <strong id="totalRechargeAmount">0.00</strong>
+          </div>
+        </article>
+        <article class="recharge-summary-card">
+          <span class="summary-icon rose" aria-hidden="true">
+            <svg viewBox="0 0 20 20" focusable="false">
+              <path d="m5.5 10.2 3 3 6-6"></path>
+            </svg>
+          </span>
+          <div>
+            <span>累计消耗（积分）</span>
+            <strong id="totalConsumedPoints">0</strong>
+          </div>
+        </article>
+        <article class="recharge-summary-card">
+          <span class="summary-icon cyan" aria-hidden="true">
+            <svg viewBox="0 0 20 20" focusable="false">
+              <path d="m5.5 11.5 4.5-4 4.5 4"></path>
+            </svg>
+          </span>
+          <div>
+            <span>当月消费（积分）</span>
+            <strong id="monthSpentPoints">0</strong>
+          </div>
+        </article>
+        <article class="recharge-summary-card">
+          <span class="summary-icon green" aria-hidden="true">
+            <svg viewBox="0 0 20 20" focusable="false">
+              <path d="M6 3.5h6l2 2V16.5H6z"></path>
+              <path d="M11.5 3.5V6H14M8 9h4M8 12h4"></path>
+            </svg>
+          </span>
+          <div>
+            <span>当日消费（积分）</span>
+            <strong id="todaySpentPoints">0</strong>
+          </div>
+        </article>
+      </section>
+
+      <section class="surface-card recharge-panel">
+        <div class="recharge-tabs" role="tablist" aria-label="充值方式">
+          <button class="recharge-tab is-active" type="button" data-tab="online" role="tab" aria-selected="true">在线充值</button>
+          <button class="recharge-tab" type="button" data-tab="offline" role="tab" aria-selected="false">线下转账</button>
+          <button class="recharge-tab" type="button" data-tab="records" role="tab" aria-selected="false">充值记录</button>
+        </div>
+
+        <div class="recharge-tab-panel is-active" id="onlinePanel" role="tabpanel">
+          <div class="recharge-layout">
+            <form class="recharge-form" id="onlineRechargeForm">
+              <div class="amount-grid" id="onlineAmountGrid" aria-label="在线充值金额"></div>
+              <label class="recharge-field">
+                <span>充值金额</span>
+                <input id="onlineAmountInput" name="amount" type="number" min="100" step="100" value="100" />
+              </label>
+              <div class="payment-field">
+                <span>支付方式</span>
+                <label class="payment-option">
+                  <input type="radio" name="onlinePayment" value="alipay" checked />
+                  <span class="payment-brand alipay">支付宝</span>
+                </label>
+                <label class="payment-option">
+                  <input type="radio" name="onlinePayment" value="wechat" />
+                  <span class="payment-brand wechat">微信支付</span>
+                </label>
+              </div>
+              <p class="recharge-form-error" id="onlineRechargeError" hidden></p>
+              <button class="primary-button recharge-submit" type="submit">立即充值</button>
+            </form>
+            <aside class="recharge-side-note">
+              <h4>积分换算</h4>
+              <p>· 充值金额需为 100 元的整数倍。<br />· 系统按 1 元 = 100 积分计算到账积分。</p>
+              <strong id="onlinePointPreview">10,000 积分</strong>
+            </aside>
+          </div>
+        </div>
+
+        <div class="recharge-tab-panel" id="offlinePanel" role="tabpanel" hidden>
+          <div class="recharge-layout">
+            <form class="recharge-form" id="offlineRechargeForm">
+              <div class="amount-grid" id="offlineAmountGrid" aria-label="线下充值金额"></div>
+              <label class="recharge-field">
+                <span>充值金额</span>
+                <input id="offlineAmountInput" name="amount" type="number" min="100" step="100" value="100" />
+              </label>
+              <div class="payment-field">
+                <span>支付方式</span>
+                <label class="payment-option">
+                  <input type="radio" name="offlinePayment" value="transfer" checked />
+                  <span class="payment-brand transfer">对公转账</span>
+                </label>
+              </div>
+              <label class="voucher-upload" for="offlineVoucherInput">
+                <input id="offlineVoucherInput" type="file" accept="image/*,.pdf" />
+                <span>上传支付凭证</span>
+                <strong id="offlineVoucherName">请选择付款截图或 PDF</strong>
+              </label>
+              <p class="recharge-form-error" id="offlineRechargeError" hidden></p>
+              <button class="primary-button recharge-submit" type="submit">提交审核</button>
+            </form>
+            <aside class="company-account-card">
+              <h4>对公账户信息</h4>
+              <dl>
+                <div>
+                  <dt>公司名称</dt>
+                  <dd>
+                    <span class="company-account-value">鲸创传媒集团（武汉）有限公司</span>
+                    <button class="account-copy-button" type="button" data-copy-label="户名" data-copy-value="鲸创传媒集团（武汉）有限公司" aria-label="复制户名">
+                      <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+                        <rect x="7" y="5" width="9" height="11" rx="1.8"></rect>
+                        <path d="M4 12.5V5.2A1.8 1.8 0 0 1 5.8 3.4h6.4"></path>
+                      </svg>
+                    </button>
+                  </dd>
+                </div>
+                <div>
+                  <dt>开户行</dt>
+                  <dd>
+                    <span class="company-account-value">中国银行股份有限公司武汉友谊大道支行</span>
+                    <button class="account-copy-button" type="button" data-copy-label="开户行" data-copy-value="中国银行股份有限公司武汉友谊大道支行" aria-label="复制开户行">
+                      <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+                        <rect x="7" y="5" width="9" height="11" rx="1.8"></rect>
+                        <path d="M4 12.5V5.2A1.8 1.8 0 0 1 5.8 3.4h6.4"></path>
+                      </svg>
+                    </button>
+                  </dd>
+                </div>
+                <div>
+                  <dt>银行卡号</dt>
+                  <dd>
+                    <span class="company-account-value">5664 7965 9361</span>
+                    <button class="account-copy-button" type="button" data-copy-label="账号" data-copy-value="5664 7965 9361" aria-label="复制账号">
+                      <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+                        <rect x="7" y="5" width="9" height="11" rx="1.8"></rect>
+                        <path d="M4 12.5V5.2A1.8 1.8 0 0 1 5.8 3.4h6.4"></path>
+                      </svg>
+                    </button>
+                  </dd>
+                </div>
+              </dl>
+            </aside>
+          </div>
+        </div>
+
+        <div class="recharge-tab-panel" id="recordsPanel" role="tabpanel" hidden>
+          <div class="table-wrap recharge-record-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>订单号</th>
+                  <th>充值方式</th>
+                  <th>金额</th>
+                  <th>到账积分</th>
+                  <th>状态</th>
+                  <th>时间</th>
+                </tr>
+              </thead>
+              <tbody id="rechargeRecordsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="copy-toast" id="copyToast" role="status" aria-live="polite" aria-hidden="true">已复制</div>
+
+<div class="alipay-modal" id="alipayModal" aria-hidden="true">
+  <div class="alipay-modal-backdrop" data-alipay-close="true"></div>
+  <div class="alipay-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="alipayModalTitle">
+    <div class="alipay-modal-head">
+      <div>
+        <p class="eyebrow">Alipay Order Code</p>
+        <h3 id="alipayModalTitle">支付宝订单码</h3>
+      </div>
+      <button class="profile-modal-close" id="alipayModalClose" type="button" aria-label="关闭支付宝订单码">×</button>
+    </div>
+    <div class="alipay-order-summary">
+      <span>订单金额</span>
+      <strong id="alipayModalAmount">￥0</strong>
+      <small id="alipayModalPoints">0 积分</small>
+    </div>
+    <div class="alipay-qr-frame">
+      <img id="alipayQrImage" src="" alt="支付宝订单码" />
+    </div>
+    <div class="alipay-order-meta">
+      <span>订单号</span>
+      <strong id="alipayModalOrderNo">-</strong>
+    </div>
+  </div>
+</div>
+
+<div class="profile-modal" id="profileModal" aria-hidden="true">
+  <div class="profile-modal-backdrop" data-profile-close="true"></div>
+  <div class="profile-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+    <div class="profile-modal-head">
+      <h3 id="profileModalTitle">编辑个人资料</h3>
+      <button class="profile-modal-close" id="profileModalClose" type="button" aria-label="Close">×</button>
+    </div>
+    <form class="profile-form" id="profileForm">
+      <div class="profile-avatar-editor">
+        <div class="profile-avatar-preview">
+          <img id="profileAvatarPreview" src="./logo.png?v=20260428a" alt="avatar preview" />
+        </div>
+        <input class="sr-only" id="profileAvatarInput" type="file" accept="image/*" />
+        <button class="profile-avatar-upload" id="profileAvatarUpload" type="button">更换头像</button>
+      </div>
+      <label class="profile-field">
+        <span>昵称</span>
+        <input id="profileDisplayNameInput" name="displayName" type="text" maxlength="24" placeholder="请输入昵称" required />
+      </label>
+      <label class="profile-field">
+        <span>用户名</span>
+        <input id="profileUsernameInput" name="username" type="text" maxlength="24" placeholder="请输入用户名" required />
+      </label>
+      <label class="profile-field">
+        <span>手机号</span>
+        <input id="profilePhoneInput" name="phone" type="text" maxlength="20" placeholder="请输入手机号" />
+      </label>
+      <label class="profile-field">
+        <span>地址</span>
+        <input id="profileAddressInput" name="address" type="text" maxlength="255" placeholder="请输入地址" />
+      </label>
+      <p class="profile-form-hint">个人资料将同步更新到当前账户，用户名需保持唯一。</p>
+      <p class="profile-form-error" id="profileFormError" hidden></p>
+      <div class="profile-form-actions">
+        <button class="secondary-button profile-form-cancel" id="profileModalCancel" type="button">取消</button>
+        <button class="primary-button" type="submit">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="./auth-state.js?v=20260509a"></script>
+<script src="./portal-shell.js?v=20260509b"></script>
+<script src="./recharge.js?v=20260509g"></script>
+</body>
+</html>

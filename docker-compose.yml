@@ -28,12 +28,15 @@ services:
       - .env.docker
     environment:
       CLIENT_PORTAL_AVATAR_DIR: /app/client-portal/avatar
+      ALIPAY_PRIVATE_KEY_PATH: /run/secrets/payment-keys/app_private_key.pem
+      ALIPAY_PUBLIC_KEY_PATH: /run/secrets/payment-keys/alipay_public_key.pem
     depends_on:
       - db
     ports:
       - "3002:3002"
     volumes:
       - ./client-portal/avatar:/app/client-portal/avatar
+      - ./secrets/payment-keys:/run/secrets/payment-keys:ro
 
   web:
     build:
