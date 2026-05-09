@@ -12,8 +12,23 @@ function resolveApiBase() {
   return "";
 }
 
+function resolveAuthEntryUrl() {
+  const { protocol, hostname, port } = window.location;
+
+  if (protocol === "file:") {
+    return "http://127.0.0.1:8080/auth/?mode=login";
+  }
+
+  if (port === "3003") {
+    return `${protocol}//${hostname}:8000/auth/?mode=login`;
+  }
+
+  return `${window.location.origin}/auth/?mode=login`;
+}
+
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = "auth_demo_token";
+const PROFILE_STORAGE_KEY = "client_portal_profile";
 const THEME_KEY = "client_portal_theme";
 const ALLOWED_ASPECT_RATIOS = ["1:1", "4:3", "3:4", "16:9", "9:16"];
 
@@ -37,6 +52,10 @@ function initTheme() {
 }
 
 function getToken() {
+  if (window.ClientPortalAuth) {
+    return window.ClientPortalAuth.readToken();
+  }
+
   const urlToken = new URLSearchParams(window.location.search).get("token");
   if (urlToken) {
     window.localStorage.setItem(TOKEN_KEY, urlToken);
@@ -48,19 +67,39 @@ function getToken() {
     return localToken;
   }
 
-  const manualToken = window.prompt("请粘贴登录后拿到的 auth_demo_token");
-  if (manualToken && manualToken.trim()) {
-    window.localStorage.setItem(TOKEN_KEY, manualToken.trim());
-    return manualToken.trim();
+  return null;
+}
+
+function clearAuthState() {
+  if (window.ClientPortalAuth) {
+    window.ClientPortalAuth.clearAuthState();
+    return;
   }
 
-  throw new Error("未找到有效 token，请先登录后再打开 WF-001 页面。");
+  window.localStorage.removeItem(TOKEN_KEY);
+  window.localStorage.removeItem(PROFILE_STORAGE_KEY);
+}
+
+function redirectToLogin() {
+  if (window.ClientPortalAuth) {
+    window.ClientPortalAuth.redirectToLogin();
+    return;
+  }
+
+  clearAuthState();
+  window.location.replace(resolveAuthEntryUrl());
 }
 
 function buildHeaders() {
+  const token = getToken();
+  if (!token) {
+    redirectToLogin();
+    throw new Error("请先登录后再打开 WF-001 页面。");
+  }
+
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${getToken()}`,
+    Authorization: `Bearer ${token}`,
   };
 }
 
@@ -88,6 +127,10 @@ async function requestJson(path, options = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 401 && options.auth !== false) {
+      redirectToLogin();
+      throw new Error("登录已过期，请重新登录");
+    }
     throw new Error(data?.message || data?.detail || `请求失败: ${response.status}`);
   }
 
@@ -105,6 +148,10 @@ async function executeWorkflow(payload) {
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      redirectToLogin();
+      throw new Error("登录已过期，请重新登录");
+    }
     throw new Error(data?.message || data?.detail || `请求失败: ${response.status}`);
   }
 
@@ -324,12 +371,17 @@ function bindFormSafe() {
 function bootstrap() {
   try {
     initTheme();
-    getToken();
+    if (!getToken()) {
+      redirectToLogin();
+      return;
+    }
     buildBackLink();
     bindDemoPrompt();
     bindFormSafe();
   } catch (error) {
-    window.alert(error.message);
+    if (error.message !== "登录已过期，请重新登录") {
+      window.alert(error.message);
+    }
   }
 }
 

@@ -95,6 +95,10 @@ function resolveRecordTime(record) {
 }
 
 function getToken() {
+  if (window.ClientPortalAuth) {
+    return window.ClientPortalAuth.readToken();
+  }
+
   const urlToken = new URLSearchParams(window.location.search).get("token");
   if (urlToken) {
     window.localStorage.setItem(TOKEN_KEY, urlToken);
@@ -106,19 +110,24 @@ function getToken() {
     return localToken;
   }
 
-  const manualToken = window.prompt("请粘贴登录后拿到的 auth_demo_token");
-  if (manualToken && manualToken.trim()) {
-    window.localStorage.setItem(TOKEN_KEY, manualToken.trim());
-    return manualToken.trim();
+  return null;
+}
+
+function redirectToLogin() {
+  if (window.ClientPortalAuth) {
+    window.ClientPortalAuth.redirectToLogin();
+    return;
   }
 
-  return null;
+  window.localStorage.removeItem(TOKEN_KEY);
+  window.location.replace(resolveAuthEntryUrl());
 }
 
 function getAuthHeaders() {
   const token = getToken();
   if (!token) {
-    throw new Error("未找到有效 token，请先登录后重试");
+    redirectToLogin();
+    throw new Error("请先登录");
   }
 
   return {
@@ -127,8 +136,7 @@ function getAuthHeaders() {
 }
 
 function logout() {
-  window.localStorage.removeItem(TOKEN_KEY);
-  window.location.href = resolveAuthEntryUrl();
+  redirectToLogin();
 }
 
 async function requestJson(path, options = {}) {
@@ -145,6 +153,10 @@ async function requestJson(path, options = {}) {
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
+    if (response.status === 401 && options.auth !== false) {
+      redirectToLogin();
+      throw new Error("登录已过期，请重新登录");
+    }
     throw new Error(data?.message || data?.detail || `请求失败: ${response.status}`);
   }
 
@@ -439,6 +451,11 @@ function startAutoRefresh() {
 }
 
 async function bootstrap() {
+  if (!getToken()) {
+    redirectToLogin();
+    return;
+  }
+
   syncAccountView(fallbackPointAccount);
   renderRecords([]);
   attachRecordControls();
@@ -448,6 +465,9 @@ async function bootstrap() {
     await refreshData();
     startAutoRefresh();
   } catch (error) {
+    if (error.message === "登录已过期，请重新登录" || error.message === "请先登录") {
+      return;
+    }
     console.error(error);
     alert(`调用记录加载失败: ${error.message}`);
   }

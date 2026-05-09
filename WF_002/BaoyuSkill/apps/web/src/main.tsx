@@ -100,6 +100,8 @@ type WorkflowBillingMeta = {
 };
 
 const AUTH_TOKEN_KEY = "auth_demo_token";
+const LOGGED_OUT_TOKEN_KEY = "auth_demo_logged_out_token";
+const LOGOUT_AT_KEY = "auth_demo_logout_at";
 const BRAND_ASSET_VERSION = "20260425b";
 const APP_BASE = import.meta.env.BASE_URL;
 const WF002_PROVIDER: Provider = "kie";
@@ -149,16 +151,58 @@ function readAuthToken() {
   const currentUrl = new URL(window.location.href);
   const tokenFromQuery = currentUrl.searchParams.get("token")?.trim() || "";
   if (tokenFromQuery) {
-    window.localStorage.setItem(AUTH_TOKEN_KEY, tokenFromQuery);
     currentUrl.searchParams.delete("token");
     window.history.replaceState(null, "", currentUrl.toString());
+
+    if (isLoggedOutToken(tokenFromQuery)) {
+      window.localStorage.removeItem(AUTH_TOKEN_KEY);
+      return "";
+    }
+
+    window.localStorage.setItem(AUTH_TOKEN_KEY, tokenFromQuery);
+    window.localStorage.removeItem(LOGGED_OUT_TOKEN_KEY);
+    window.localStorage.removeItem(LOGOUT_AT_KEY);
     return tokenFromQuery;
   }
 
-  return window.localStorage.getItem(AUTH_TOKEN_KEY)?.trim() || "";
+  const storedToken = window.localStorage.getItem(AUTH_TOKEN_KEY)?.trim() || "";
+  if (isLoggedOutToken(storedToken)) {
+    window.localStorage.removeItem(AUTH_TOKEN_KEY);
+    return "";
+  }
+
+  return storedToken;
+}
+
+function tokenFingerprint(token: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < token.length; index += 1) {
+    hash ^= token.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${token.length}:${hash >>> 0}`;
+}
+
+function isLoggedOutToken(token: string) {
+  return Boolean(token && window.localStorage.getItem(LOGGED_OUT_TOKEN_KEY) === tokenFingerprint(token));
+}
+
+function clearAuthState() {
+  const currentUrl = new URL(window.location.href);
+  const token = currentUrl.searchParams.get("token")?.trim() || window.localStorage.getItem(AUTH_TOKEN_KEY)?.trim() || "";
+  if (token) {
+    window.localStorage.setItem(LOGGED_OUT_TOKEN_KEY, tokenFingerprint(token));
+  }
+  window.localStorage.setItem(LOGOUT_AT_KEY, String(Date.now()));
+  window.localStorage.removeItem(AUTH_TOKEN_KEY);
+  if (currentUrl.searchParams.has("token")) {
+    currentUrl.searchParams.delete("token");
+    window.history.replaceState(null, "", currentUrl.toString());
+  }
 }
 
 function redirectToLogin() {
+  clearAuthState();
   const loginUrl = new URL(resolveAuthEntryUrl(), window.location.origin);
   loginUrl.searchParams.set("redirect", window.location.href);
   window.location.replace(loginUrl.toString());
@@ -196,7 +240,7 @@ function AuthGate({ children }: { children: ReactNode }) {
           setReady(true);
         }
       } catch {
-        window.localStorage.removeItem(AUTH_TOKEN_KEY);
+        clearAuthState();
         if (!cancelled) {
           redirectToLogin();
         }
@@ -204,8 +248,21 @@ function AuthGate({ children }: { children: ReactNode }) {
     }
 
     void verifyLogin();
+    const handleAuthStateChange = (event: StorageEvent) => {
+      if ([AUTH_TOKEN_KEY, LOGGED_OUT_TOKEN_KEY, LOGOUT_AT_KEY].includes(event.key || "")) {
+        void verifyLogin();
+      }
+    };
+    const handlePageShow = () => {
+      void verifyLogin();
+    };
+    window.addEventListener("storage", handleAuthStateChange);
+    window.addEventListener("pageshow", handlePageShow);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("storage", handleAuthStateChange);
+      window.removeEventListener("pageshow", handlePageShow);
     };
   }, []);
 

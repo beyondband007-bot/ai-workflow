@@ -42,6 +42,28 @@ export class PointAccountsService {
       [currentUser.userId],
     );
 
+    const [monthUsage] = await this.dataSource.query(
+      `
+        SELECT COALESCE(SUM(points_cost), 0) AS month_spent_points
+        FROM api_call_logs
+        WHERE user_id = ?
+          AND DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+      `,
+      [currentUser.userId],
+    );
+
+    const [paidRecharge] = await this.dataSource.query(
+      `
+        SELECT
+          COALESCE(SUM(total_amount), 0) AS total_paid_recharge_amount,
+          COALESCE(SUM(points), 0) AS total_paid_recharge_points
+        FROM payment_orders
+        WHERE user_id = ?
+          AND status = 'PAID'
+      `,
+      [currentUser.userId],
+    );
+
     return {
       user_id: String(user.id),
       email: user.email,
@@ -53,8 +75,11 @@ export class PointAccountsService {
       frozen_points: Number(pointAccount.frozen_points ?? 0),
       total_recharged_points: Number(pointAccount.total_recharged_points ?? 0),
       total_consumed_points: Number(pointAccount.total_consumed_points ?? 0),
+      total_paid_recharge_amount: Number(paidRecharge?.total_paid_recharge_amount ?? 0),
+      total_paid_recharge_points: Number(paidRecharge?.total_paid_recharge_points ?? 0),
       today_runs: Number(todayUsage?.today_runs ?? 0),
       today_spent_points: Number(todayUsage?.today_spent_points ?? 0),
+      month_spent_points: Number(monthUsage?.month_spent_points ?? 0),
     };
   }
 

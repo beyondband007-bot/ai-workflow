@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PointAccountsModule } from './point-accounts/point-accounts.module';
+import { PaymentsModule } from './payments/payments.module';
 import { WorkflowRunsModule } from './workflow-runs/workflow-runs.module';
 import { Wf003Feishu } from './workflows/wf003-feishu.entity';
 import { Wf003ManufacturerLogo } from './workflows/wf003-manufacturer-logo.entity';
@@ -32,6 +33,7 @@ import { User } from './users/user.entity';
     }),
     AuthModule,
     PointAccountsModule,
+    PaymentsModule,
     WorkflowsModule,
     WorkflowRunsModule,
   ],

@@ -5,6 +5,8 @@ const API_BASE = process.env.REACT_APP_API_BASE || '';
 const PORTAL_BASE =
   process.env.REACT_APP_PORTAL_BASE || '/portal/index.html';
 const TOKEN_KEY = 'auth_demo_token';
+const LOGGED_OUT_TOKEN_KEY = 'auth_demo_logged_out_token';
+const LOGOUT_AT_KEY = 'auth_demo_logout_at';
 
 function decodeJwtPayload(token) {
   if (!token || typeof token !== 'string') {
@@ -33,6 +35,24 @@ function isTokenExpired(token) {
   }
 
   return Date.now() >= payload.exp * 1000;
+}
+
+function isLoggedOutToken(token) {
+  return Boolean(token && window.localStorage.getItem(LOGGED_OUT_TOKEN_KEY) === tokenFingerprint(token));
+}
+
+function tokenFingerprint(token) {
+  let hash = 2166136261;
+  for (let index = 0; index < token.length; index += 1) {
+    hash ^= token.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${token.length}:${hash >>> 0}`;
+}
+
+function clearLogoutState() {
+  window.localStorage.removeItem(LOGGED_OUT_TOKEN_KEY);
+  window.localStorage.removeItem(LOGOUT_AT_KEY);
 }
 
 async function requestJson(path, options = {}) {
@@ -313,6 +333,11 @@ export default function LoginPage() {
       return;
     }
 
+    if (isLoggedOutToken(token)) {
+      window.localStorage.removeItem(TOKEN_KEY);
+      return;
+    }
+
     const expired = isTokenExpired(token);
     if (expired === true) {
       window.localStorage.removeItem(TOKEN_KEY);
@@ -357,6 +382,7 @@ export default function LoginPage() {
           }),
         });
 
+        clearLogoutState();
         window.localStorage.setItem(TOKEN_KEY, result.access_token);
         await fetchCurrentUser(result.access_token);
         redirectToPortal(result.access_token);

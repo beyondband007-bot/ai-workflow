@@ -1,4 +1,6 @@
 const tokenKey = "auth_demo_token";
+const loggedOutTokenKey = "auth_demo_logged_out_token";
+const logoutAtKey = "auth_demo_logout_at";
 
 const registerForm = document.querySelector("#register-form");
 const loginForm = document.querySelector("#login-form");
@@ -14,8 +16,19 @@ function setMessage(value) {
 }
 
 function saveToken(token) {
+    localStorage.removeItem(loggedOutTokenKey);
+    localStorage.removeItem(logoutAtKey);
     localStorage.setItem(tokenKey, token);
     renderSession();
+}
+
+function tokenFingerprint(token) {
+    let hash = 2166136261;
+    for (let index = 0; index < token.length; index += 1) {
+        hash ^= token.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+    }
+    return `${token.length}:${hash >>> 0}`;
 }
 
 function getToken() {
@@ -23,6 +36,11 @@ function getToken() {
 }
 
 function clearToken() {
+    const token = getToken();
+    if (token) {
+        localStorage.setItem(loggedOutTokenKey, tokenFingerprint(token));
+    }
+    localStorage.setItem(logoutAtKey, String(Date.now()));
     localStorage.removeItem(tokenKey);
     renderSession();
 }

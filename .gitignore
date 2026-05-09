@@ -51,8 +51,15 @@ temp/
 demo/.git/
 
 # Docker / local overrides
+.env
+.env.docker
 .env.local
 .env.*.local
+
+# Payment and service secrets
+client-portal/keys/
+secrets/
+*.pem
 
 # WF-003 local generated assets
 WF-003/car-export-portal/uploads/

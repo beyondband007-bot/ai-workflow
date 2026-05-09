@@ -162,6 +162,10 @@ function formatDateTime(value) {
 }
 
 function getToken() {
+  if (window.ClientPortalAuth) {
+    return window.ClientPortalAuth.readToken();
+  }
+
   const urlToken = new URLSearchParams(window.location.search).get("token");
   if (urlToken) {
     window.localStorage.setItem(TOKEN_KEY, urlToken);
@@ -173,19 +177,34 @@ function getToken() {
     return localToken;
   }
 
-  const manualToken = window.prompt("请粘贴登录后拿到的 auth_demo_token");
-  if (manualToken && manualToken.trim()) {
-    window.localStorage.setItem(TOKEN_KEY, manualToken.trim());
-    return manualToken.trim();
+  return null;
+}
+
+function clearAuthState() {
+  if (window.ClientPortalAuth) {
+    window.ClientPortalAuth.clearAuthState();
+    return;
   }
 
-  return null;
+  window.localStorage.removeItem(TOKEN_KEY);
+  window.localStorage.removeItem(PROFILE_STORAGE_KEY);
+}
+
+function redirectToLogin() {
+  if (window.ClientPortalAuth) {
+    window.ClientPortalAuth.redirectToLogin();
+    return;
+  }
+
+  clearAuthState();
+  window.location.replace(resolveAuthEntryUrl());
 }
 
 function getAuthHeaders() {
   const token = getToken();
   if (!token) {
-    throw new Error("未找到有效 token，请先登录并重新打开门户页");
+    redirectToLogin();
+    throw new Error("请先登录");
   }
 
   return {
@@ -445,6 +464,10 @@ function syncProfileForm() {
 
 async function uploadProfileAvatar(file) {
   const token = getToken();
+  if (!token) {
+    redirectToLogin();
+    throw new Error("请先登录");
+  }
   const formData = new FormData();
   formData.append("avatar", file);
 
@@ -460,6 +483,10 @@ async function uploadProfileAvatar(file) {
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      redirectToLogin();
+      throw new Error("登录已过期，请重新登录");
+    }
     throw new Error(data?.message || data?.detail || `Avatar upload failed: ${response.status}`);
   }
 
@@ -717,9 +744,7 @@ function attachProfileControls() {
 }
 
 function logout() {
-  window.localStorage.removeItem(TOKEN_KEY);
-  window.localStorage.removeItem(PROFILE_STORAGE_KEY);
-  window.location.href = resolveAuthEntryUrl();
+  redirectToLogin();
 }
 
 async function requestJson(path, options = {}) {
@@ -736,6 +761,10 @@ async function requestJson(path, options = {}) {
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
+    if (response.status === 401 && options.auth !== false) {
+      redirectToLogin();
+      throw new Error("登录已过期，请重新登录");
+    }
     throw new Error(data?.message || data?.detail || `请求失败: ${response.status}`);
   }
 
@@ -1074,6 +1103,11 @@ function startAutoRefresh() {
 }
 
 async function bootstrap() {
+  if (!getToken()) {
+    redirectToLogin();
+    return;
+  }
+
   // renderApiContracts();
   syncAccountView(fallbackPointAccount);
   renderRecords([]);
@@ -1100,6 +1134,9 @@ async function bootstrap() {
     attachWorkflowButtons();
     startAutoRefresh();
   } catch (error) {
+    if (error.message === "登录已过期，请重新登录" || error.message === "请先登录") {
+      return;
+    }
     renderWorkflows([]);
     renderConnectionState(error.message, true);
     console.error(error);

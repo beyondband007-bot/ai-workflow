@@ -1,0 +1,27 @@
+# Git / editor metadata
+.git
+.gitignore
+.vscode
+.idea
+
+# Local dependencies and build output
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+**/coverage
+
+# Local and production secrets must never enter Docker build context.
+.env
+.env.*
+client-portal/keys
+secrets
+*.pem
+
+# Runtime/generated files
+client-portal/avatar
+WF-003/car-export-portal/uploads
+logs
+tmp
+temp
