@@ -110,7 +110,6 @@ export class WorkflowsController {
       car_name?: string;
       exterior_images?: string[];
       interior_images?: string[];
-      manufacturer_code?: string;
       source?: string;
       submitted_at?: string;
     },

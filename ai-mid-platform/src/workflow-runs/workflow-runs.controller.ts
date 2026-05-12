@@ -41,6 +41,7 @@ export class WorkflowRunsController {
       end_time?: string;
       status?: string;
       order_no?: string;
+      workflow_code?: string;
     },
   ) {
     return this.workflowRunsService.getMyRunsQuery(currentUser, query);

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WF-001 历史记录</title>
+    <link rel="stylesheet" href="./styles.css?v=20260428a" />
+    <style>
+      .wf-page {
+        min-height: 100vh;
+        padding: 28px 18px 40px;
+      }
+
+      .wf-wrap {
+        max-width: 1280px;
+        margin: 0 auto;
+        display: grid;
+        gap: 20px;
+      }
+
+      .wf-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+      }
+
+      .wf-head h1 {
+        margin: 6px 0 10px;
+        color: var(--text);
+        font-size: clamp(32px, 5vw, 52px);
+      }
+
+      .wf-head p {
+        margin: 0;
+        max-width: 760px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .wf-head-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .wf-panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        padding: 22px;
+      }
+
+      .wf-record-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+        color: var(--muted);
+      }
+
+      .wf-record-table {
+        overflow: auto;
+      }
+
+      .wf-record-table table {
+        min-width: 1180px;
+      }
+
+      .wf-record-table th:nth-child(3),
+      .wf-record-table td:nth-child(3) {
+        min-width: 320px;
+        max-width: 500px;
+      }
+
+      .wf-record-table th:nth-child(4),
+      .wf-record-table td:nth-child(4) {
+        max-width: 195px;
+      }
+
+      .wf-description {
+        margin: 0;
+        color: var(--text);
+        line-height: 1.6;
+        text-wrap: pretty;
+      }
+
+      .wf-prompt-text {
+        display: -webkit-box;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+      }
+
+      .wf-image-links {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .wf-image-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border: 1px solid rgba(25, 197, 107, 0.2);
+        border-radius: 8px;
+        color: var(--teal);
+        background: rgba(25, 197, 107, 0.08);
+        text-decoration: none;
+        font-weight: 650;
+        transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+      }
+
+      .wf-image-link:hover,
+      .wf-image-link:focus-visible {
+        outline: none;
+        border-color: rgba(25, 197, 107, 0.38);
+        background: rgba(25, 197, 107, 0.12);
+        box-shadow: 0 8px 18px rgba(25, 197, 107, 0.12);
+        transform: translateY(-1px);
+      }
+
+      .wf-preview-popover {
+        position: fixed;
+        z-index: 1000;
+        width: min(220px, calc(100vw - 32px));
+        padding: 8px;
+        border: 1px solid rgba(31, 41, 55, 0.08);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+        pointer-events: none;
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+        transition: opacity 120ms ease, transform 120ms ease;
+      }
+
+      .wf-preview-popover.is-visible {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      .wf-preview-popover img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 4 / 5;
+        border-radius: 10px;
+        object-fit: cover;
+        background: var(--panel-soft);
+      }
+
+      .wf-preview-popover span {
+        display: block;
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .wf-muted {
+        color: var(--muted);
+      }
+
+      .wf-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .wf-mobile-records {
+        display: none;
+        gap: 12px;
+      }
+
+      .wf-mobile-record {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--panel-soft);
+        padding: 14px;
+      }
+
+      .wf-mobile-record-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .wf-mobile-record dl {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+      }
+
+      .wf-mobile-record div {
+        min-width: 0;
+      }
+
+      .wf-mobile-record dt {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .wf-mobile-record dd {
+        margin: 3px 0 0;
+        color: var(--text);
+        line-height: 1.6;
+        word-break: break-word;
+      }
+
+      .wf-empty {
+        padding: 48px 20px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      body[data-theme="dark"] .wf-image-link {
+        border-color: rgba(114, 255, 214, 0.22);
+        background: rgba(114, 255, 214, 0.08);
+        color: #72ffd6;
+      }
+
+      body[data-theme="dark"] .wf-image-link:hover,
+      body[data-theme="dark"] .wf-image-link:focus-visible {
+        border-color: rgba(114, 255, 214, 0.38);
+        background: rgba(114, 255, 214, 0.14);
+        box-shadow: 0 8px 18px rgba(79, 165, 116, 0.18);
+      }
+
+      body[data-theme="dark"] .wf-preview-popover {
+        border-color: rgba(74, 228, 198, 0.18);
+        background: rgba(8, 21, 36, 0.96);
+        box-shadow: 0 18px 42px rgba(2, 8, 14, 0.52);
+      }
+
+      body[data-theme="dark"] .wf-mobile-record {
+        background: rgba(8, 21, 36, 0.92);
+        border-color: rgba(74, 228, 198, 0.16);
+      }
+
+      .status-timeout,
+      .status-cancelled,
+      .status-unknown {
+        color: #5f6674;
+        background: rgba(95, 102, 116, 0.1);
+      }
+
+      body[data-theme="dark"] .status-timeout,
+      body[data-theme="dark"] .status-cancelled,
+      body[data-theme="dark"] .status-unknown {
+        color: #d3dee8;
+        background: rgba(141, 166, 171, 0.16);
+      }
+
+      @media (max-width: 860px) {
+        .wf-head {
+          flex-direction: column;
+        }
+
+        .wf-head-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .wf-record-table {
+          display: none;
+        }
+
+        .wf-mobile-records {
+          display: grid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+
+    <main class="wf-page">
+      <div class="wf-wrap">
+        <header class="wf-head">
+          <div>
+            <p class="eyebrow">WF-001 Records</p>
+            <h1>文生图历史记录</h1>
+            <p>性价比文生图历史记录，图片链接有效期7天，请及时下载保存。</p>
+          </div>
+          <div class="wf-head-actions">
+            <a class="secondary-button" id="wf001Link" href="./wf001.html">返回文生图</a>
+            <a class="secondary-button" id="portalLink" href="./index.html">返回门户</a>
+          </div>
+        </header>
+
+        <section class="wf-panel">
+          <div class="wf-record-toolbar">
+            <span id="recordTotalCount">共 0 条</span>
+            <button class="secondary-button" id="refreshButton" type="button">刷新</button>
+          </div>
+
+          <div class="wf-record-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>订单状态</th>
+                  <th>提示词</th>
+                  <th>订单详情</th>
+                  <th>消耗积分</th>
+                  <th>时间</th>
+                </tr>
+              </thead>
+              <tbody id="recordsBody"></tbody>
+            </table>
+          </div>
+
+          <div class="wf-mobile-records" id="mobileRecords"></div>
+
+          <div class="wf-pagination">
+            <button class="ghost-button" id="prevPageButton" type="button">上一页</button>
+            <span id="pageInfo">1 / 1</span>
+            <button class="ghost-button" id="nextPageButton" type="button">下一页</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="./auth-state.js?v=20260509a"></script>
+    <script src="./wf001_record.js?v=20260512b"></script>
+  </body>
+</html>

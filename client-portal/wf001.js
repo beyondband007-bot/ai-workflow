@@ -165,6 +165,59 @@ function setText(id, value) {
   }
 }
 
+const statusTextMap = {
+  success: "成功",
+  running: "执行中",
+  failed: "失败",
+  timeout: "超时",
+  cancelled: "已取消",
+};
+
+const billingStatusTextMap = {
+  charged: "已扣费",
+  frozen: "积分冻结中",
+  rollback: "已退回",
+};
+
+function getRunImageUrls(run) {
+  return Array.isArray(run?.result_urls) ? run.result_urls.filter(Boolean) : [];
+}
+
+function formatRunStatus(status) {
+  return statusTextMap[status] || status || "未知";
+}
+
+function formatBillingStatus(status) {
+  return billingStatusTextMap[status] || status || "-";
+}
+
+function buildResultSummary(run) {
+  const status = run?.status;
+  const imageCount = getRunImageUrls(run).length;
+
+  if (status === "success") {
+    return imageCount > 0 ? `生成成功，已返回 ${imageCount} 张图片。` : "生成成功。";
+  }
+
+  if (status === "failed") {
+    return "生成失败，积分已按规则处理。";
+  }
+
+  if (status === "timeout") {
+    return "生成超时，请稍后查看历史记录。";
+  }
+
+  if (status === "cancelled") {
+    return "任务已取消。";
+  }
+
+  if (status === "running") {
+    return "正在生成，请稍候。";
+  }
+
+  return "任务已更新。";
+}
+
 async function executeWorkflowRequest(payload) {
   return requestJson("/api/v1/workflows/WF-001/execute", {
     method: "POST",
@@ -205,26 +258,23 @@ function renderGallery(urls) {
 function renderRunning(prompt, aspectRatio) {
   setText("runIdValue", "-");
   setText("runStatusValue", "执行中");
-  setText("billingStatusValue", "处理中");
+  setText("billingStatusValue", "积分冻结中");
   setText("chargePointsValue", "0");
-  setText("summaryText", `正在处理提示词：${prompt}，比例：${aspectRatio}`);
+  setText("summaryText", `正在生成，图像比例：${aspectRatio}。`);
   renderGallery([]);
 }
 
 function renderResult(result) {
   const run = result?.run || {};
   setText("runIdValue", run.run_id || "-");
-  setText("runStatusValue", run.status || "unknown");
-  setText("billingStatusValue", run.billing_status || "-");
+  setText("runStatusValue", formatRunStatus(run.status));
+  setText("billingStatusValue", formatBillingStatus(run.billing_status));
   setText(
     "chargePointsValue",
     String(run.final_charge_points ?? run.estimated_frozen_points ?? 0),
   );
-  setText(
-    "summaryText",
-    run.result_summary || "工作流已执行完成，但暂未返回结果摘要。",
-  );
-  renderGallery(run.result_urls || []);
+  setText("summaryText", buildResultSummary(run));
+  renderGallery(getRunImageUrls(run));
 }
 
 async function recoverLatestWf001Result() {
@@ -239,14 +289,93 @@ async function recoverLatestWf001Result() {
 
 function buildBackLink() {
   const backLink = document.getElementById("backLink");
-  if (!backLink) {
+  const historyLink = document.getElementById("historyLink");
+
+  const token = window.localStorage.getItem(TOKEN_KEY);
+  if (backLink) {
+    backLink.href = token
+      ? `./index.html?token=${encodeURIComponent(token)}`
+      : "./index.html";
+  }
+  if (historyLink) {
+    historyLink.href = token
+      ? `./wf001_record.html?token=${encodeURIComponent(token)}`
+      : "./wf001_record.html";
+  }
+}
+
+function setAspectRatio(value) {
+  if (!ALLOWED_ASPECT_RATIOS.includes(value)) {
     return;
   }
 
-  const token = window.localStorage.getItem(TOKEN_KEY);
-  backLink.href = token
-    ? `./index.html?token=${encodeURIComponent(token)}`
-    : "./index.html";
+  const input = document.getElementById("aspectRatioSelect");
+  const label = document.getElementById("aspectRatioLabel");
+  const options = document.querySelectorAll(".wf-ratio-option");
+
+  if (input) {
+    input.value = value;
+  }
+  if (label) {
+    label.textContent = value;
+  }
+
+  options.forEach((option) => {
+    const isActive = option.dataset.ratio === value;
+    option.classList.toggle("is-active", isActive);
+    option.setAttribute("aria-selected", String(isActive));
+  });
+}
+
+function closeAspectRatioPicker() {
+  const picker = document.getElementById("aspectRatioPicker");
+  const trigger = document.getElementById("aspectRatioTrigger");
+  if (!picker || !trigger) {
+    return;
+  }
+
+  picker.classList.remove("is-open");
+  trigger.setAttribute("aria-expanded", "false");
+}
+
+function bindAspectRatioPicker() {
+  const picker = document.getElementById("aspectRatioPicker");
+  const trigger = document.getElementById("aspectRatioTrigger");
+  const menu = document.getElementById("aspectRatioMenu");
+  if (!picker || !trigger || !menu) {
+    return;
+  }
+
+  trigger.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const isOpen = picker.classList.toggle("is-open");
+    trigger.setAttribute("aria-expanded", String(isOpen));
+  });
+
+  menu.addEventListener("click", (event) => {
+    const option = event.target.closest(".wf-ratio-option");
+    if (!option) {
+      return;
+    }
+
+    setAspectRatio(option.dataset.ratio);
+    closeAspectRatioPicker();
+    trigger.focus();
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!picker.contains(event.target)) {
+      closeAspectRatioPicker();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeAspectRatioPicker();
+    }
+  });
+
+  setAspectRatio(document.getElementById("aspectRatioSelect")?.value || "3:4");
 }
 
 function bindDemoPrompt() {
@@ -261,7 +390,7 @@ function bindDemoPrompt() {
     promptInput.value =
       "生成一张电影感很强的中国美女写真，柔光，时尚杂志风格，细节清晰，人物自然，背景干净。";
     if (aspectRatioSelect) {
-      aspectRatioSelect.value = "3:4";
+      setAspectRatio("3:4");
     }
   });
 }
@@ -284,7 +413,7 @@ function bindForm() {
     }
     if (!ALLOWED_ASPECT_RATIOS.includes(aspectRatio)) {
       window.alert("请选择有效的图像比例。");
-      aspectRatioSelect.focus();
+      document.getElementById("aspectRatioTrigger")?.focus();
       return;
     }
 
@@ -330,7 +459,7 @@ function bindFormSafe() {
     }
     if (!ALLOWED_ASPECT_RATIOS.includes(aspectRatio)) {
       window.alert("请选择有效的图像比例。");
-      aspectRatioSelect.focus();
+      document.getElementById("aspectRatioTrigger")?.focus();
       return;
     }
 
@@ -358,7 +487,7 @@ function bindFormSafe() {
 
       setText("runStatusValue", "失败");
       setText("billingStatusValue", "异常");
-      setText("summaryText", error.message);
+      setText("summaryText", "生成失败，请稍后重试。");
       renderGallery([]);
       window.alert(`WF-001 执行失败：${error.message}`);
     } finally {
@@ -376,6 +505,7 @@ function bootstrap() {
       return;
     }
     buildBackLink();
+    bindAspectRatioPicker();
     bindDemoPrompt();
     bindFormSafe();
   } catch (error) {

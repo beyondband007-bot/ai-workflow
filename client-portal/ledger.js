@@ -247,12 +247,33 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function formatWorkflowName(workflowCode) {
+  return window.ClientPortalWorkflowLabels?.getName(workflowCode) || workflowCode || "-";
+}
+
+function formatLedgerRemark(row) {
+  const workflowName = row.workflow_name || formatWorkflowName(row.workflow_code);
+  const points = Math.abs(Number(row.change_points ?? 0));
+
+  if (row.ledger_type === "freeze") {
+    return `${workflowName} 预冻结 ${formatNumber(points)} 积分`;
+  }
+  if (row.ledger_type === "charge") {
+    return `${workflowName} 正式扣费 ${formatNumber(points)} 积分`;
+  }
+  if (row.ledger_type === "rollback") {
+    return `${workflowName} 回滚 ${formatNumber(points)} 积分`;
+  }
+  return row.remark || "-";
+}
+
 function buildLedgerRowsFromRuns(runs = []) {
   const rows = [];
 
   runs.forEach((run) => {
     const runId = String(run.run_id || "");
     const workflowCode = String(run.workflow_code || "-");
+    const workflowName = formatWorkflowName(workflowCode);
     const estimatedFrozenPoints = Number(run.estimated_frozen_points ?? 0);
     const finalChargePoints = Number(run.final_charge_points ?? 0);
     const refundPoints = Number(run.refund_points ?? 0);
@@ -263,6 +284,7 @@ function buildLedgerRowsFromRuns(runs = []) {
         ledger_type: "freeze",
         change_points: -estimatedFrozenPoints,
         workflow_code: workflowCode,
+        workflow_name: workflowName,
         run_id: runId,
         remark: `${workflowCode} 预冻结 ${estimatedFrozenPoints} 积分`,
         created_at: run.started_at || run.created_at || null,
@@ -275,6 +297,7 @@ function buildLedgerRowsFromRuns(runs = []) {
         ledger_type: "charge",
         change_points: -finalChargePoints,
         workflow_code: workflowCode,
+        workflow_name: workflowName,
         run_id: runId,
         remark: `${workflowCode} 正式扣费 ${finalChargePoints} 积分`,
         created_at: run.finished_at || run.created_at || null,
@@ -287,6 +310,7 @@ function buildLedgerRowsFromRuns(runs = []) {
         ledger_type: "rollback",
         change_points: refundPoints,
         workflow_code: workflowCode,
+        workflow_name: workflowName,
         run_id: runId,
         remark: `${workflowCode} 回滚 ${refundPoints} 积分`,
         created_at: run.finished_at || run.created_at || null,
@@ -329,6 +353,7 @@ function applyLedgerFilters(rows = []) {
       row.ledger_no,
       row.run_id,
       row.workflow_code,
+      row.workflow_name,
       row.remark,
       ledgerTypeTextMap[row.ledger_type] ?? row.ledger_type,
     ]
@@ -354,9 +379,9 @@ function renderLedgerRows(rows = []) {
                 <td>${escapeHtml(row.ledger_no)}</td>
                 <td>${escapeHtml(ledgerTypeTextMap[row.ledger_type] ?? row.ledger_type)}</td>
                 <td><strong class="ledger-change ${changeClass}">${changePrefix}${formatNumber(row.change_points)}</strong></td>
-                <td>${escapeHtml(row.workflow_code || "-")}</td>
+                <td>${escapeHtml(row.workflow_name || formatWorkflowName(row.workflow_code))}</td>
                 <td>${escapeHtml(row.run_id || "-")}</td>
-                <td>${escapeHtml(row.remark || "-")}</td>
+                <td>${escapeHtml(formatLedgerRemark(row))}</td>
                 <td>${escapeHtml(formatDateTime(row.created_at))}</td>
               </tr>
             `;

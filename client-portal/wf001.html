@@ -38,6 +38,18 @@
         line-height: 1.7;
       }
 
+      .wf-head-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .wf-head-actions .secondary-button {
+        white-space: nowrap;
+      }
+
       .wf-panel {
         background: var(--panel);
         border: 1px solid var(--line);
@@ -58,13 +70,129 @@
         font-weight: 600;
       }
 
-      .wf-form select {
-        height: 45px;
-        padding: 0 16px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: transparent;
+      .wf-ratio-field {
+        position: relative;
+      }
+
+      .wf-ratio-select {
+        position: relative;
+      }
+
+      .wf-ratio-trigger {
+        width: 100%;
+        min-height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 14px 10px 16px;
+        border: 1px solid rgba(31, 41, 55, 0.09);
+        border-radius: 14px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.96));
         color: var(--text);
+        font: inherit;
+        font-weight: 650;
+        cursor: pointer;
+        transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+      }
+
+      .wf-ratio-trigger:hover,
+      .wf-ratio-trigger:focus-visible {
+        outline: none;
+        border-color: rgba(25, 197, 107, 0.36);
+        box-shadow: 0 0 0 4px rgba(25, 197, 107, 0.1);
+      }
+
+      .wf-ratio-trigger svg {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+        stroke: currentColor;
+        stroke-width: 2;
+        fill: none;
+        transition: transform 160ms ease;
+      }
+
+      .wf-ratio-select.is-open .wf-ratio-trigger svg {
+        transform: rotate(180deg);
+      }
+
+      .wf-ratio-menu {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 8px);
+        z-index: 20;
+        display: none;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        padding: 10px;
+        border: 1px solid rgba(31, 41, 55, 0.08);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+        backdrop-filter: blur(16px);
+      }
+
+      .wf-ratio-select.is-open .wf-ratio-menu {
+        display: grid;
+      }
+
+      .wf-ratio-option {
+        min-height: 72px;
+        border: 1px solid rgba(31, 41, 55, 0.08);
+        border-radius: 12px;
+        background: var(--panel-soft);
+        color: var(--text);
+        font: inherit;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        gap: 6px;
+        padding: 8px;
+        transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+      }
+
+      .wf-ratio-option:hover,
+      .wf-ratio-option.is-active {
+        border-color: rgba(25, 197, 107, 0.38);
+        background: rgba(25, 197, 107, 0.08);
+      }
+
+      .wf-ratio-option.is-active {
+        box-shadow: inset 0 0 0 1px rgba(25, 197, 107, 0.18);
+      }
+
+      .wf-ratio-preview {
+        width: 28px;
+        height: 28px;
+        border: 2px solid currentColor;
+        border-radius: 5px;
+        opacity: 0.75;
+      }
+
+      .wf-ratio-preview[data-ratio="4:3"] {
+        width: 34px;
+      }
+
+      .wf-ratio-preview[data-ratio="3:4"] {
+        height: 36px;
+      }
+
+      .wf-ratio-preview[data-ratio="16:9"] {
+        width: 40px;
+        height: 24px;
+      }
+
+      .wf-ratio-preview[data-ratio="9:16"] {
+        width: 24px;
+        height: 40px;
+      }
+
+      .wf-ratio-text {
+        font-size: 14px;
+        font-weight: 700;
       }
 
       .wf-form textarea {
@@ -174,19 +302,49 @@
         background: rgba(8, 21, 36, 0.84);
       }
 
+      body[data-theme="dark"] .wf-ratio-trigger,
+      body[data-theme="dark"] .wf-ratio-menu,
+      body[data-theme="dark"] .wf-ratio-option {
+        border-color: rgba(74, 228, 198, 0.16);
+        background: rgba(8, 21, 36, 0.92);
+      }
+
+      body[data-theme="dark"] .wf-ratio-menu {
+        box-shadow: 0 18px 40px rgba(2, 8, 14, 0.45);
+      }
+
+      body[data-theme="dark"] .wf-ratio-option:hover,
+      body[data-theme="dark"] .wf-ratio-option.is-active {
+        border-color: rgba(114, 255, 214, 0.34);
+        background: rgba(79, 165, 116, 0.12);
+      }
+
       @media (max-width: 860px) {
         .wf-head {
           flex-direction: column;
         }
 
+        .wf-head-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
         .wf-status {
           grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .wf-ratio-menu {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
         }
       }
 
       @media (max-width: 520px) {
         .wf-status {
           grid-template-columns: 1fr;
+        }
+
+        .wf-ratio-menu {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
     </style>
@@ -199,11 +357,14 @@
       <div class="wf-wrap">
         <header class="wf-head">
           <div>
-            <p class="eyebrow">WF-001</p>
+            <p class="eyebrow">Text-to-Image Workflow</p>
             <h1>文生图工作流</h1>
-            <p>这个页面只保留最小闭环：输入提示词，观察中台执行日志，等待图片生成并确认本次积分结算结果。</p>
+            <p>高性价比文生图工作流，支持多种图像比例选择。图片仅保证7天有效，请及时下载保存。</p>
           </div>
-          <a class="secondary-button" id="backLink" href="./index.html">返回门户</a>
+          <div class="wf-head-actions">
+            <a class="secondary-button" id="historyLink" href="./wf001_record.html">历史记录</a>
+            <a class="secondary-button" id="backLink" href="./index.html">返回门户</a>
+          </div>
         </header>
 
         <section class="wf-panel">
@@ -212,15 +373,39 @@
               提示词
               <textarea id="promptInput" placeholder="例如：生成一张电影感很强的中国美女写真，柔光，细节清晰，时尚杂志风格。"></textarea>
             </label>
-            <label for="aspectRatioSelect">
+            <label class="wf-ratio-field" for="aspectRatioSelect">
               图像比例
-              <select id="aspectRatioSelect">
-                <option value="1:1">1:1</option>
-                <option value="4:3">4:3</option>
-                <option value="3:4" selected>3:4</option>
-                <option value="16:9">16:9</option>
-                <option value="9:16">9:16</option>
-              </select>
+              <input id="aspectRatioSelect" type="hidden" value="3:4" />
+              <div class="wf-ratio-select" id="aspectRatioPicker">
+                <button class="wf-ratio-trigger" id="aspectRatioTrigger" type="button" aria-expanded="false" aria-haspopup="listbox">
+                  <span id="aspectRatioLabel">3:4</span>
+                  <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+                    <path d="m5 7.5 5 5 5-5"></path>
+                  </svg>
+                </button>
+                <div class="wf-ratio-menu" id="aspectRatioMenu" role="listbox" aria-label="图像比例">
+                  <button class="wf-ratio-option" type="button" role="option" data-ratio="1:1" aria-selected="false">
+                    <span class="wf-ratio-preview" data-ratio="1:1"></span>
+                    <span class="wf-ratio-text">1:1</span>
+                  </button>
+                  <button class="wf-ratio-option" type="button" role="option" data-ratio="4:3" aria-selected="false">
+                    <span class="wf-ratio-preview" data-ratio="4:3"></span>
+                    <span class="wf-ratio-text">4:3</span>
+                  </button>
+                  <button class="wf-ratio-option is-active" type="button" role="option" data-ratio="3:4" aria-selected="true">
+                    <span class="wf-ratio-preview" data-ratio="3:4"></span>
+                    <span class="wf-ratio-text">3:4</span>
+                  </button>
+                  <button class="wf-ratio-option" type="button" role="option" data-ratio="16:9" aria-selected="false">
+                    <span class="wf-ratio-preview" data-ratio="16:9"></span>
+                    <span class="wf-ratio-text">16:9</span>
+                  </button>
+                  <button class="wf-ratio-option" type="button" role="option" data-ratio="9:16" aria-selected="false">
+                    <span class="wf-ratio-preview" data-ratio="9:16"></span>
+                    <span class="wf-ratio-text">9:16</span>
+                  </button>
+                </div>
+              </div>
             </label>
             <div class="wf-actions">
               <button class="primary-button" id="submitButton" type="submit">开始生成</button>
@@ -232,31 +417,31 @@
         <section class="wf-panel">
           <div class="wf-status">
             <article class="wf-status-card">
-              <span>run id</span>
+              <span>任务 ID</span>
               <strong id="runIdValue">-</strong>
             </article>
             <article class="wf-status-card">
-              <span>status</span>
+              <span>状态</span>
               <strong id="runStatusValue">未开始</strong>
             </article>
             <article class="wf-status-card">
-              <span>billing</span>
+              <span>计费</span>
               <strong id="billingStatusValue">-</strong>
             </article>
             <article class="wf-status-card">
-              <span>charge points</span>
+              <span>消耗积分</span>
               <strong id="chargePointsValue">0</strong>
             </article>
           </div>
 
-          <p class="wf-summary" id="summaryText">提交任务后，这里会显示执行摘要。</p>
+          <p class="wf-summary" id="summaryText">任务执行摘要</p>
           <div class="wf-gallery" id="resultGallery"></div>
-          <div class="wf-empty" id="resultEmpty">图片生成完成后会显示在这里。</div>
+          <div class="wf-empty" id="resultEmpty">图片生成完成后会显示在这里</div>
         </section>
       </div>
     </main>
 
     <script src="./auth-state.js?v=20260509a"></script>
-    <script src="./wf001.js?v=20260509c"></script>
+    <script src="./wf001.js?v=20260511a"></script>
   </body>
 </html>

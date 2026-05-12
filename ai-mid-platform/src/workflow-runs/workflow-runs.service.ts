@@ -36,6 +36,7 @@ type RunsQueryPayload = {
   end_time?: string;
   status?: string;
   order_no?: string;
+  workflow_code?: string;
 };
 
 type Wf003RegisterTaskPayload = {
@@ -221,6 +222,7 @@ export class WorkflowRunsService {
           result_summary,
           result_summary_url,
           result_urls_json,
+          request_payload_summary,
           external_task_id,
           error_message,
           started_at,
@@ -237,6 +239,7 @@ export class WorkflowRunsService {
     return runs.map((run: Record<string, unknown>) => ({
       ...run,
       result_urls: this.parseJsonArray(run.result_urls_json),
+      request_payload_summary: this.parseJsonObject(run.request_payload_summary),
     }));
   }
 
@@ -268,6 +271,12 @@ export class WorkflowRunsService {
     if (status) {
       conditions.push('status = ?');
       params.push(status);
+    }
+
+    const workflowCode = (query.workflow_code ?? '').trim();
+    if (workflowCode) {
+      conditions.push('workflow_code = ?');
+      params.push(workflowCode);
     }
 
     const orderNo = (query.order_no ?? '').trim();
@@ -307,6 +316,7 @@ export class WorkflowRunsService {
           result_summary,
           result_summary_url,
           result_urls_json,
+          request_payload_summary,
           external_task_id,
           error_message,
           started_at,
@@ -327,6 +337,7 @@ export class WorkflowRunsService {
       items: runs.map((run: Record<string, unknown>) => ({
         ...run,
         result_urls: this.parseJsonArray(run.result_urls_json),
+        request_payload_summary: this.parseJsonObject(run.request_payload_summary),
       })),
     };
   }
@@ -1306,6 +1317,25 @@ export class WorkflowRunsService {
         : [];
     } catch {
       return [];
+    }
+  }
+
+  private parseJsonObject(value: unknown) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+
+    if (typeof value !== 'string' || !value.trim()) {
+      return {};
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
+    } catch {
+      return {};
     }
   }
 }

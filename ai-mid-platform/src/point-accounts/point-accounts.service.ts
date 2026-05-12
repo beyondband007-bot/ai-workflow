@@ -64,6 +64,15 @@ export class PointAccountsService {
       [currentUser.userId],
     );
 
+    const [totalUsage] = await this.dataSource.query(
+      `
+        SELECT COUNT(*) AS total_runs
+        FROM api_call_logs
+        WHERE user_id = ?
+      `,
+      [currentUser.userId],
+    );
+
     return {
       user_id: String(user.id),
       email: user.email,
@@ -80,6 +89,7 @@ export class PointAccountsService {
       today_runs: Number(todayUsage?.today_runs ?? 0),
       today_spent_points: Number(todayUsage?.today_spent_points ?? 0),
       month_spent_points: Number(monthUsage?.month_spent_points ?? 0),
+      total_runs: Number(totalUsage?.total_runs ?? 0),
     };
   }
 

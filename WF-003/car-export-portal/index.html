@@ -24,7 +24,7 @@
         <div class="hero-copy">
           <p class="eyebrow">Cross-border imaging workflow</p>
           <h1>跨境电商图生图</h1>
-          <p class="intro">上传车名、选择厂家并补充主图与内饰图，即可发起统一的图生图任务。</p>
+          <p class="intro">输入车名并补充主图与内饰图，即可发起统一的图生图任务。</p>
           <div class="hero-points">
             <span>Premium B2B Workflow</span>
             <span>Global Automotive Trade</span>
@@ -60,14 +60,6 @@
             <label class="field">
               <span class="field-label">车名</span>
               <input id="carName" name="car_name" type="text" placeholder="例如：2022 Toyota Camry 2.0G 豪华版" required>
-            </label>
-
-            <label class="field field-spaced">
-              <span class="field-label">厂家</span>
-              <select id="manufacturerSelect" name="manufacturer_code" disabled>
-                <option value="">正在加载厂家...</option>
-              </select>
-              <span id="manufacturerHelp" class="helper">请选择生成图片时使用的厂家 Logo。</span>
             </label>
 
             <section class="upload-section">
@@ -117,7 +109,7 @@
             <h2>提交说明</h2>
           </div>
           <div class="notes">
-            <p>1. 先填写车名，选择厂家。</p>
+            <p>1. 先填写车名。</p>
             <p>2. 分别在对应区域上传对应图片，每个区域最多上传5张图片，每张图片不能超过10M。</p>
             <p>3. 选中图片后点击缩略图，可以查看大图，点击右上角叉号可以删除图片。</p>
             <p>4. 点击“提交运行”后等待提示。</p>
@@ -133,7 +125,9 @@
     <img id="lightboxImage" alt="原图预览">
   </div>
 
-  <script src="/runtime-config.js"></script>
+
+
+  <script src="./runtime-config.js"></script>
   <script src="./script.js"></script>
 </body>
 </html>

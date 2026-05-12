@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>超级Token聚合器 - 鲸创传媒集团</title>
+<title>应用中心 - 鲸创传媒集团</title>
 <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20260511f">
-<link rel="stylesheet" href="./styles.css?v=20260512c" />
+<link rel="stylesheet" href="./styles.css?v=20260512a" />
 </head>
 <body>
 <div class="ambient ambient-a"></div>
@@ -25,7 +25,7 @@
 			<div class="sidebar-nav-group">
 				<p class="sidebar-section-title">MAIN MENU</p>
 				<nav class="side-nav">
-					<a href="./index.html" class="nav-item is-active">
+					<a href="./index.html" class="nav-item">
 						<span class="nav-item-main">
 							<span class="nav-icon" aria-hidden="true">
 								<svg viewBox="0 0 20 20" focusable="false">
@@ -38,7 +38,7 @@
 							<span>总览</span>
 						</span>
 					</a>
-					<a href="./workflows.html" class="nav-item">
+					<a href="./workflows.html" class="nav-item is-active">
 						<span class="nav-item-main">
 							<span class="nav-icon" aria-hidden="true">
 								<svg viewBox="0 0 20 20" focusable="false">
@@ -140,7 +140,7 @@
 				<div class="topbar-breadcrumb">
 					<span>控制台</span>
 					<span class="topbar-divider">/</span>
-					<strong>总览</strong>
+					<strong>应用中心</strong>
 				</div>
 			</div>
 
@@ -175,147 +175,15 @@
 		</header>
 
 		<main class="content content1">
-			<header class="hero-card" id="overview">
-				<div class="hero-copy">
-					<p class="eyebrow">Client Console</p>
-					<h2>鲸创AI超级Token聚合中台</h2>
-					<p class="hero-text">鲸创AI超级Token聚合中台，是面向企业级AI生态打造的统一积分与Token管理平台，负责公司旗下所有AI应用的大模型调用计费、积分消耗、额度分发与统一结算。
-						平台通过集中化的Token聚合能力，将不同模型、不同应用、不同业务场景的算力消耗进行统一管理，实现多模型接入、统一扣费、实时统计、动态风控与精细化运营。</p>
-					<div class="hero-actions">
-						<button class="primary-button" type="button">立即开始工作流</button>
-						<button class="secondary-button" type="button">查看今日任务</button>
-					</div>
-				</div>
-
-				<div class="hero-canvas token-engine" aria-hidden="true">
-					<div class="token-grid"></div>
-					<div class="token-ring token-ring-a"></div>
-					<div class="token-ring token-ring-b"></div>
-					<div class="token-ring token-ring-c"></div>
-					<div class="token-core">
-						<span class="token-core-face token-core-front"></span>
-						<span class="token-core-face token-core-back"></span>
-						<span class="token-core-glow"></span>
-					</div>
-					<div class="token-beam token-beam-a"></div>
-					<div class="token-beam token-beam-b"></div>
-					<div class="token-beam token-beam-c"></div>
-					<div class="token-slice token-slice-a"></div>
-					<div class="token-slice token-slice-b"></div>
-					<div class="token-slice token-slice-c"></div>
-					<div class="token-slice token-slice-d"></div>
-					<div class="token-stream token-stream-a"><span></span><span></span><span></span></div>
-					<div class="token-stream token-stream-b"><span></span><span></span><span></span></div>
-					<div class="token-stream token-stream-c"><span></span><span></span><span></span></div>
-				</div>
-			</header>
-
-			<section class="mobile-quick-entry">
-				<button class="primary-button" type="button">进入图生图工作流</button>
-				<button class="secondary-button" type="button">查看调用记录</button>
-			</section>
-
-			<section class="account-stats-bar" id="accountStatsBar">
-				<div class="account-stat-item" data-href="./recharge.html" style="cursor:pointer">
-					<div class="account-stat-icon">💎</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">剩余积分</span>
-						<strong class="account-stat-value" id="statAvailablePoints">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">❄️</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">冻结积分</span>
-						<strong class="account-stat-value" id="statFrozenPoints">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./records.html" style="cursor:pointer">
-					<div class="account-stat-icon">⚡</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">今日调用</span>
-						<strong class="account-stat-value" id="statTodayRuns">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">🔥</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">今日消耗</span>
-						<strong class="account-stat-value" id="statTodaySpent">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./recharge.html" style="cursor:pointer">
-					<div class="account-stat-icon">💳</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计充值</span>
-						<strong class="account-stat-value" id="statTotalRechargeAmount">¥0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">📥</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计入账</span>
-						<strong class="account-stat-value" id="statTotalRechargedPoints">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./records.html" style="cursor:pointer">
-					<div class="account-stat-icon">🚀</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计调用</span>
-						<strong class="account-stat-value" id="statTotalRuns">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">⏱️</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计消耗</span>
-						<strong class="account-stat-value" id="statTotalConsumedPoints">0</strong>
-					</div>
+			<section class="section-head" id="workflows">
+				<div>
+					<p class="eyebrow">Workflow Access</p>
+					<h3>应用中心</h3>
+					<p class="section-note">选择工作流，发起任务，统一在记录区追踪状态和积分变化。</p>
 				</div>
 			</section>
 
-			<section class="double-grid" id="shortcut-links">
-				<article class="surface-card" data-href="./records.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>调用记录</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">查看全部工作流调用历史、状态追踪与积分结算明细。</p>
-				</article>
-				<article class="surface-card" data-href="./ledger.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>积分流水</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">浏览积分充值、消费、冻结与解冻的完整流水记录。</p>
-				</article>
-				<article class="surface-card" data-href="./recharge.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>充值中心</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">在线充值积分，支持支付宝付款，即时到账。</p>
-				</article>
-				<article class="surface-card" data-href="./contact.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>联系运营</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">遇到问题？查看联系方式或提交工单获取运营支持。</p>
-				</article>
-			</section>
+			<section class="workflow-grid" id="workflowGrid"></section>
 		</main>
 	</div>
 </div>
@@ -390,6 +258,187 @@
 	toggleButton.addEventListener("click", () => {
 		applyTheme(body.dataset.theme === "dark" ? "light" : "dark");
 	});
+})();
+</script>
+<script>
+(() => {
+  const API_BASE = (() => {
+    const { protocol, hostname, port } = window.location;
+    if (protocol === "file:") return "http://127.0.0.1:3002";
+    if (port === "3003") return `${protocol}//${hostname}:3002`;
+    return "";
+  })();
+
+  function getToken() {
+    if (window.ClientPortalAuth) return window.ClientPortalAuth.readToken();
+    const urlToken = new URLSearchParams(window.location.search).get("token");
+    if (urlToken) { window.localStorage.setItem("auth_demo_token", urlToken); return urlToken; }
+    return window.localStorage.getItem("auth_demo_token") || "";
+  }
+
+  function getAuthHeaders() {
+    const token = getToken();
+    if (!token) throw new Error("请先登录");
+    return { Authorization: `Bearer ${token}` };
+  }
+
+  async function requestJson(path, options = {}) {
+    const response = await fetch(`${API_BASE}${path}`, {
+      headers: { "Content-Type": "application/json", ...getAuthHeaders(), ...(options.headers || {}) },
+      ...options,
+    });
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : null;
+    if (!response.ok) throw new Error(data?.message || data?.detail || `请求失败: ${response.status}`);
+    return data;
+  }
+
+  function resolveWf003PortalUrl() {
+    const { protocol } = window.location;
+    if (protocol === "file:") return "http://127.0.0.1:8080/portal/wf003/";
+    return `${window.location.origin}/portal/wf003/`;
+  }
+
+  function resolveWf002PortalUrl() {
+    const { protocol, hostname, port } = window.location;
+    if (protocol === "file:") return "http://127.0.0.1:8080/portal/wf002/";
+    if (port === "3003" || port === "8080") return `${protocol}//${hostname}:8080/portal/wf002/`;
+    return `${window.location.origin}/portal/wf002/`;
+  }
+
+  function formatNumber(value) {
+    return Number(value ?? 0).toLocaleString("zh-CN");
+  }
+
+  function renderWorkflows(workflows) {
+    const grid = document.getElementById("workflowGrid");
+    if (!workflows || workflows.length === 0) {
+      grid.innerHTML = `
+        <div class="workflow-empty">
+          <div class="workflow-empty-icon">📦</div>
+          <h4>暂无可用工作流</h4>
+          <p>当前没有可访问的工作流，请联系运营开通权限。</p>
+        </div>
+      `;
+      return;
+    }
+    grid.innerHTML = workflows.map((w) => `
+      <article class="workflow-card">
+        <div class="workflow-header">
+          <div>
+            <p class="eyebrow">${w.workflow_code}</p>
+            <h4>${w.workflow_name}</h4>
+          </div>
+          <span class="workflow-status">${w.current_status}</span>
+        </div>
+        <p class="workflow-description">${w.description || "-"}</p>
+        <div class="workflow-meta">
+          <p>计费模式: <span>${w.metering_mode}</span></p>
+          <p>计费口径: <span>${w.base_points ? `${w.base_points} 积分 / 次` : (w.unit_points ? `${w.unit_points} 积分 / 张` : '-')}</span></p>
+        </div>
+        <div class="workflow-footer">
+          <p class="status-line">${w.workflow_code === "WF-001" ? "进入表单页填写提示词，执行完成后展示图片结果。" : w.workflow_code === "WF-003" ? "上传外观图和内饰图，先按预估张数冻结，再按实际完成张数结算。" : "先 register 预冻结，再由工作流 callback 结算。"}</p>
+          <button class="primary-button" type="button" data-workflow-code="${w.workflow_code}">进入</button>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  function openModal(accessData) {
+    const modal = document.getElementById("wf003AccessModal");
+    const bc = accessData?.business_contact || {};
+    const phoneEl = document.getElementById("wf003ContactPhone");
+    const wechatEl = document.getElementById("wf003ContactWechat");
+    if (phoneEl) phoneEl.textContent = bc.phone || "13800138000";
+    if (wechatEl) wechatEl.textContent = bc.wechat || "商务微信";
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModal() {
+    const modal = document.getElementById("wf003AccessModal");
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  function attachModalControls() {
+    document.getElementById("wf003AccessModalClose")?.addEventListener("click", closeModal);
+    document.getElementById("wf003AccessModalCancel")?.addEventListener("click", closeModal);
+    document.querySelector("[data-wf003-access-close='true']")?.addEventListener("click", closeModal);
+    document.getElementById("wf003AccessModalConfirm")?.addEventListener("click", () => {
+      closeModal();
+      const phone = document.getElementById("wf003ContactPhone")?.textContent?.trim();
+      if (phone && phone !== "--") window.location.href = `tel:${phone}`;
+      else alert("请联系商务开通 WF-003 权限");
+    });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+  }
+
+  function attachButtons() {
+    const grid = document.getElementById("workflowGrid");
+    if (!grid) return;
+    grid.addEventListener("click", async (e) => {
+      const button = e.target.closest("[data-workflow-code]");
+      if (!button) return;
+      if (button.dataset.workflowOpening === "true") return;
+      button.dataset.workflowOpening = "true";
+      const code = button.dataset.workflowCode;
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = "处理中...";
+      try {
+        if (code === "WF-003") {
+          const access = await requestJson("/api/v1/wf003/access");
+          if (!access?.has_access) { openModal(access); button.disabled = false; button.textContent = originalText; return; }
+          const url = new URL(resolveWf003PortalUrl());
+          url.searchParams.set("token", getToken());
+          window.open(url.toString(), "_blank", "noopener,noreferrer");
+          button.disabled = false; button.textContent = originalText; return;
+        }
+        if (code === "WF-001") {
+          const token = getToken();
+          window.open(token ? `./wf001.html?token=${encodeURIComponent(token)}` : "./wf001.html", "_blank", "noopener,noreferrer");
+          button.disabled = false; button.textContent = originalText; return;
+        }
+        if (code === "WF-002") {
+          const token = getToken();
+          if (!token) throw new Error("请先登录");
+          const url = new URL(resolveWf002PortalUrl());
+          url.searchParams.set("token", token);
+          window.open(url.toString(), "_blank", "noopener,noreferrer");
+          button.disabled = false; button.textContent = originalText; return;
+        }
+        const result = await requestJson("/api/v1/workflow-runs/register", {
+          method: "POST",
+          body: JSON.stringify({ workflow_code: code, client_request_id: `portal_${code}_${Date.now()}`, request_payload_summary: { source: "client_portal" } }),
+        });
+        alert(`登记成功
+run_id: ${result.run_id}
+冻结积分: ${result.estimated_frozen_points}`);
+        window.location.reload();
+      } catch (err) {
+        alert(`执行失败: ${err.message}`);
+        button.disabled = false; button.textContent = originalText;
+      } finally {
+        delete button.dataset.workflowOpening;
+      }
+    });
+  }
+
+  async function bootstrap() {
+    if (!getToken()) { window.location.replace("./auth/?mode=login"); return; }
+    attachModalControls();
+    try {
+      const workflows = await requestJson("/api/v1/workflows");
+      renderWorkflows(workflows);
+      attachButtons();
+    } catch (err) {
+      console.error(err);
+      alert(`加载失败: ${err.message}`);
+    }
+  }
+
+  bootstrap();
 })();
 </script>
 </body>

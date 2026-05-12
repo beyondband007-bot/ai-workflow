@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>超级Token聚合器 - 鲸创传媒集团</title>
+<title>常见问题FAQ - 鲸创传媒集团</title>
 <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20260511f">
-<link rel="stylesheet" href="./styles.css?v=20260512c" />
+<link rel="stylesheet" href="./styles.css?v=20260512b" />
 </head>
 <body>
 <div class="ambient ambient-a"></div>
@@ -25,7 +25,7 @@
 			<div class="sidebar-nav-group">
 				<p class="sidebar-section-title">MAIN MENU</p>
 				<nav class="side-nav">
-					<a href="./index.html" class="nav-item is-active">
+					<a href="./index.html" class="nav-item">
 						<span class="nav-item-main">
 							<span class="nav-icon" aria-hidden="true">
 								<svg viewBox="0 0 20 20" focusable="false">
@@ -89,7 +89,7 @@
 			<div class="sidebar-nav-group">
 				<p class="sidebar-section-title">FAQ</p>
 				<nav class="side-nav side-nav-secondary">
-					<a href="./faq.html" class="nav-item">
+					<a href="./faq.html" class="nav-item is-active">
 						<span class="nav-item-main">
 							<span class="nav-icon" aria-hidden="true">
 								<svg viewBox="0 0 20 20" focusable="false">
@@ -140,7 +140,7 @@
 				<div class="topbar-breadcrumb">
 					<span>控制台</span>
 					<span class="topbar-divider">/</span>
-					<strong>总览</strong>
+					<strong>常见问题FAQ</strong>
 				</div>
 			</div>
 
@@ -175,147 +175,22 @@
 		</header>
 
 		<main class="content content1">
-			<header class="hero-card" id="overview">
-				<div class="hero-copy">
-					<p class="eyebrow">Client Console</p>
-					<h2>鲸创AI超级Token聚合中台</h2>
-					<p class="hero-text">鲸创AI超级Token聚合中台，是面向企业级AI生态打造的统一积分与Token管理平台，负责公司旗下所有AI应用的大模型调用计费、积分消耗、额度分发与统一结算。
-						平台通过集中化的Token聚合能力，将不同模型、不同应用、不同业务场景的算力消耗进行统一管理，实现多模型接入、统一扣费、实时统计、动态风控与精细化运营。</p>
-					<div class="hero-actions">
-						<button class="primary-button" type="button">立即开始工作流</button>
-						<button class="secondary-button" type="button">查看今日任务</button>
-					</div>
-				</div>
-
-				<div class="hero-canvas token-engine" aria-hidden="true">
-					<div class="token-grid"></div>
-					<div class="token-ring token-ring-a"></div>
-					<div class="token-ring token-ring-b"></div>
-					<div class="token-ring token-ring-c"></div>
-					<div class="token-core">
-						<span class="token-core-face token-core-front"></span>
-						<span class="token-core-face token-core-back"></span>
-						<span class="token-core-glow"></span>
-					</div>
-					<div class="token-beam token-beam-a"></div>
-					<div class="token-beam token-beam-b"></div>
-					<div class="token-beam token-beam-c"></div>
-					<div class="token-slice token-slice-a"></div>
-					<div class="token-slice token-slice-b"></div>
-					<div class="token-slice token-slice-c"></div>
-					<div class="token-slice token-slice-d"></div>
-					<div class="token-stream token-stream-a"><span></span><span></span><span></span></div>
-					<div class="token-stream token-stream-b"><span></span><span></span><span></span></div>
-					<div class="token-stream token-stream-c"><span></span><span></span><span></span></div>
-				</div>
-			</header>
-
-			<section class="mobile-quick-entry">
-				<button class="primary-button" type="button">进入图生图工作流</button>
-				<button class="secondary-button" type="button">查看调用记录</button>
-			</section>
-
-			<section class="account-stats-bar" id="accountStatsBar">
-				<div class="account-stat-item" data-href="./recharge.html" style="cursor:pointer">
-					<div class="account-stat-icon">💎</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">剩余积分</span>
-						<strong class="account-stat-value" id="statAvailablePoints">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">❄️</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">冻结积分</span>
-						<strong class="account-stat-value" id="statFrozenPoints">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./records.html" style="cursor:pointer">
-					<div class="account-stat-icon">⚡</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">今日调用</span>
-						<strong class="account-stat-value" id="statTodayRuns">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">🔥</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">今日消耗</span>
-						<strong class="account-stat-value" id="statTodaySpent">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./recharge.html" style="cursor:pointer">
-					<div class="account-stat-icon">💳</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计充值</span>
-						<strong class="account-stat-value" id="statTotalRechargeAmount">¥0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">📥</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计入账</span>
-						<strong class="account-stat-value" id="statTotalRechargedPoints">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./records.html" style="cursor:pointer">
-					<div class="account-stat-icon">🚀</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计调用</span>
-						<strong class="account-stat-value" id="statTotalRuns">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">⏱️</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计消耗</span>
-						<strong class="account-stat-value" id="statTotalConsumedPoints">0</strong>
-					</div>
+			<section class="section-head">
+				<div>
+					<p class="eyebrow">Help Center</p>
+					<h3>常见问题</h3>
+					<p class="section-note">遇到问题？先来这里看看，大部分疑问都能找到答案。</p>
 				</div>
 			</section>
 
-			<section class="double-grid" id="shortcut-links">
-				<article class="surface-card" data-href="./records.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>调用记录</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">查看全部工作流调用历史、状态追踪与积分结算明细。</p>
-				</article>
-				<article class="surface-card" data-href="./ledger.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>积分流水</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">浏览积分充值、消费、冻结与解冻的完整流水记录。</p>
-				</article>
-				<article class="surface-card" data-href="./recharge.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>充值中心</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">在线充值积分，支持支付宝付款，即时到账。</p>
-				</article>
-				<article class="surface-card" data-href="./contact.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>联系运营</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">遇到问题？查看联系方式或提交工单获取运营支持。</p>
-				</article>
-			</section>
+			<div class="faq-tabs" id="faqTabs">
+				<button class="faq-tab is-active" data-category="hot" type="button">🔥 热门问题</button>
+				<button class="faq-tab" data-category="points" type="button">💰 积分相关</button>
+				<button class="faq-tab" data-category="workflow" type="button">⚙️ 工作流相关</button>
+				<button class="faq-tab" data-category="account" type="button">👤 账户相关</button>
+			</div>
+
+			<div class="faq-list" id="faqList"></div>
 		</main>
 	</div>
 </div>
@@ -359,8 +234,7 @@
 	</div>
 </div>
 <script src="./auth-state.js?v=20260511f"></script>
-<script src="./workflow-labels.js?v=20260512a"></script>
-<script src="./app.js?v=20260512d"></script>
+
 <script>
 (() => {
 	const THEME_KEY = "client_portal_theme";
@@ -390,6 +264,79 @@
 	toggleButton.addEventListener("click", () => {
 		applyTheme(body.dataset.theme === "dark" ? "light" : "dark");
 	});
+})();
+</script>
+<script>
+(() => {
+  const builtinFaq = {
+    hot: [
+      { q: "如何充值积分？", a: "进入充值中心，选择充值金额，支持支付宝扫码付款。充值成功后积分实时到账。" },
+      { q: "工作流执行失败怎么办？", a: "任务失败时系统会自动回滚冻结积分，您可以在调用记录中查看失败原因，修正后重新提交任务。" },
+      { q: "跨境电商图生图和普通文生图有什么区别？", a: "跨境电商图生图是专门针对车辆外观/内饰图做风格迁移和背景替换，生成的图片可直接用于电商 listing。" },
+      { q: "如何查看我的调用记录？", a: "点击左侧菜单「调用记录」，可按状态筛选全部/成功/执行中/失败的任务，并查看每笔任务的积分冻结与结算详情。" },
+    ],
+    points: [
+      { q: "积分是如何计算的？", a: "不同工作流计费模式不同：WF-001（性价比文生图）30积分/次；WF-002（高质量文生图）50积分/次；WF-003（跨境电商图生图）按实际生成张数 × 30积分/张计费。" },
+      { q: "冻结积分是什么意思？", a: "提交任务时会先冻结预估积分，任务完成后按实际消耗结算，多余积分自动解冻回到账户。若任务失败则全额回滚。" },
+      { q: "充值有发票吗？", a: "企业用户充值后可联系运营开具电子发票，个人用户暂不支持。" },
+      { q: "积分会过期吗？", a: "目前积分永久有效，不设过期时间。如有政策调整将提前 30 天通知。" },
+    ],
+    workflow: [
+      { q: "【跨境电商图生图】工作流如何使用？", a: "上传车辆外观图和内饰图，填写车名与期望风格，系统会自动生成跨境电商风格的商品图。任务完成后可在结果页下载。" },
+      { q: "工作流支持哪些图片格式？", a: "支持 JPG、PNG、WEBP 格式，单张图片不超过 10MB。建议上传分辨率不低于 1024×1024 的清晰图片以获得最佳效果。" },
+      { q: "任务执行需要多长时间？", a: "WF-001/WF-002 通常在 10-30 秒内完成；WF-003 根据生成张数不同，一般在 1-3 分钟内完成。高峰期可能略有延迟。" },
+      { q: "可以同时提交多个任务吗？", a: "可以，每个任务独立冻结积分、独立结算。您可以在调用记录中分别追踪各任务状态。" },
+    ],
+    account: [
+      { q: "如何修改个人资料？", a: "点击右上角头像，选择「个人中心」即可修改昵称、用户名、手机号和地址信息。" },
+      { q: "忘记密码怎么办？", a: "请联系运营支持重置密码，或联系您的商务对接人协助处理。" },
+      { q: "如何开通【跨境电商图生图】权限？", a: "【跨境电商图生图】为增值功能，需联系商务开通。开通后会自动绑定您的账户，无需额外配置。" },
+      { q: "可以绑定多个用户吗？", a: "每个账户独立管理积分和权限。如需子账户或团队协作，请联系商务开通企业版方案。" },
+    ],
+  };
+
+  function renderFaq(category) {
+    const list = document.getElementById("faqList");
+    const items = builtinFaq[category] || [];
+    if (items.length === 0) {
+      list.innerHTML = `
+        <div class="faq-empty">
+          <div style="font-size: 32px; margin-bottom: 8px;">📝</div>
+          <h4 style="margin: 0 0 6px; font-size: 16px; color: var(--text);">该分类下暂无问题</h4>
+          <p style="margin: 0; font-size: 14px;">内容正在整理中，即将补充上线。</p>
+        </div>
+      `;
+      return;
+    }
+    list.innerHTML = items.map((item, index) => `
+      <details class="faq-item" name="faq" ${index === 0 ? "open" : ""}>
+        <summary class="faq-question">
+          <span>${item.q}</span>
+          <span class="faq-chevron" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M5 8.5 12 15.5 19 8.5"></path>
+            </svg>
+          </span>
+        </summary>
+        <div class="faq-answer">${item.a}</div>
+      </details>
+    `).join("");
+  }
+
+  function attachTabs() {
+    const tabs = document.getElementById("faqTabs");
+    if (!tabs) return;
+    tabs.addEventListener("click", (e) => {
+      const tab = e.target.closest("[data-category]");
+      if (!tab) return;
+      tabs.querySelectorAll(".faq-tab").forEach((t) => t.classList.remove("is-active"));
+      tab.classList.add("is-active");
+      renderFaq(tab.dataset.category);
+    });
+  }
+
+  renderFaq("hot");
+  attachTabs();
 })();
 </script>
 </body>

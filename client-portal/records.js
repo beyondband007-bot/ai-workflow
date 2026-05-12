@@ -51,12 +51,6 @@ const statusTextMap = {
   cancelled: "已取消",
 };
 
-const billingStatusTextMap = {
-  charged: "已扣费",
-  frozen: "已冻结",
-  rollback: "已回滚",
-};
-
 const fallbackPointAccount = {
   user_id: "-",
   available_points: 0,
@@ -88,6 +82,29 @@ function formatDateTime(value) {
 
   const pad = (input) => String(input).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function buildRecordSummary(record) {
+  if (record.status === "success") {
+    return record.workflow_code === "WF-001" ? "生成成功。" : "执行成功。";
+  }
+  if (record.status === "failed") {
+    return record.workflow_code === "WF-001" ? "生成失败。" : "执行失败。";
+  }
+  if (record.status === "running") {
+    return "正在执行。";
+  }
+  if (record.status === "timeout") {
+    return "执行超时。";
+  }
+  if (record.status === "cancelled") {
+    return "已取消。";
+  }
+  return "状态已更新。";
+}
+
+function formatWorkflowName(workflowCode) {
+  return window.ClientPortalWorkflowLabels?.getName(workflowCode) || workflowCode || "-";
 }
 
 function resolveRecordTime(record) {
@@ -248,7 +265,7 @@ function renderRecords(rows = []) {
             (record) => `
               <tr>
                 <td>${record.run_id}</td>
-                <td>${record.workflow_code}</td>
+                <td>${formatWorkflowName(record.workflow_code)}</td>
                 <td><span class="status-pill status-${record.status}">${statusTextMap[record.status] ?? record.status}</span></td>
                 <td>${formatNumber(record.estimated_frozen_points)}</td>
                 <td>${formatNumber(record.final_charge_points)}</td>
@@ -267,17 +284,15 @@ function renderRecords(rows = []) {
             (record) => `
               <article class="mobile-record-card">
                 <div class="mobile-record-top">
-                  <strong>${record.workflow_code}</strong>
+                  <strong>${formatWorkflowName(record.workflow_code)}</strong>
                   <span class="status-pill status-${record.status}">${statusTextMap[record.status] ?? record.status}</span>
                 </div>
                 <div class="mobile-record-main">
-                  <p>${record.result_summary ?? "-"}</p>
+                  <p>${buildRecordSummary(record)}</p>
                 </div>
                 <div class="mobile-record-meta">
-                  <span><strong>run_id</strong> ${record.run_id}</span>
-                  <span><strong>billing_status</strong> ${billingStatusTextMap[record.billing_status] ?? record.billing_status}</span>
-                  <span><strong>estimated_frozen_points</strong> ${formatNumber(record.estimated_frozen_points)}</span>
-                  <span><strong>final_charge_points</strong> ${formatNumber(record.final_charge_points)}</span>
+                  <span><strong>任务 ID</strong> ${record.run_id}</span>
+                  <span><strong>消耗积分</strong> ${formatNumber(record.final_charge_points ?? record.estimated_frozen_points)}</span>
                 </div>
                 <span class="mobile-record-time">${formatDateTime(resolveRecordTime(record))}</span>
               </article>

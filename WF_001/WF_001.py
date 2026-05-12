@@ -310,6 +310,7 @@ def prompt_user_inputs(args: argparse.Namespace) -> tuple[str, str, str]:
 def build_request_summary(prompt: str, image_path: str, aspect_ratio: str) -> dict:
     return {
         "workflow_code": WORKFLOW_CODE,
+        "prompt": prompt,
         "prompt_preview": prompt[:120],
         "aspect_ratio": aspect_ratio,
         "has_reference_image": bool(image_path),

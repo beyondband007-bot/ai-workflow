@@ -114,19 +114,12 @@ function toAppPath(path: string) {
 
 function resolveAuthApiBase() {
   const { protocol, hostname, port } = window.location;
-  const normalizedHost = String(hostname || "").toLowerCase();
 
   if (protocol === "file:") {
     return "http://127.0.0.1:3002";
   }
 
-  if (
-    port === "5173" ||
-    port === "3003" ||
-    normalizedHost === "127.0.0.1" ||
-    normalizedHost === "localhost" ||
-    normalizedHost === "0.0.0.0"
-  ) {
+  if (port === "5173" || port === "3003") {
     return `${protocol}//${hostname || "127.0.0.1"}:3002`;
   }
 

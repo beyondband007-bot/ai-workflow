@@ -1,7 +1,5 @@
 const form = document.getElementById("carForm");
 const carNameInput = document.getElementById("carName");
-const manufacturerSelect = document.getElementById("manufacturerSelect");
-const manufacturerHelp = document.getElementById("manufacturerHelp");
 const mainInput = document.getElementById("mainImages");
 const interiorInput = document.getElementById("interiorImages");
 const pickMainBtn = document.getElementById("pickMainBtn");
@@ -58,8 +56,7 @@ const API_BASE = resolveApiBase();
 const state = {
   main: [],
   interior: [],
-  manufacturers: [],
-  manufacturersLoaded: false,
+  hasAccess: false,
   isSubmitting: false,
 };
 
@@ -180,7 +177,6 @@ function markUploading(uploading) {
   submitBtn.disabled = uploading;
   pickMainBtn.disabled = uploading;
   pickInteriorBtn.disabled = uploading;
-  manufacturerSelect.disabled = uploading || !state.manufacturersLoaded;
 }
 
 function clearAll() {
@@ -191,9 +187,6 @@ function clearAll() {
   form.reset();
   resetInput(mainInput);
   resetInput(interiorInput);
-  if (state.manufacturers.length) {
-    manufacturerSelect.value = "";
-  }
   renderGroup("main");
   renderGroup("interior");
 }
@@ -238,58 +231,6 @@ function buildApiUrl(path) {
   return API_BASE ? `${API_BASE}${path}` : path;
 }
 
-async function loadManufacturers() {
-  try {
-    manufacturerSelect.disabled = true;
-    manufacturerSelect.innerHTML = '<option value="">正在加载厂家...</option>';
-
-    const response = await fetch(buildApiUrl("/api/v1/wf003/manufacturers"), {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-    });
-
-    const text = await response.text();
-    const data = text ? JSON.parse(text) : [];
-
-    if (!response.ok) {
-      throw new Error(data?.message || data?.error || `Load manufacturers failed (${response.status})`);
-    }
-
-    const manufacturers = Array.isArray(data)
-      ? data.filter((item) => item?.manufacturer_code && item?.manufacturer_name)
-      : [];
-
-    state.manufacturers = manufacturers;
-    state.manufacturersLoaded = manufacturers.length > 0;
-    manufacturerSelect.innerHTML = "";
-
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = manufacturers.length ? "请选择厂家" : "暂无可选厂家";
-    manufacturerSelect.appendChild(placeholder);
-
-    manufacturers.forEach((item) => {
-      const option = document.createElement("option");
-      option.value = item.manufacturer_code;
-      option.textContent = item.manufacturer_name;
-      manufacturerSelect.appendChild(option);
-    });
-
-    manufacturerSelect.disabled = !state.manufacturersLoaded;
-    manufacturerHelp.textContent = state.manufacturersLoaded
-      ? "请选择生成图片时使用的厂家 Logo。"
-      : "厂家列表为空，请先导入厂家 Logo 后再提交。";
-  } catch (error) {
-    state.manufacturers = [];
-    state.manufacturersLoaded = false;
-    manufacturerSelect.innerHTML = '<option value="">厂家列表加载失败</option>';
-    manufacturerSelect.disabled = true;
-    manufacturerHelp.textContent = `厂家列表暂时不可用，请刷新页面或检查服务。${error.message || ""}`.trim();
-  }
-}
-
 function buildHeaders() {
   const token = getToken();
   if (!token) {
@@ -302,19 +243,61 @@ function buildHeaders() {
   };
 }
 
+async function checkAccess() {
+  try {
+    const response = await fetch(buildApiUrl("/api/v1/wf003/access"), {
+      method: "GET",
+      headers: buildHeaders(),
+    });
+
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+
+    if (!response.ok) {
+      throw new Error(data?.message || data?.error || `权限检查失败 (${response.status})`);
+    }
+
+    state.hasAccess = !!data?.has_access;
+    return state.hasAccess;
+  } catch (error) {
+    state.hasAccess = false;
+    setStatus(`权限检查失败：${error.message || ""}`.trim(), "error");
+    return false;
+  }
+}
+
+function showAccessModal() {
+  const businessContact = RUNTIME_CONFIG.businessContact || {};
+  contactPhone.textContent = businessContact.phone || "--";
+  contactWechat.textContent = businessContact.wechat || "--";
+  accessModal.classList.remove("hidden");
+}
+
+function hideAccessModal() {
+  accessModal.classList.add("hidden");
+}
+
+function redirectToBusinessContact() {
+  const businessContact = RUNTIME_CONFIG.businessContact || {};
+  if (businessContact.url) {
+    window.location.href = businessContact.url;
+    return;
+  }
+  if (businessContact.phone) {
+    window.location.href = `tel:${businessContact.phone}`;
+    return;
+  }
+  alert("请联系商务开通权限");
+}
+
 function validateBeforeSubmit(carName) {
   if (!carName) {
     setStatus("请输入车辆名称", "error");
     return false;
   }
 
-  if (!state.manufacturersLoaded) {
-    setStatus("厂家列表未加载，暂时不能提交。", "error");
-    return false;
-  }
-
-  if (!manufacturerSelect.value) {
-    setStatus("请选择厂家。", "error");
+  if (!state.hasAccess) {
+    setStatus("您暂无 WF-003 访问权限，请联系商务开通。", "error");
     return false;
   }
 
@@ -391,12 +374,11 @@ async function uploadBatchToKie(items, typeLabel, uploadPath, concurrency = DEFA
   return urls;
 }
 
-function buildWorkflowPayload(carName, mainUrls, interiorUrls, manufacturerCode) {
+function buildWorkflowPayload(carName, mainUrls, interiorUrls) {
   return {
     car_name: carName,
     exterior_images: mainUrls,
     interior_images: interiorUrls,
-    manufacturer_code: manufacturerCode,
     source: "wf003_frontend_direct_to_kie",
     submitted_at: new Date().toISOString(),
   };
@@ -479,11 +461,8 @@ form.addEventListener("submit", async (event) => {
 
     setStatus("冻结点和提交工作流程……", "");
 
-    const payload = buildWorkflowPayload(carName, mainUrls, interiorUrls, manufacturerSelect.value);
+    const payload = buildWorkflowPayload(carName, mainUrls, interiorUrls);
     const result = await submitWorkflow(payload);
-
-    // console.log("工作流有效负载：", payload);
-    // console.log("工作流程结果：", result);
 
     const frozenPoints = result?.estimated_frozen_points ?? result?.run?.estimated_frozen_points ?? 0;
     const runId = result?.run?.run_id || result?.client_request_id || "-";
@@ -492,7 +471,6 @@ form.addEventListener("submit", async (event) => {
     clearAll();
     setStatus("等待提交", "");
   } catch (error) {
-    // console.error("提交失败：", error);
     setStatus(error.message || "提交失败，请重试。", "error");
     alert(`提交失败：${error.message}`);
   } finally {
@@ -502,4 +480,5 @@ form.addEventListener("submit", async (event) => {
 
 renderGroup("main");
 renderGroup("interior");
-loadManufacturers();
+
+checkAccess();

@@ -68,7 +68,7 @@ https://n8n.deepsix.store/webhook/wf003-kie-submit
 $env:WF_003_WEBHOOK_URL="https://n8n.deepsix.store/webhook/wf003-kie-submit"
 ```
 
-当前版本会优先使用 `WF_003_WEBHOOK_URL`。这适合你的线上环境已经直接给出完整 webhook 地址的情况。
+当前版本在同时配置 `WF_003_MIDDLE_PLATFORM_URL` 和 `WF_003_WEBHOOK_URL` 时会优先走中台。生产环境建议走中台，否则会绕过积分注册，n8n 的 `Notify Middle Platform` 回调可能因为找不到 `run_id` 而报 404。
 
 先安装依赖：
 

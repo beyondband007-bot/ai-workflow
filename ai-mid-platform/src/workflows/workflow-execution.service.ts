@@ -308,10 +308,15 @@ export class WorkflowExecutionService {
     const callbackBaseUrl =
       this.configService.get<string>('WF_003_CALLBACK_BASE_URL')?.trim() ||
       this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim();
+    const callbackToken =
+      this.configService.get<string>('WF_003_CALLBACK_TOKEN')?.trim() || '';
     const webhookTimeoutMs = Number(
       this.configService.get<string>('WF_003_WEBHOOK_TIMEOUT_MS') || '300000',
     );
     const clientRequestId = `wf003_exec_${Date.now()}`;
+    const callbackUrl = callbackBaseUrl
+      ? `${callbackBaseUrl.replace(/\/$/, '')}/api/v1/workflow-runs/wf003-callback`
+      : null;
     const requestPayloadSummary = {
       workflow_code: workflowCode,
       car_name: carName.slice(0, 120),
@@ -320,9 +325,7 @@ export class WorkflowExecutionService {
       executor_type: 'wf003_n8n_webhook',
       billing_mode: 'result_count',
       webhook_url: webhookUrl,
-      callback_url: callbackBaseUrl
-        ? `${callbackBaseUrl.replace(/\/$/, '')}/api/v1/workflow-runs/callback`
-        : null,
+      callback_url: callbackUrl,
     };
 
     const registerData = await this.workflowRunsService.register(currentUser, {
@@ -342,11 +345,11 @@ export class WorkflowExecutionService {
       formData.append('user_id', String(currentUser.userId));
       formData.append('feishu_app_id', userMetadata.feishu_app_id ?? '');
       formData.append('feishu_id', userMetadata.feishu_id ?? '');
-      if (callbackBaseUrl) {
-        formData.append(
-          'callback_url',
-          `${callbackBaseUrl.replace(/\/$/, '')}/api/v1/workflow-runs/callback`,
-        );
+      if (callbackUrl) {
+        formData.append('callback_url', callbackUrl);
+        if (callbackToken) {
+          formData.append('callback_token', callbackToken);
+        }
       }
 
       let exteriorIndex = 1;
@@ -548,7 +551,6 @@ export class WorkflowExecutionService {
       car_name?: string;
       exterior_images?: string[];
       interior_images?: string[];
-      manufacturer_code?: string;
       source?: string;
       submitted_at?: string;
     },
@@ -574,7 +576,6 @@ export class WorkflowExecutionService {
       .filter((item): item is string => typeof item === 'string')
       .map((item) => item.trim())
       .filter(Boolean);
-    const manufacturerCode = payload.manufacturer_code?.trim().toLowerCase() || '';
 
     if (exteriorImages.length === 0) {
       throw new BadRequestException('At least one exterior image is required');
@@ -584,10 +585,6 @@ export class WorkflowExecutionService {
       throw new BadRequestException(
         'exterior_images and interior_images support up to 5 items each',
       );
-    }
-
-    if (!manufacturerCode) {
-      throw new BadRequestException('manufacturer_code is required');
     }
 
     const webhookUrl =
@@ -616,15 +613,14 @@ export class WorkflowExecutionService {
       );
     }
 
-    const logoUrl = await this.resolveWf003LogoUrl(manufacturerCode);
+    const logoUrl = await this.resolveWf003UserLogoUrl(currentUser.userId);
 
     const requestPayloadSummary = {
       workflow_code: workflowCode,
       car_name: carName.slice(0, 120),
       exterior_image_count: exteriorImages.length,
       interior_image_count: interiorImages.length,
-      manufacturer_code: manufacturerCode,
-      logo_source: 'manufacturer_database',
+      logo_source: 'user_bound_logo',
       executor_type: 'wf003_json_webhook',
       billing_mode: 'result_count',
       webhook_url: webhookUrl,
@@ -656,7 +652,6 @@ export class WorkflowExecutionService {
           exterior_images: exteriorImages,
           interior_images: interiorImages,
           logo: logoUrl,
-          manufacturer_code: manufacturerCode,
           source: payload.source?.trim() || 'wf003_frontend_direct_to_kie',
           submitted_at: payload.submitted_at?.trim() || new Date().toISOString(),
           run_id: runId,
@@ -769,6 +764,25 @@ export class WorkflowExecutionService {
         error instanceof Error
           ? error.message
           : `WF-003 manufacturer logo not found: ${manufacturerCode}`;
+      throw new BadRequestException(message);
+    }
+  }
+
+  private async resolveWf003UserLogoUrl(userId: number) {
+    try {
+      const logo = await this.wf003ManufacturerLogosService.getMyLogo(userId);
+      const publicUrl = logo.logoPublicUrl?.trim();
+      if (!publicUrl) {
+        throw new BadRequestException(
+          `WF-003 logo public URL is not configured for user: ${userId}`,
+        );
+      }
+      return publicUrl;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : `WF-003 logo not found for user: ${userId}`;
       throw new BadRequestException(message);
     }
   }

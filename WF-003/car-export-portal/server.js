@@ -46,6 +46,11 @@ function sendRuntimeConfig(res) {
     kieApiKey: process.env.KIE_API_KEY || "",
     workflowApiBase: process.env.PUBLIC_WORKFLOW_API_BASE || "",
     workflowWebhookUrl,
+    businessContact: {
+      phone: process.env.BUSINESS_CONTACT_PHONE || "",
+      wechat: process.env.BUSINESS_CONTACT_WECHAT || "",
+      url: process.env.BUSINESS_CONTACT_URL || "",
+    },
   };
   const body = `window.__WF003_CONFIG__ = ${JSON.stringify(payload)};\n`;
   res.writeHead(200, {
@@ -57,17 +62,17 @@ function sendRuntimeConfig(res) {
 }
 
 function resolveWorkflowSubmitUpstream() {
-  if (workflowWebhookUrl) {
-    return {
-      source: "WF_003_WEBHOOK_URL",
-      url: workflowWebhookUrl,
-    };
-  }
-
   if (legacyMiddlePlatformUrl) {
     return {
       source: "WF_003_MIDDLE_PLATFORM_URL",
       url: legacyMiddlePlatformUrl,
+    };
+  }
+
+  if (workflowWebhookUrl) {
+    return {
+      source: "WF_003_WEBHOOK_URL",
+      url: workflowWebhookUrl,
     };
   }
 

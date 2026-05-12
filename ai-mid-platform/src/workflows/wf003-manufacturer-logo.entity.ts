@@ -11,6 +11,9 @@ export class Wf003ManufacturerLogo {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: string;
 
+  @Column({ name: 'user_id', type: 'int', nullable: true })
+  userId!: number | null;
+
   @Column({ name: 'manufacturer_code', type: 'varchar', length: 64, unique: true })
   manufacturerCode!: string;
 

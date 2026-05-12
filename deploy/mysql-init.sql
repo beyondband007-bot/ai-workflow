@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS wf_003_feishu (
 
 CREATE TABLE IF NOT EXISTS wf_003_manufacturer_logos (
     id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id             INT NULL,
     manufacturer_code   VARCHAR(64) NOT NULL UNIQUE,
     manufacturer_name   VARCHAR(128) NOT NULL,
     logo_file_name      VARCHAR(255) NULL,
@@ -43,6 +44,7 @@ CREATE TABLE IF NOT EXISTS wf_003_manufacturer_logos (
     is_active           TINYINT(1) NOT NULL DEFAULT 1,
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_wf003_manufacturer_logos_user_id (user_id),
     INDEX idx_wf003_manufacturer_logos_active (is_active),
     INDEX idx_wf003_manufacturer_logos_name (manufacturer_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

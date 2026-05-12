@@ -13,24 +13,13 @@ function resolveApiBase() {
 }
 
 function resolveWf003PortalUrl() {
-  const { protocol, hostname, port } = window.location;
+  const { protocol } = window.location;
 
   if (protocol === "file:") {
-    return "http://127.0.0.1:3001/";
+    return "http://127.0.0.1:8080/portal/wf003/";
   }
 
-  const normalizedHost = String(hostname || "").toLowerCase();
-  if (
-    normalizedHost === "127.0.0.1" ||
-    normalizedHost === "localhost" ||
-    normalizedHost === "0.0.0.0" ||
-    port === "8080" ||
-    port === "3003"
-  ) {
-    return `${protocol}//${hostname || "127.0.0.1"}:3001/`;
-  }
-
-  return "https://mycar.deepsix.store/";
+  return `${window.location.origin}/portal/wf003/`;
 }
 
 function resolveWf002PortalUrl() {
@@ -126,12 +115,6 @@ const statusTextMap = {
   cancelled: "已取消",
 };
 
-const billingStatusTextMap = {
-  charged: "已扣费",
-  frozen: "已冻结",
-  rollback: "已回滚",
-};
-
 function setText(id, value) {
   const element = document.getElementById(id);
   if (element) {
@@ -147,6 +130,26 @@ function formatPoints(value) {
   return `${formatNumber(value)}`;
 }
 
+function formatWorkflowName(workflowCode) {
+  return window.ClientPortalWorkflowLabels?.getName(workflowCode) || workflowCode || "-";
+}
+
+function formatLedgerRemark(entry) {
+  const workflowName = entry.workflow_name || formatWorkflowName(entry.workflow_code);
+  const points = Math.abs(Number(entry.change_points ?? 0));
+
+  if (entry.ledger_type === "freeze") {
+    return `${workflowName} 预冻结 ${formatNumber(points)} 积分`;
+  }
+  if (entry.ledger_type === "charge") {
+    return `${workflowName} 正式扣费 ${formatNumber(points)} 积分`;
+  }
+  if (entry.ledger_type === "rollback") {
+    return `${workflowName} 回滚 ${formatNumber(points)} 积分`;
+  }
+  return entry.remark || "-";
+}
+
 function formatDateTime(value) {
   if (!value) {
     return "-";
@@ -159,6 +162,25 @@ function formatDateTime(value) {
 
   const pad = (input) => String(input).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function buildRecordSummary(record) {
+  if (record.status === "success") {
+    return record.workflow_code === "WF-001" ? "生成成功。" : "执行成功。";
+  }
+  if (record.status === "failed") {
+    return record.workflow_code === "WF-001" ? "生成失败。" : "执行失败。";
+  }
+  if (record.status === "running") {
+    return "正在执行。";
+  }
+  if (record.status === "timeout") {
+    return "执行超时。";
+  }
+  if (record.status === "cancelled") {
+    return "已取消。";
+  }
+  return "状态已更新。";
 }
 
 function getToken() {
@@ -336,8 +358,8 @@ function getProfileElements() {
 function getProfileDefaults() {
   const elements = getProfileElements();
   return {
-    displayName: normalizeDisplayName(elements.topbarDisplayName?.textContent || "Workflow Points"),
-    username: normalizeUsername(elements.menuUsername?.textContent?.replace(/^@/, "") || "workflow_points"),
+    displayName: normalizeDisplayName(elements.topbarDisplayName?.textContent || "Token Aggregator"),
+    username: normalizeUsername(elements.menuUsername?.textContent?.replace(/^@/, "") || "Token_Aggregator"),
     avatarDataUrl: "",
     phone: "",
     address: "",
@@ -387,8 +409,8 @@ function renderProfile(profile, options = {}) {
 
 function mapUserToProfile(user = {}) {
   return {
-    displayName: normalizeDisplayName(user.nickname || user.username || "Workflow Points"),
-    username: normalizeUsername(user.username || "workflow_points"),
+    displayName: normalizeDisplayName(user.nickname || user.username || "Token Aggregator"),
+    username: normalizeUsername(user.username || "Token_Aggregator"),
     avatarDataUrl: String(user.avatar_img || ""),
     phone: normalizePhone(user.phone || ""),
     address: normalizeAddress(user.address || ""),
@@ -790,10 +812,20 @@ function syncAccountView(pointAccount) {
   setText("totalConsumedPoints", formatNumber(pointAccount.total_consumed_points));
   setText("availablePointsMirror", formatNumber(pointAccount.available_points));
   setText("frozenPointsMirror", formatNumber(pointAccount.frozen_points));
+
+  setText("statAvailablePoints", formatNumber(pointAccount.available_points));
+  setText("statFrozenPoints", formatNumber(pointAccount.frozen_points));
+  setText("statTodayRuns", formatNumber(pointAccount.today_runs));
+  setText("statTodaySpent", formatNumber(pointAccount.today_spent_points));
+  setText("statTotalRechargeAmount", `¥${formatNumber(pointAccount.total_paid_recharge_amount ?? 0)}`);
+  setText("statTotalRechargedPoints", formatNumber(pointAccount.total_recharged_points));
+  setText("statTotalRuns", formatNumber(pointAccount.total_runs ?? 0));
+  setText("statTotalConsumedPoints", formatNumber(pointAccount.total_consumed_points));
 }
 
 function renderWorkflows(workflows) {
   const workflowGrid = document.getElementById("workflowGrid");
+  if (!workflowGrid) return;
   workflowGrid.innerHTML = workflows
     .map(
       (workflow) => `
@@ -835,6 +867,7 @@ function renderRecords(workflowRuns, filter = "all") {
   const rows = workflowRuns.filter((record) => filter === "all" || record.status === filter);
   const recordsBody = document.getElementById("recordsBody");
   const mobileRecords = document.getElementById("mobileRecords");
+  if (!recordsBody || !mobileRecords) return;
   const resolveRecordTime = (record) => record.finished_at || record.started_at || record.created_at;
 
   recordsBody.innerHTML = rows
@@ -842,7 +875,7 @@ function renderRecords(workflowRuns, filter = "all") {
       (record) => `
         <tr>
           <td>${record.run_id}</td>
-          <td>${record.workflow_code}</td>
+          <td>${formatWorkflowName(record.workflow_code)}</td>
           <td><span class="status-pill status-${record.status}">${statusTextMap[record.status] ?? record.status}</span></td>
           <td>${formatNumber(record.estimated_frozen_points)}</td>
           <td>${formatNumber(record.final_charge_points)}</td>
@@ -857,17 +890,15 @@ function renderRecords(workflowRuns, filter = "all") {
       (record) => `
         <article class="mobile-record-card">
           <div class="mobile-record-top">
-            <strong>${record.workflow_code}</strong>
+            <strong>${formatWorkflowName(record.workflow_code)}</strong>
             <span class="status-pill status-${record.status}">${statusTextMap[record.status] ?? record.status}</span>
           </div>
           <div class="mobile-record-main">
-            <p>${record.result_summary ?? "-"}</p>
+            <p>${buildRecordSummary(record)}</p>
           </div>
           <div class="mobile-record-meta">
-            <span><strong>run_id</strong> ${record.run_id}</span>
-            <span><strong>billing_status</strong> ${billingStatusTextMap[record.billing_status] ?? record.billing_status}</span>
-            <span><strong>estimated_frozen_points</strong> ${formatNumber(record.estimated_frozen_points)}</span>
-            <span><strong>final_charge_points</strong> ${formatNumber(record.final_charge_points)}</span>
+            <span><strong>任务 ID</strong> ${record.run_id}</span>
+            <span><strong>消耗积分</strong> ${formatNumber(record.final_charge_points ?? record.estimated_frozen_points)}</span>
           </div>
           <span class="mobile-record-time">${formatDateTime(resolveRecordTime(record))}</span>
         </article>
@@ -879,12 +910,14 @@ function renderRecords(workflowRuns, filter = "all") {
 function buildLedgerRowsFromRuns(workflowRuns) {
   return workflowRuns.flatMap((record) => {
     const entries = [];
+    const workflowName = formatWorkflowName(record.workflow_code);
 
     if (Number(record.estimated_frozen_points) > 0) {
       entries.push({
         ledger_no: `${record.run_id}-freeze`,
         change_points: -Number(record.estimated_frozen_points),
         workflow_code: record.workflow_code,
+        workflow_name: workflowName,
         remark: `${record.workflow_code} 预冻结 ${record.estimated_frozen_points} 积分`,
         ledger_type: "freeze",
         created_at: record.started_at,
@@ -896,6 +929,7 @@ function buildLedgerRowsFromRuns(workflowRuns) {
         ledger_no: `${record.run_id}-charge`,
         change_points: -Number(record.final_charge_points),
         workflow_code: record.workflow_code,
+        workflow_name: workflowName,
         remark: `${record.workflow_code} 正式扣费 ${record.final_charge_points} 积分`,
         ledger_type: "charge",
         created_at: record.finished_at,
@@ -907,6 +941,7 @@ function buildLedgerRowsFromRuns(workflowRuns) {
         ledger_no: `${record.run_id}-rollback`,
         change_points: Number(record.refund_points),
         workflow_code: record.workflow_code,
+        workflow_name: workflowName,
         remark: `${record.workflow_code} 回滚 ${record.refund_points} 积分`,
         ledger_type: "rollback",
         created_at: record.finished_at,
@@ -919,6 +954,7 @@ function buildLedgerRowsFromRuns(workflowRuns) {
 
 function renderLedgers(workflowRuns) {
   const ledgerList = document.getElementById("ledgerList");
+  if (!ledgerList) return;
   const entries = buildLedgerRowsFromRuns(workflowRuns);
 
   ledgerList.innerHTML = entries.length
@@ -932,8 +968,8 @@ function renderLedgers(workflowRuns) {
                   ${entry.change_points > 0 ? "+" : ""}${entry.change_points} 积分
                 </strong>
               </div>
-              <p>${entry.remark}</p>
-              <span>${entry.ledger_type} · ${entry.workflow_code} · ${formatDateTime(entry.created_at)}</span>
+              <p>${formatLedgerRemark(entry)}</p>
+              <span>${entry.ledger_type} · ${entry.workflow_name || formatWorkflowName(entry.workflow_code)} · ${formatDateTime(entry.created_at)}</span>
             </article>
           `,
         )
@@ -984,6 +1020,68 @@ function attachRecordFilter(workflowRuns) {
   });
 }
 
+function openWf003AccessModal(accessData) {
+  const modal = document.getElementById("wf003AccessModal");
+  if (!modal) {
+    return;
+  }
+  const businessContact = accessData?.business_contact || {};
+  const phoneEl = document.getElementById("wf003ContactPhone");
+  const wechatEl = document.getElementById("wf003ContactWechat");
+  if (phoneEl) {
+    phoneEl.textContent = businessContact.phone || "";
+  }
+  if (wechatEl) {
+    wechatEl.textContent = businessContact.wechat || "";
+  }
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeWf003AccessModal() {
+  const modal = document.getElementById("wf003AccessModal");
+  if (!modal) {
+    return;
+  }
+  modal.classList.remove("is-open");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function redirectToWf003BusinessContact() {
+  const phone = document.getElementById("wf003ContactPhone")?.textContent?.trim();
+  if (phone && phone !== "--") {
+    window.location.href = `tel:${phone}`;
+    return;
+  }
+  alert("请联系商务开通 WF-003 权限");
+}
+
+function attachWf003AccessModalControls() {
+  const modal = document.getElementById("wf003AccessModal");
+  if (!modal) {
+    return;
+  }
+
+  const closeButton = document.getElementById("wf003AccessModalClose");
+  const cancelButton = document.getElementById("wf003AccessModalCancel");
+  const confirmButton = document.getElementById("wf003AccessModalConfirm");
+  const backdrop = modal.querySelector("[data-wf003-access-close='true']");
+
+  closeButton?.addEventListener("click", closeWf003AccessModal);
+  cancelButton?.addEventListener("click", closeWf003AccessModal);
+  backdrop?.addEventListener("click", closeWf003AccessModal);
+  confirmButton?.addEventListener("click", () => {
+    closeWf003AccessModal();
+    redirectToWf003BusinessContact();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal.classList.contains("is-open")) {
+      closeWf003AccessModal();
+    }
+  });
+}
+
 function attachWorkflowButtons() {
   const workflowGrid = document.getElementById("workflowGrid");
   if (!workflowGrid) {
@@ -995,6 +1093,10 @@ function attachWorkflowButtons() {
     if (!button) {
       return;
     }
+    if (button.dataset.workflowOpening === "true") {
+      return;
+    }
+    button.dataset.workflowOpening = "true";
 
     const workflowCode = button.dataset.workflowCode;
     const originalText = button.textContent;
@@ -1003,6 +1105,14 @@ function attachWorkflowButtons() {
 
     try {
       if (workflowCode === "WF-003") {
+        const access = await requestJson("/api/v1/wf003/access");
+        if (!access?.has_access) {
+          button.disabled = false;
+          button.textContent = originalText;
+          openWf003AccessModal(access);
+          return;
+        }
+
         const token = getToken();
         const wf003Url = new URL(resolveWf003PortalUrl());
         if (token) {
@@ -1057,6 +1167,8 @@ function attachWorkflowButtons() {
       alert(`执行失败: ${error.message}`);
       button.disabled = false;
       button.textContent = originalText;
+    } finally {
+      delete button.dataset.workflowOpening;
     }
   });
 }
@@ -1069,6 +1181,19 @@ function attachLogoutButton() {
 
   logoutButtons.forEach((button) => {
     button.addEventListener("click", logout);
+  });
+}
+
+function attachStatClicks() {
+  document.querySelectorAll(".account-stat-item[data-href]").forEach((item) => {
+    item.addEventListener("click", () => {
+      window.location.href = item.dataset.href;
+    });
+  });
+  document.querySelectorAll("#shortcut-links .surface-card[data-href]").forEach((card) => {
+    card.addEventListener("click", () => {
+      window.location.href = card.dataset.href;
+    });
   });
 }
 
@@ -1114,6 +1239,7 @@ async function bootstrap() {
   renderLedgers([]);
   attachProfileControls();
   attachLogoutButton();
+  attachStatClicks();
 
   try {
     const [currentUser, pointAccount, workflows, workflowRuns] = await Promise.all([
@@ -1132,6 +1258,8 @@ async function bootstrap() {
     renderConnectionState(`账号 ${pointAccount.username || pointAccount.user_id} 已连接中台`, false);
     attachRecordFilter(workflowRuns);
     attachWorkflowButtons();
+    attachWf003AccessModalControls();
+    attachStatClicks();
     startAutoRefresh();
   } catch (error) {
     if (error.message === "登录已过期，请重新登录" || error.message === "请先登录") {

@@ -50,6 +50,45 @@ export class Wf003ManufacturerLogosService {
     return logo;
   }
 
+  async getMyLogo(userId: number) {
+    const logo = await this.manufacturerLogoRepository.findOne({
+      where: {
+        userId,
+        isActive: true,
+      },
+    });
+
+    if (!logo) {
+      throw new NotFoundException(
+        `WF-003 logo not found for user: ${userId}`,
+      );
+    }
+
+    return logo;
+  }
+
+  async checkUserAccess(userId: number): Promise<{
+    hasAccess: boolean;
+    logoPublicUrl: string | null;
+    businessContact: { phone: string; wechat: string };
+  }> {
+    const logo = await this.manufacturerLogoRepository.findOne({
+      where: {
+        userId,
+        isActive: true,
+      },
+    });
+
+    return {
+      hasAccess: !!logo && !!logo.logoPublicUrl?.trim(),
+      logoPublicUrl: logo?.logoPublicUrl?.trim() || null,
+      businessContact: {
+        phone: this.configService.get<string>('WF_003_BUSINESS_CONTACT_PHONE')?.trim() || '',
+        wechat: this.configService.get<string>('WF_003_BUSINESS_CONTACT_WECHAT')?.trim() || '',
+      },
+    };
+  }
+
   buildPublicLogoUrl(manufacturerCode: string, request?: Request) {
     const baseUrl = this.resolvePublicBaseUrl(request);
     const encodedCode = encodeURIComponent(

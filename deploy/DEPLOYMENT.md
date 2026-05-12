@@ -131,7 +131,7 @@ sudo systemctl status ai-mid-platform
 
 ### 4.1 安装 `WF-003` 前端服务
 
-`mycar.deepsix.store` 对应的是 `WF-003/car-export-portal/server.js`。如果要正式接入积分中台，必须部署这个服务的最新代码，并配置：
+`WF-003` 现在通过同源路由 `/portal/wf003/` 访问，对应服务是 `WF-003/car-export-portal/server.js`。如果要正式接入积分中台，必须部署这个服务的最新代码，并配置：
 
 ```bash
 sudo cp /srv/ai-workflow/deploy/systemd/wf003-car-export.service /etc/systemd/system/wf003-car-export.service
@@ -144,8 +144,8 @@ sudo systemctl status wf003-car-export
 关键环境变量：
 
 ```env
-PORT=3001
-# server.js 优先级：WF_003_WEBHOOK_URL > WF_003_MIDDLE_PLATFORM_URL > WORKFLOW_API_BASE+WORKFLOW_SUBMIT_PATH
+PORT=3003
+# server.js 优先级：WF_003_MIDDLE_PLATFORM_URL > WF_003_WEBHOOK_URL > WORKFLOW_API_BASE+WORKFLOW_SUBMIT_PATH
 # 走中台（推荐）——中台会处理积分冻结/结算
 WF_003_MIDDLE_PLATFORM_URL=http://127.0.0.1:3002/api/v1/workflows/WF-003/json-execute
 # 直连 n8n webhook（绕过中台积分结算，仅测试用）
@@ -168,7 +168,7 @@ cp /srv/ai-workflow/WF-003/car-export-portal/.env.production.example /srv/ai-wor
 - `WF-003` 页面提交后不再直接走旧 n8n webhook
 - 必须从积分门户进入，页面会携带登录 token
 - `car-export-portal` 服务收到 token 后，会转发到积分中台执行冻结和结算
-- 当前 `server.js` 优先读取 `WF_003_WEBHOOK_URL`，其次兼容旧变量 `WF_003_MIDDLE_PLATFORM_URL`，最后才使用 `WORKFLOW_API_BASE + WORKFLOW_SUBMIT_PATH`
+- 当前 `server.js` 优先读取 `WF_003_MIDDLE_PLATFORM_URL`，其次兼容直连变量 `WF_003_WEBHOOK_URL`，最后才使用 `WORKFLOW_API_BASE + WORKFLOW_SUBMIT_PATH`
 
 ### 4.2 中台补充工作流环境变量
 

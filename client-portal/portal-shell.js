@@ -195,8 +195,8 @@
   function getProfileDefaults() {
     const elements = getProfileElements();
     return {
-      displayName: normalizeDisplayName(elements.topbarDisplayName?.textContent || "Workflow Points"),
-      username: normalizeUsername(elements.menuUsername?.textContent?.replace(/^@/, "") || "workflow_points"),
+      displayName: normalizeDisplayName(elements.topbarDisplayName?.textContent || "Token Aggregator"),
+      username: normalizeUsername(elements.menuUsername?.textContent?.replace(/^@/, "") || "Token_Aggregator"),
       avatarDataUrl: "",
       phone: "",
       address: "",
@@ -251,8 +251,8 @@
 
   function mapUserToProfile(user = {}) {
     return {
-      displayName: normalizeDisplayName(user.nickname || user.username || "Workflow Points"),
-      username: normalizeUsername(user.username || "workflow_points"),
+      displayName: normalizeDisplayName(user.nickname || user.username || "Token Aggregator"),
+      username: normalizeUsername(user.username || "Token_Aggregator"),
       avatarDataUrl: String(user.avatar_img || ""),
       phone: normalizePhone(user.phone || ""),
       address: normalizeAddress(user.address || ""),

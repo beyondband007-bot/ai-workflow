@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>超级Token聚合器 - 鲸创传媒集团</title>
+<title>联系我们 - 鲸创传媒集团</title>
 <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20260511f">
-<link rel="stylesheet" href="./styles.css?v=20260512c" />
+<link rel="stylesheet" href="./styles.css?v=20260512a" />
 </head>
 <body>
 <div class="ambient ambient-a"></div>
@@ -25,7 +25,7 @@
 			<div class="sidebar-nav-group">
 				<p class="sidebar-section-title">MAIN MENU</p>
 				<nav class="side-nav">
-					<a href="./index.html" class="nav-item is-active">
+					<a href="./index.html" class="nav-item">
 						<span class="nav-item-main">
 							<span class="nav-icon" aria-hidden="true">
 								<svg viewBox="0 0 20 20" focusable="false">
@@ -140,7 +140,7 @@
 				<div class="topbar-breadcrumb">
 					<span>控制台</span>
 					<span class="topbar-divider">/</span>
-					<strong>总览</strong>
+					<strong>联系我们</strong>
 				</div>
 			</div>
 
@@ -174,147 +174,86 @@
 			</div>
 		</header>
 
-		<main class="content content1">
-			<header class="hero-card" id="overview">
-				<div class="hero-copy">
-					<p class="eyebrow">Client Console</p>
-					<h2>鲸创AI超级Token聚合中台</h2>
-					<p class="hero-text">鲸创AI超级Token聚合中台，是面向企业级AI生态打造的统一积分与Token管理平台，负责公司旗下所有AI应用的大模型调用计费、积分消耗、额度分发与统一结算。
-						平台通过集中化的Token聚合能力，将不同模型、不同应用、不同业务场景的算力消耗进行统一管理，实现多模型接入、统一扣费、实时统计、动态风控与精细化运营。</p>
-					<div class="hero-actions">
-						<button class="primary-button" type="button">立即开始工作流</button>
-						<button class="secondary-button" type="button">查看今日任务</button>
-					</div>
-				</div>
-
-				<div class="hero-canvas token-engine" aria-hidden="true">
-					<div class="token-grid"></div>
-					<div class="token-ring token-ring-a"></div>
-					<div class="token-ring token-ring-b"></div>
-					<div class="token-ring token-ring-c"></div>
-					<div class="token-core">
-						<span class="token-core-face token-core-front"></span>
-						<span class="token-core-face token-core-back"></span>
-						<span class="token-core-glow"></span>
-					</div>
-					<div class="token-beam token-beam-a"></div>
-					<div class="token-beam token-beam-b"></div>
-					<div class="token-beam token-beam-c"></div>
-					<div class="token-slice token-slice-a"></div>
-					<div class="token-slice token-slice-b"></div>
-					<div class="token-slice token-slice-c"></div>
-					<div class="token-slice token-slice-d"></div>
-					<div class="token-stream token-stream-a"><span></span><span></span><span></span></div>
-					<div class="token-stream token-stream-b"><span></span><span></span><span></span></div>
-					<div class="token-stream token-stream-c"><span></span><span></span><span></span></div>
-				</div>
-			</header>
-
-			<section class="mobile-quick-entry">
-				<button class="primary-button" type="button">进入图生图工作流</button>
-				<button class="secondary-button" type="button">查看调用记录</button>
-			</section>
-
-			<section class="account-stats-bar" id="accountStatsBar">
-				<div class="account-stat-item" data-href="./recharge.html" style="cursor:pointer">
-					<div class="account-stat-icon">💎</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">剩余积分</span>
-						<strong class="account-stat-value" id="statAvailablePoints">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">❄️</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">冻结积分</span>
-						<strong class="account-stat-value" id="statFrozenPoints">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./records.html" style="cursor:pointer">
-					<div class="account-stat-icon">⚡</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">今日调用</span>
-						<strong class="account-stat-value" id="statTodayRuns">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">🔥</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">今日消耗</span>
-						<strong class="account-stat-value" id="statTodaySpent">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./recharge.html" style="cursor:pointer">
-					<div class="account-stat-icon">💳</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计充值</span>
-						<strong class="account-stat-value" id="statTotalRechargeAmount">¥0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">📥</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计入账</span>
-						<strong class="account-stat-value" id="statTotalRechargedPoints">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./records.html" style="cursor:pointer">
-					<div class="account-stat-icon">🚀</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计调用</span>
-						<strong class="account-stat-value" id="statTotalRuns">0</strong>
-					</div>
-				</div>
-				<div class="account-stat-item" data-href="./ledger.html" style="cursor:pointer">
-					<div class="account-stat-icon">⏱️</div>
-					<div class="account-stat-body">
-						<span class="account-stat-label">累计消耗</span>
-						<strong class="account-stat-value" id="statTotalConsumedPoints">0</strong>
-					</div>
+		<main class="content">
+			<section class="section-head">
+				<div>
+					<p class="eyebrow">Contact Us</p>
+					<h3>联系运营支持</h3>
+					<p class="section-note">如有任何问题或合作意向，欢迎通过以下方式联系我们。</p>
 				</div>
 			</section>
 
-			<section class="double-grid" id="shortcut-links">
-				<article class="surface-card" data-href="./records.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>调用记录</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">查看全部工作流调用历史、状态追踪与积分结算明细。</p>
+			<div class="contact-grid">
+				<article class="surface-card contact-card">
+					<div class="contact-icon">📞</div>
+					<h4>商务热线</h4>
+					<p class="contact-value">177-8610-7928</p>
+					<p class="contact-desc">工作日 9:00 - 18:00</p>
 				</article>
-				<article class="surface-card" data-href="./ledger.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>积分流水</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">浏览积分充值、消费、冻结与解冻的完整流水记录。</p>
+
+				<article class="surface-card contact-card">
+					<div class="contact-icon">💬</div>
+					<h4>微信客服</h4>
+					<p class="contact-value">JingChuangAI</p>
+					<p class="contact-desc">添加微信备注「中台咨询」</p>
 				</article>
-				<article class="surface-card" data-href="./recharge.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>充值中心</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">在线充值积分，支持支付宝付款，即时到账。</p>
+
+				<article class="surface-card contact-card">
+					<div class="contact-icon">✉️</div>
+					<h4>电子邮箱</h4>
+					<p class="contact-value">support@jingchuang.ai</p>
+					<p class="contact-desc">24小时内回复</p>
 				</article>
-				<article class="surface-card" data-href="./contact.html">
-					<div class="section-head inside">
-						<div>
-							<p class="eyebrow">Quick Access</p>
-							<h3>联系运营</h3>
-						</div>
-						<span class="shortcut-arrow">→</span>
-					</div>
-					<p class="shortcut-desc">遇到问题？查看联系方式或提交工单获取运营支持。</p>
+
+				<article class="surface-card contact-card">
+					<div class="contact-icon">📍</div>
+					<h4>公司地址</h4>
+					<p class="contact-value">湖北省武汉市武昌区</p>
+					<p class="contact-desc">水岸国际晶座2407室</p>
 				</article>
+			</div>
+
+			<section class="surface-card contact-form-card">
+				<div class="section-head inside">
+					<div>
+						<p class="eyebrow">Online Message</p>
+						<h3>在线留言</h3>
+					</div>
+				</div>
+				<form class="contact-form" id="contactForm">
+					<div class="contact-form-row">
+						<label class="contact-field">
+							<span>您的姓名</span>
+							<input type="text" placeholder="请输入姓名" required />
+						</label>
+						<label class="contact-field">
+							<span>联系电话</span>
+							<input type="text" placeholder="请输入手机号" required />
+						</label>
+					</div>
+					<div class="contact-form-row">
+						<label class="contact-field">
+							<span>留言类型</span>
+							<select>
+								<option>商务合作</option>
+								option>技术支持</option>
+								<option>账户问题</option>
+								<option>其他</option>
+							</select>
+						</label>
+						<label class="contact-field">
+							<span>电子邮箱</span>
+							<input type="email" placeholder="请输入邮箱" />
+						</label>
+					</div>
+					<label class="contact-field">
+						<span>留言内容</span>
+						<textarea rows="4" placeholder="请详细描述您的问题或需求..."></textarea>
+					</label>
+					<div class="contact-form-actions">
+						<button class="primary-button" type="submit">提交留言</button>
+					</div>
+				</form>
 			</section>
 		</main>
 	</div>
@@ -359,8 +298,7 @@
 	</div>
 </div>
 <script src="./auth-state.js?v=20260511f"></script>
-<script src="./workflow-labels.js?v=20260512a"></script>
-<script src="./app.js?v=20260512d"></script>
+<script src="./app.js?v=20260511f"></script>
 <script>
 (() => {
 	const THEME_KEY = "client_portal_theme";
@@ -389,6 +327,15 @@
 
 	toggleButton.addEventListener("click", () => {
 		applyTheme(body.dataset.theme === "dark" ? "light" : "dark");
+	});
+})();
+</script>
+<script>
+(() => {
+	document.getElementById("contactForm")?.addEventListener("submit", (e) => {
+		e.preventDefault();
+		alert("留言已提交，我们会尽快与您联系！");
+		e.target.reset();
 	});
 })();
 </script>
