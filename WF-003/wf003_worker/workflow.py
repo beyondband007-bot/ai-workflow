@@ -29,6 +29,8 @@ def format_finished_at() -> str:
 
 
 def build_interior_groups(images: list[str]) -> list[list[str]]:
+    if not images:
+        return []
     if len(images) <= 3:
         return [images]
     if len(images) == 4:
@@ -56,8 +58,6 @@ def normalize_submission(body: dict[str, Any], settings: Settings) -> Normalized
         raise WorkflowInputError("car_name is required")
     if not exterior:
         raise WorkflowInputError("exterior_images is required")
-    if not interior:
-        raise WorkflowInputError("interior_images is required")
     if not feishu_app_id:
         raise WorkflowInputError("feishu_app_id is required")
     if not feishu_id:

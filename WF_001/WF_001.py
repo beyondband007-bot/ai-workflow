@@ -11,6 +11,7 @@ import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime
+from json import JSONDecodeError
 
 WORKFLOW_CODE = "WF-001"
 API_TOKEN = "c521060b9a55ae31b09cae042a8599fa"
@@ -25,6 +26,64 @@ OUTPUT_DIR = os.getenv(
     "WF_001_OUTPUT_DIR", os.path.dirname(os.path.abspath(__file__))
 )
 ALLOWED_ASPECT_RATIOS = ("1:1", "4:3", "3:4", "16:9", "9:16")
+KIE_RETRYABLE_STATUS_CODES = {502, 503, 504}
+
+
+def parse_json_response(raw: str, context: str) -> dict:
+    try:
+        return json.loads(raw)
+    except JSONDecodeError as exc:
+        preview = raw[:200].replace("\n", " ").replace("\r", " ").strip()
+        raise RuntimeError(
+            f"{context} returned non-JSON content: {preview or '<empty response>'}"
+        ) from exc
+
+
+def request_kie_json(
+    method: str,
+    path: str,
+    body: str | bytes | None,
+    headers: dict[str, str],
+    *,
+    context: str,
+    retries: int = 2,
+    retry_delay: int = 2,
+) -> dict:
+    last_error: Exception | None = None
+
+    for attempt in range(retries + 1):
+        conn = http.client.HTTPSConnection(KIE_API_HOST, timeout=60)
+        try:
+            conn.request(method, path, body, headers)
+            response = conn.getresponse()
+            raw = response.read().decode("utf-8", errors="replace")
+            status = response.status
+        except Exception as exc:
+            last_error = exc
+            status = None
+            raw = ""
+        finally:
+            conn.close()
+
+        if status in KIE_RETRYABLE_STATUS_CODES and attempt < retries:
+            time.sleep(retry_delay)
+            continue
+
+        if last_error is not None and status is None:
+            if attempt < retries:
+                time.sleep(retry_delay)
+                continue
+            raise RuntimeError(f"{context} request failed: {last_error}") from last_error
+
+        if status and status >= 400:
+            preview = raw[:200].replace("\n", " ").replace("\r", " ").strip()
+            raise RuntimeError(
+                f"{context} failed with HTTP {status}: {preview or '<empty response>'}"
+            )
+
+        return parse_json_response(raw, context)
+
+    raise RuntimeError(f"{context} failed after retries")
 
 
 def upload_image(local_path: str) -> str:
@@ -53,13 +112,13 @@ def upload_image(local_path: str) -> str:
         "Content-Length": str(len(body)),
     }
 
-    conn = http.client.HTTPSConnection(KIE_API_HOST)
-    conn.request("POST", "/api/v1/files/upload", body, headers)
-    response = conn.getresponse()
-    raw = response.read().decode("utf-8")
-    conn.close()
-
-    payload = json.loads(raw)
+    payload = request_kie_json(
+        "POST",
+        "/api/v1/files/upload",
+        body,
+        headers,
+        context="Kie image upload",
+    )
     if payload.get("code") != 200:
         raise RuntimeError(f"Image upload failed: {payload}")
 
@@ -80,17 +139,17 @@ def create_task(prompt: str, aspect_ratio: str, image_url: str = "") -> str:
     if CALLBACK_URL:
         payload["callBackUrl"] = CALLBACK_URL
 
-    conn = http.client.HTTPSConnection(KIE_API_HOST)
     headers = {
         "Authorization": f"Bearer {API_TOKEN}",
         "Content-Type": "application/json",
     }
-    conn.request("POST", "/api/v1/jobs/createTask", json.dumps(payload), headers)
-    response = conn.getresponse()
-    raw = response.read().decode("utf-8")
-    conn.close()
-
-    data = json.loads(raw)
+    data = request_kie_json(
+        "POST",
+        "/api/v1/jobs/createTask",
+        json.dumps(payload),
+        headers,
+        context="Kie task creation",
+    )
     if data.get("code") != 200:
         raise RuntimeError(f"Task creation failed: {data}")
 
@@ -98,17 +157,18 @@ def create_task(prompt: str, aspect_ratio: str, image_url: str = "") -> str:
 
 
 def query_task(task_id: str) -> dict:
-    conn = http.client.HTTPSConnection(KIE_API_HOST)
     headers = {
         "Authorization": f"Bearer {API_TOKEN}",
         "Content-Type": "application/json",
     }
     encoded_task_id = urllib.parse.quote(task_id, safe="")
-    conn.request("GET", f"/api/v1/jobs/recordInfo?taskId={encoded_task_id}", headers=headers)
-    response = conn.getresponse()
-    raw = response.read().decode("utf-8")
-    conn.close()
-    return json.loads(raw)
+    return request_kie_json(
+        "GET",
+        f"/api/v1/jobs/recordInfo?taskId={encoded_task_id}",
+        None,
+        headers,
+        context="Kie task query",
+    )
 
 
 def find_status(payload: dict) -> str:

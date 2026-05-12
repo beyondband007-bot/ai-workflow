@@ -243,16 +243,31 @@ function renderGallery(urls) {
   }
 
   emptyState.style.display = "none";
-  gallery.innerHTML = imageUrls
-    .map(
-      (url, index) => `
-        <article class="wf-gallery-item">
-          <img src="${url}" alt="WF-001 result ${index + 1}" />
-          <a href="${url}" target="_blank" rel="noreferrer">查看原图 ${index + 1}</a>
-        </article>
-      `,
-    )
-    .join("");
+  gallery.innerHTML = "";
+
+  imageUrls.forEach((url, index) => {
+    const card = document.createElement("article");
+    card.className = "wf-gallery-item";
+
+    const image = document.createElement("img");
+    image.src = url;
+    image.alt = `WF-001 result ${index + 1}`;
+    image.referrerPolicy = "no-referrer";
+    image.loading = "lazy";
+
+    image.addEventListener("error", () => {
+      image.replaceWith(document.createTextNode("图片预览加载失败，请点击下方查看原图。"));
+    });
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.textContent = `查看原图 ${index + 1}`;
+
+    card.append(image, link);
+    gallery.append(card);
+  });
 }
 
 function renderRunning(prompt, aspectRatio) {
