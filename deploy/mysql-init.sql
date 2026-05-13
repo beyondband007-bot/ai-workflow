@@ -18,6 +18,18 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_users_username (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS auth_refresh_tokens (
+    token_hash             CHAR(64) PRIMARY KEY,
+    user_id                INT NOT NULL,
+    expires_at             DATETIME NOT NULL,
+    revoked_at             DATETIME NULL,
+    replaced_by_token_hash CHAR(64) NULL,
+    created_at             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at           DATETIME NULL,
+    INDEX idx_auth_refresh_tokens_user_id (user_id),
+    INDEX idx_auth_refresh_tokens_expires_at (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS wf_003_feishu (
     id            INT AUTO_INCREMENT PRIMARY KEY,
     user_id       INT NOT NULL UNIQUE,
@@ -143,6 +155,7 @@ CREATE TABLE IF NOT EXISTS workflow_runs (
     external_task_id        VARCHAR(128) NULL,
     error_message           TEXT NULL,
     started_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at              DATETIME NULL,
     finished_at             DATETIME NULL,
     created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -150,6 +163,7 @@ CREATE TABLE IF NOT EXISTS workflow_runs (
     INDEX idx_workflow_runs_user_id (user_id),
     INDEX idx_workflow_runs_workflow_code (workflow_code),
     INDEX idx_workflow_runs_created_at (created_at),
+    INDEX idx_workflow_runs_expires_at (expires_at),
     CONSTRAINT fk_workflow_runs_user
         FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE

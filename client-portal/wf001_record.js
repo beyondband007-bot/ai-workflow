@@ -60,14 +60,7 @@ function getToken() {
   if (window.ClientPortalAuth) {
     return window.ClientPortalAuth.readToken();
   }
-
-  const urlToken = new URLSearchParams(window.location.search).get("token");
-  if (urlToken) {
-    window.localStorage.setItem(TOKEN_KEY, urlToken);
-    return urlToken;
-  }
-
-  return window.localStorage.getItem(TOKEN_KEY);
+  return "";
 }
 
 function redirectToLogin() {
@@ -94,13 +87,22 @@ function buildHeaders() {
 }
 
 async function requestJson(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const requestOptions = {
+    ...options,
     headers: {
-      ...(options.auth === false ? {} : buildHeaders()),
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {}),
     },
-    ...options,
-  });
+  };
+  const response = window.ClientPortalAuth
+    ? await window.ClientPortalAuth.authFetch(path, requestOptions)
+    : await fetch(`${API_BASE}${path}`, {
+        ...requestOptions,
+        headers: {
+          ...requestOptions.headers,
+          ...(options.auth === false ? {} : buildHeaders()),
+        },
+      });
 
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
@@ -429,26 +431,21 @@ function bindControls() {
 }
 
 function buildLinks() {
-  const token = window.localStorage.getItem(TOKEN_KEY);
   const wf001Link = document.getElementById("wf001Link");
   const portalLink = document.getElementById("portalLink");
-  const suffix = token ? `?token=${encodeURIComponent(token)}` : "";
 
   if (wf001Link) {
-    wf001Link.href = `./wf001.html${suffix}`;
+    wf001Link.href = "./wf001.html";
   }
   if (portalLink) {
-    portalLink.href = `./index.html${suffix}`;
+    portalLink.href = "./index.html";
   }
 }
 
 async function bootstrap() {
   try {
     initTheme();
-    if (!getToken()) {
-      redirectToLogin();
-      return;
-    }
+    await window.ClientPortalAuth?.ensureAuthenticated();
     buildLinks();
     bindControls();
     bindImagePreview();

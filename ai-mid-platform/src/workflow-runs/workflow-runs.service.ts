@@ -2,7 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 import { AuthUser } from '../auth/auth-user.interface';
@@ -76,12 +79,33 @@ type Wf003BuildFinalPayload = {
 };
 
 @Injectable()
-export class WorkflowRunsService {
+export class WorkflowRunsService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(WorkflowRunsService.name);
+  private readonly runExpirationMinutes = 30;
+  private readonly expirationScanIntervalMs = 60_000;
+  private expirationTimer: NodeJS.Timeout | null = null;
+
   constructor(
     private readonly dataSource: DataSource,
     private readonly workflowsService: WorkflowsService,
     private readonly pointAccountsService: PointAccountsService,
   ) {}
+
+  onModuleInit() {
+    this.scanExpiredRunsSafely();
+    this.expirationTimer = setInterval(
+      () => this.scanExpiredRunsSafely(),
+      this.expirationScanIntervalMs,
+    );
+    this.expirationTimer.unref?.();
+  }
+
+  onModuleDestroy() {
+    if (this.expirationTimer) {
+      clearInterval(this.expirationTimer);
+      this.expirationTimer = null;
+    }
+  }
 
   async register(currentUser: AuthUser, payload: RegisterPayload) {
     const workflowCode = payload.workflow_code?.trim();
@@ -110,6 +134,7 @@ export class WorkflowRunsService {
         register_status: 'approved',
         estimated_count: existingRun.estimated_count,
         estimated_frozen_points: existingRun.estimated_frozen_points,
+        expires_at: existingRun.expires_at,
       };
     }
 
@@ -132,6 +157,7 @@ export class WorkflowRunsService {
       }
 
       const runId = this.createRunId();
+      const expiresAt = this.createRunExpiresAt();
       const nextAvailablePoints =
         pointAccount.available_points - estimate.estimatedFrozenPoints;
       const nextFrozenPoints =
@@ -158,8 +184,9 @@ export class WorkflowRunsService {
             billing_status,
             estimated_count,
             estimated_frozen_points,
+            expires_at,
             request_payload_summary
-          ) VALUES (?, ?, ?, ?, 'running', 'frozen', ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, 'running', 'frozen', ?, ?, ?, ?)
         `,
         [
           runId,
@@ -168,6 +195,7 @@ export class WorkflowRunsService {
           clientRequestId,
           estimate.estimatedCount,
           estimate.estimatedFrozenPoints,
+          this.formatDateTime(expiresAt),
           JSON.stringify(requestPayloadSummary),
         ],
       );
@@ -197,6 +225,7 @@ export class WorkflowRunsService {
         register_status: 'approved',
         estimated_count: estimate.estimatedCount,
         estimated_frozen_points: estimate.estimatedFrozenPoints,
+        expires_at: this.formatDateTime(expiresAt),
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -226,6 +255,7 @@ export class WorkflowRunsService {
           external_task_id,
           error_message,
           started_at,
+          expires_at,
           finished_at,
           created_at
         FROM workflow_runs
@@ -320,6 +350,7 @@ export class WorkflowRunsService {
           external_task_id,
           error_message,
           started_at,
+          expires_at,
           finished_at,
           created_at
         FROM workflow_runs
@@ -380,6 +411,7 @@ export class WorkflowRunsService {
           FROM workflow_runs
           WHERE run_id = ?
           LIMIT 1
+          FOR UPDATE
         `,
         [runId],
       );
@@ -608,6 +640,45 @@ export class WorkflowRunsService {
     }
 
     return this.callback(payload);
+  }
+
+  async expireExpiredRuns(limit = 100) {
+    const expiredRuns = await this.dataSource.query(
+      `
+        SELECT run_id, workflow_code
+        FROM workflow_runs
+        WHERE status = 'running'
+          AND billing_status = 'frozen'
+          AND COALESCE(expires_at, DATE_ADD(started_at, INTERVAL ? MINUTE)) <= CURRENT_TIMESTAMP
+        ORDER BY id ASC
+        LIMIT ?
+      `,
+      [this.runExpirationMinutes, limit],
+    );
+
+    let expiredCount = 0;
+
+    for (const run of expiredRuns as Array<{ run_id: string; workflow_code: string }>) {
+      try {
+        await this.callback({
+          run_id: run.run_id,
+          workflow_code: run.workflow_code,
+          status: 'failed',
+          finished_at: this.formatDateTime(new Date()),
+          actual_completed_count: 0,
+          result_summary: `${run.workflow_code} expired after ${this.runExpirationMinutes} minutes`,
+          error_message: `Order expired after ${this.runExpirationMinutes} minutes`,
+        });
+        expiredCount += 1;
+      } catch (error) {
+        this.logger.error(
+          `Failed to expire workflow run ${run.run_id}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
+    }
+
+    return { expired_count: expiredCount };
   }
 
   async wf003RegisterTask(payload: Wf003RegisterTaskPayload) {
@@ -1141,7 +1212,7 @@ export class WorkflowRunsService {
   ) {
     const [existingRun] = await this.dataSource.query(
       `
-        SELECT run_id, estimated_count, estimated_frozen_points
+        SELECT run_id, estimated_count, estimated_frozen_points, expires_at
         FROM workflow_runs
         WHERE user_id = ?
           AND workflow_code = ?
@@ -1235,6 +1306,15 @@ export class WorkflowRunsService {
     return allowed.has(normalized) ? normalized : null;
   }
 
+  private scanExpiredRunsSafely() {
+    void this.expireExpiredRuns().catch((error) => {
+      this.logger.error(
+        'Failed to scan expired workflow runs',
+        error instanceof Error ? error.stack : String(error),
+      );
+    });
+  }
+
   private normalizeDateTime(value: unknown) {
     const raw = String(value ?? '').trim();
     if (!raw) {
@@ -1263,6 +1343,10 @@ export class WorkflowRunsService {
     const suffix = Math.random().toString(36).slice(2, 8);
 
     return `run_${timestamp}_${suffix}`;
+  }
+
+  private createRunExpiresAt() {
+    return new Date(Date.now() + this.runExpirationMinutes * 60 * 1000);
   }
 
   private calculateSettlement(

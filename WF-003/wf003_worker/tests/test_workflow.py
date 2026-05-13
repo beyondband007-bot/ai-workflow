@@ -72,13 +72,14 @@ def test_normalize_submission_and_task_count():
     assert [task.type for task in tasks] == ["exterior", "exterior", "exterior", "interior", "interior"]
 
 
-def test_normalize_submission_allows_empty_interior_images():
+def test_normalize_submission_allows_exterior_only():
     submission = normalize_submission(base_body(interior_images=[]), settings())
 
     assert submission.interior_images == []
     assert submission.interior_groups == []
     assert submission.expected_tasks == 1
-    assert [task.type for task in build_task_items(submission)] == ["exterior"]
+    tasks = build_task_items(submission)
+    assert [task.type for task in tasks] == ["exterior"]
 
 
 @pytest.mark.parametrize(

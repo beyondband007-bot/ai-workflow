@@ -13,15 +13,6 @@ import { AlipayClientService } from './alipay-client.service';
 
 const POINTS_PER_YUAN = 100;
 const FINAL_ORDER_STATUSES = new Set(['PAID', 'CANCELED', 'CLOSED', 'REFUNDED', 'AMOUNT_MISMATCH']);
-const REDACTED_PAYMENT_EVENT_FIELDS = new Set([
-  'app_auth_token',
-  'buyer_logon_id',
-  'buyer_open_id',
-  'buyer_user_id',
-  'open_id',
-  'qr_code',
-  'sign',
-]);
 
 @Injectable()
 export class PaymentsService {
@@ -419,7 +410,7 @@ export class PaymentsService {
           payload_json
         ) VALUES (?, ?, ?, ?)
       `,
-      [orderId, eventType, provider, JSON.stringify(this.sanitizePaymentEventPayload(payload))],
+      [orderId, eventType, provider, JSON.stringify(payload)],
     );
   }
 
@@ -439,7 +430,7 @@ export class PaymentsService {
           payload_json
         ) VALUES (?, ?, ?, ?)
       `,
-      [orderId, eventType, provider, JSON.stringify(this.sanitizePaymentEventPayload(payload))],
+      [orderId, eventType, provider, JSON.stringify(payload)],
     );
   }
 
@@ -482,26 +473,5 @@ export class PaymentsService {
       paidAt: order.paid_at,
       createdAt: order.created_at,
     };
-  }
-
-  private sanitizePaymentEventPayload(payload: Record<string, unknown>) {
-    return Object.fromEntries(
-      Object.entries(payload).map(([key, value]) => {
-        if (!REDACTED_PAYMENT_EVENT_FIELDS.has(key)) {
-          return [key, value];
-        }
-        return [key, this.redactPaymentEventValue(value)];
-      }),
-    );
-  }
-
-  private redactPaymentEventValue(value: unknown) {
-    if (typeof value !== 'string') {
-      return '[redacted]';
-    }
-    if (value.length <= 8) {
-      return '[redacted]';
-    }
-    return `${value.slice(0, 4)}***${value.slice(-4)}`;
   }
 }

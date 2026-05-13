@@ -1,12 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 import { AuthUser } from '../auth/auth-user.interface';
 
 @Injectable()
 export class PointAccountsService {
-  private readonly logger = new Logger(PointAccountsService.name);
-  private hasWarnedMissingPaymentTables = false;
-
   constructor(private readonly dataSource: DataSource) {}
 
   async getMyPointAccount(currentUser: AuthUser) {
@@ -55,7 +52,17 @@ export class PointAccountsService {
       [currentUser.userId],
     );
 
-    const paidRecharge = await this.getPaidRechargeSummary(currentUser.userId);
+    const [paidRecharge] = await this.dataSource.query(
+      `
+        SELECT
+          COALESCE(SUM(total_amount), 0) AS total_paid_recharge_amount,
+          COALESCE(SUM(points), 0) AS total_paid_recharge_points
+        FROM payment_orders
+        WHERE user_id = ?
+          AND status = 'PAID'
+      `,
+      [currentUser.userId],
+    );
 
     const [totalUsage] = await this.dataSource.query(
       `
@@ -162,38 +169,5 @@ export class PointAccountsService {
       total_recharged_points: Number(account.total_recharged_points ?? 0),
       total_consumed_points: Number(account.total_consumed_points ?? 0),
     };
-  }
-
-  private async getPaidRechargeSummary(userId: number) {
-    try {
-      const [paidRecharge] = await this.dataSource.query(
-        `
-          SELECT
-            COALESCE(SUM(total_amount), 0) AS total_paid_recharge_amount,
-            COALESCE(SUM(points), 0) AS total_paid_recharge_points
-          FROM payment_orders
-          WHERE user_id = ?
-            AND status = 'PAID'
-        `,
-        [userId],
-      );
-      return paidRecharge ?? { total_paid_recharge_amount: 0, total_paid_recharge_points: 0 };
-    } catch (error) {
-      if (this.isMissingPaymentOrdersTable(error)) {
-        if (!this.hasWarnedMissingPaymentTables) {
-          this.hasWarnedMissingPaymentTables = true;
-          this.logger.warn('payment_orders table is missing; recharge summary will fall back to zero until migration is applied');
-        }
-        return { total_paid_recharge_amount: 0, total_paid_recharge_points: 0 };
-      }
-      throw error;
-    }
-  }
-
-  private isMissingPaymentOrdersTable(error: unknown) {
-    return (
-      (error as { code?: string })?.code === 'ER_NO_SUCH_TABLE' &&
-      String((error as { sqlMessage?: string })?.sqlMessage || '').includes('payment_orders')
-    );
   }
 }

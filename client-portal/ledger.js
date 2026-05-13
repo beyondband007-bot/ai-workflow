@@ -100,17 +100,6 @@ function getToken() {
     return window.ClientPortalAuth.readToken();
   }
 
-  const urlToken = new URLSearchParams(window.location.search).get("token");
-  if (urlToken) {
-    window.localStorage.setItem(TOKEN_KEY, urlToken);
-    return urlToken;
-  }
-
-  const localToken = window.localStorage.getItem(TOKEN_KEY);
-  if (localToken) {
-    return localToken;
-  }
-
   return null;
 }
 
@@ -141,14 +130,22 @@ function logout() {
 }
 
 async function requestJson(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const requestOptions = {
+    ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(options.auth === false ? {} : getAuthHeaders()),
       ...(options.headers || {}),
     },
-    ...options,
-  });
+  };
+  const response = window.ClientPortalAuth
+    ? await window.ClientPortalAuth.authFetch(path, requestOptions)
+    : await fetch(`${API_BASE}${path}`, {
+        ...requestOptions,
+        headers: {
+          ...requestOptions.headers,
+          ...(options.auth === false ? {} : getAuthHeaders()),
+        },
+      });
 
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
@@ -562,10 +559,7 @@ function startAutoRefresh() {
 }
 
 async function bootstrap() {
-  if (!getToken()) {
-    redirectToLogin();
-    return;
-  }
+  await window.ClientPortalAuth?.ensureAuthenticated();
 
   syncAccountView(fallbackPointAccount);
   renderLedgerRows([]);

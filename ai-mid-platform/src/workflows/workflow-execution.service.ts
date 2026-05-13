@@ -139,6 +139,11 @@ export class WorkflowExecutionService {
       const hasResponseBody = rawText.trim().length > 0;
 
       if (!upstreamResponse.ok) {
+        const upstreamErrorMessage = this.formatUpstreamErrorMessage(
+          rawText,
+          rawResponse,
+          `HTTP ${upstreamStatus}`,
+        );
         await this.workflowRunsService.callback({
           run_id: runId,
           workflow_code: workflowCode,
@@ -673,6 +678,11 @@ export class WorkflowExecutionService {
       const hasResponseBody = rawText.trim().length > 0;
 
       if (!upstreamResponse.ok) {
+        const upstreamErrorMessage = this.formatUpstreamErrorMessage(
+          rawText,
+          rawResponse,
+          `HTTP ${upstreamStatus}`,
+        );
         await this.workflowRunsService.callback({
           run_id: runId,
           workflow_code: workflowCode,
@@ -682,13 +692,17 @@ export class WorkflowExecutionService {
           result_summary: `WF-003 JSON request failed with status=${upstreamStatus}`,
           result_urls: [],
           external_task_id: clientRequestId,
-          error_message: hasResponseBody
-            ? rawText.slice(0, 500)
-            : `HTTP ${upstreamStatus}`,
+          error_message: upstreamErrorMessage.slice(0, 500),
         });
 
+        if (upstreamStatus >= 400 && upstreamStatus < 500) {
+          throw new BadRequestException(
+            `WF-003 json request failed: ${upstreamErrorMessage}`,
+          );
+        }
+
         throw new InternalServerErrorException(
-          `WF-003 json request failed: HTTP ${upstreamStatus}`,
+          `WF-003 json request failed: ${upstreamErrorMessage}`,
         );
       }
 
@@ -1035,6 +1049,25 @@ export class WorkflowExecutionService {
     } catch {
       return value;
     }
+  }
+
+  private formatUpstreamErrorMessage(
+    rawText: string,
+    rawResponse: unknown,
+    fallback: string,
+  ) {
+    if (rawResponse && typeof rawResponse === 'object') {
+      const candidate = rawResponse as Record<string, unknown>;
+      const detail = candidate.detail ?? candidate.message ?? candidate.error;
+      if (typeof detail === 'string' && detail.trim()) {
+        return detail.trim();
+      }
+      if (detail !== undefined) {
+        return JSON.stringify(detail).slice(0, 500);
+      }
+    }
+
+    return rawText.trim() || fallback;
   }
 
   private extractImageUrls(value: unknown, collected: string[] = []) {

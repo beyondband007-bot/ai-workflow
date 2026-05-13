@@ -78,19 +78,22 @@ function redirectRechargeLogin() {
 }
 
 async function rechargeApiRequest(path, options = {}) {
-  const token = getRechargeToken();
-  if (!token) {
-    throw new Error("请先登录后再充值");
-  }
-
-  const response = await fetch(`${resolveRechargeApiBase()}${path}`, {
+  const requestOptions = {
     ...options,
     headers: {
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {}),
-      Authorization: `Bearer ${token}`,
     },
-  });
+  };
+  const response = window.ClientPortalAuth
+    ? await window.ClientPortalAuth.authFetch(path, requestOptions)
+    : await fetch(`${resolveRechargeApiBase()}${path}`, {
+        ...requestOptions,
+        headers: {
+          ...requestOptions.headers,
+          ...(getRechargeToken() ? { Authorization: `Bearer ${getRechargeToken()}` } : {}),
+        },
+      });
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
   if (!response.ok) {
@@ -107,28 +110,16 @@ function getRechargeToken() {
   if (window.ClientPortalAuth) {
     return window.ClientPortalAuth.readToken();
   }
-
-  const urlToken = new URLSearchParams(window.location.search).get("token");
-  if (urlToken) {
-    window.localStorage.setItem(RECHARGE_TOKEN_KEY, urlToken);
-    return urlToken;
-  }
-  return window.localStorage.getItem(RECHARGE_TOKEN_KEY);
+  return "";
 }
 
 async function fetchRechargeAccount() {
-  const token = getRechargeToken();
-  if (!token) {
-    redirectRechargeLogin();
-    throw new Error("请先登录后再查看充值中心");
-  }
-
   try {
-    const response = await fetch(`${resolveRechargeApiBase()}/api/v1/point-accounts/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = window.ClientPortalAuth
+      ? await window.ClientPortalAuth.authFetch("/api/v1/point-accounts/me")
+      : await fetch(`${resolveRechargeApiBase()}/api/v1/point-accounts/me`, {
+          headers: getRechargeToken() ? { Authorization: `Bearer ${getRechargeToken()}` } : {},
+        });
     if (!response.ok) {
       if (response.status === 401) {
         redirectRechargeLogin();
@@ -628,7 +619,8 @@ function bindCompanyAccountCopy() {
   });
 }
 
-function initRechargeCenter() {
+async function initRechargeCenter() {
+  await window.ClientPortalAuth?.ensureAuthenticated();
   renderRechargeSummary();
   renderAmountGrid("onlineAmountGrid", "onlineAmountInput", "onlinePointPreview");
   renderAmountGrid("offlineAmountGrid", "offlineAmountInput");

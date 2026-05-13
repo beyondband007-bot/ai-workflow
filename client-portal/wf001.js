@@ -56,17 +56,6 @@ function getToken() {
     return window.ClientPortalAuth.readToken();
   }
 
-  const urlToken = new URLSearchParams(window.location.search).get("token");
-  if (urlToken) {
-    window.localStorage.setItem(TOKEN_KEY, urlToken);
-    return urlToken;
-  }
-
-  const localToken = window.localStorage.getItem(TOKEN_KEY);
-  if (localToken) {
-    return localToken;
-  }
-
   return null;
 }
 
@@ -104,13 +93,22 @@ function buildHeaders() {
 }
 
 async function requestJson(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const requestOptions = {
+    ...options,
     headers: {
-      ...(options.auth === false ? {} : buildHeaders()),
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {}),
     },
-    ...options,
-  });
+  };
+  const response = window.ClientPortalAuth
+    ? await window.ClientPortalAuth.authFetch(path, requestOptions)
+    : await fetch(`${API_BASE}${path}`, {
+        ...requestOptions,
+        headers: {
+          ...requestOptions.headers,
+          ...(options.auth === false ? {} : buildHeaders()),
+        },
+      });
 
   const text = await response.text();
   let data = null;
@@ -138,11 +136,19 @@ async function requestJson(path, options = {}) {
 }
 
 async function executeWorkflow(payload) {
-  const response = await fetch(`${API_BASE}/api/v1/workflows/WF-001/execute`, {
+  const requestOptions = {
     method: "POST",
-    headers: buildHeaders(),
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(payload),
-  });
+  };
+  const response = window.ClientPortalAuth
+    ? await window.ClientPortalAuth.authFetch("/api/v1/workflows/WF-001/execute", requestOptions)
+    : await fetch(`${API_BASE}/api/v1/workflows/WF-001/execute`, {
+        ...requestOptions,
+        headers: buildHeaders(),
+      });
 
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
@@ -243,31 +249,16 @@ function renderGallery(urls) {
   }
 
   emptyState.style.display = "none";
-  gallery.innerHTML = "";
-
-  imageUrls.forEach((url, index) => {
-    const card = document.createElement("article");
-    card.className = "wf-gallery-item";
-
-    const image = document.createElement("img");
-    image.src = url;
-    image.alt = `WF-001 result ${index + 1}`;
-    image.referrerPolicy = "no-referrer";
-    image.loading = "lazy";
-
-    image.addEventListener("error", () => {
-      image.replaceWith(document.createTextNode("图片预览加载失败，请点击下方查看原图。"));
-    });
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.target = "_blank";
-    link.rel = "noreferrer";
-    link.textContent = `查看原图 ${index + 1}`;
-
-    card.append(image, link);
-    gallery.append(card);
-  });
+  gallery.innerHTML = imageUrls
+    .map(
+      (url, index) => `
+        <article class="wf-gallery-item">
+          <img src="${url}" alt="WF-001 result ${index + 1}" />
+          <a href="${url}" target="_blank" rel="noreferrer">查看原图 ${index + 1}</a>
+        </article>
+      `,
+    )
+    .join("");
 }
 
 function renderRunning(prompt, aspectRatio) {
@@ -306,16 +297,11 @@ function buildBackLink() {
   const backLink = document.getElementById("backLink");
   const historyLink = document.getElementById("historyLink");
 
-  const token = window.localStorage.getItem(TOKEN_KEY);
   if (backLink) {
-    backLink.href = token
-      ? `./index.html?token=${encodeURIComponent(token)}`
-      : "./index.html";
+    backLink.href = "./index.html";
   }
   if (historyLink) {
-    historyLink.href = token
-      ? `./wf001_record.html?token=${encodeURIComponent(token)}`
-      : "./wf001_record.html";
+    historyLink.href = "./wf001_record.html";
   }
 }
 
@@ -512,13 +498,10 @@ function bindFormSafe() {
   });
 }
 
-function bootstrap() {
+async function bootstrap() {
   try {
     initTheme();
-    if (!getToken()) {
-      redirectToLogin();
-      return;
-    }
+    await window.ClientPortalAuth?.ensureAuthenticated();
     buildBackLink();
     bindAspectRatioPicker();
     bindDemoPrompt();

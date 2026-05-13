@@ -1,8 +1,23 @@
 (() => {
-  const TOKEN_KEY = "auth_demo_token";
+  const LEGACY_TOKEN_KEY = "auth_demo_token";
   const PROFILE_STORAGE_KEY = "client_portal_profile";
-  const LOGGED_OUT_TOKEN_KEY = "auth_demo_logged_out_token";
-  const LOGOUT_AT_KEY = "auth_demo_logout_at";
+
+  let accessToken = "";
+  let refreshPromise = null;
+
+  function resolveApiBase() {
+    const { protocol, hostname, port } = window.location;
+
+    if (protocol === "file:") {
+      return "http://127.0.0.1:3002";
+    }
+
+    if (port === "3003") {
+      return `${protocol}//${hostname}:3002`;
+    }
+
+    return "";
+  }
 
   function resolveAuthEntryUrl() {
     const { protocol, hostname, port } = window.location;
@@ -18,10 +33,6 @@
     return `${window.location.origin}/auth/?mode=login`;
   }
 
-  function getUrlToken() {
-    return new URLSearchParams(window.location.search).get("token")?.trim() || "";
-  }
-
   function stripTokenFromUrl() {
     const currentUrl = new URL(window.location.href);
     if (!currentUrl.searchParams.has("token")) {
@@ -32,52 +43,112 @@
     window.history.replaceState(null, "", currentUrl.toString());
   }
 
-  function isLoggedOutToken(token) {
-    return Boolean(token && window.localStorage.getItem(LOGGED_OUT_TOKEN_KEY) === tokenFingerprint(token));
+  function clearLegacyTokenStorage() {
+    window.localStorage.removeItem(LEGACY_TOKEN_KEY);
+    window.localStorage.removeItem("auth_demo_logged_out_token");
+    window.localStorage.removeItem("auth_demo_logout_at");
+    stripTokenFromUrl();
   }
 
-  function tokenFingerprint(token) {
-    let hash = 2166136261;
-    for (let index = 0; index < token.length; index += 1) {
-      hash ^= token.charCodeAt(index);
-      hash = Math.imul(hash, 16777619);
-    }
-    return `${token.length}:${hash >>> 0}`;
+  function setAccessToken(token) {
+    accessToken = String(token || "");
+    clearLegacyTokenStorage();
   }
 
   function readToken() {
-    const urlToken = getUrlToken();
-    if (urlToken) {
-      stripTokenFromUrl();
-      if (isLoggedOutToken(urlToken)) {
-        window.localStorage.removeItem(TOKEN_KEY);
-        return "";
-      }
+    return accessToken;
+  }
 
-      window.localStorage.setItem(TOKEN_KEY, urlToken);
-      window.localStorage.removeItem(LOGGED_OUT_TOKEN_KEY);
-      window.localStorage.removeItem(LOGOUT_AT_KEY);
-      return urlToken;
+  async function refreshAccessToken(options = {}) {
+    const { redirect = true } = options;
+
+    if (refreshPromise) {
+      return refreshPromise;
     }
 
-    const storedToken = window.localStorage.getItem(TOKEN_KEY)?.trim() || "";
-    if (isLoggedOutToken(storedToken)) {
-      window.localStorage.removeItem(TOKEN_KEY);
-      return "";
+    refreshPromise = fetch(`${resolveApiBase()}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then(async (response) => {
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : null;
+
+        if (!response.ok || !data?.access_token) {
+          throw new Error(data?.message || data?.detail || `Refresh failed: ${response.status}`);
+        }
+
+        setAccessToken(data.access_token);
+        return accessToken;
+      })
+      .catch((error) => {
+        accessToken = "";
+        clearLegacyTokenStorage();
+        if (redirect) {
+          window.location.replace(resolveAuthEntryUrl());
+        }
+        throw error;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+
+    return refreshPromise;
+  }
+
+  async function getAccessToken() {
+    if (accessToken) {
+      return accessToken;
     }
 
-    return storedToken;
+    return refreshAccessToken();
+  }
+
+  async function ensureAuthenticated() {
+    await getAccessToken();
+    return true;
+  }
+
+  async function authFetch(input, options = {}) {
+    const url =
+      typeof input === "string" && input.startsWith("/")
+        ? `${resolveApiBase()}${input}`
+        : input;
+    const authDisabled = options.auth === false;
+    const headers = new Headers(options.headers || {});
+
+    if (!authDisabled) {
+      headers.set("Authorization", `Bearer ${await getAccessToken()}`);
+    }
+
+    const requestOptions = {
+      ...options,
+      headers,
+      credentials: options.credentials || "include",
+    };
+    delete requestOptions.auth;
+
+    let response = await fetch(url, requestOptions);
+    if (response.status === 401 && !authDisabled) {
+      headers.set("Authorization", `Bearer ${await refreshAccessToken()}`);
+      response = await fetch(url, requestOptions);
+    }
+
+    return response;
   }
 
   function clearAuthState() {
-    const token = getUrlToken() || window.localStorage.getItem(TOKEN_KEY)?.trim() || "";
-    if (token) {
-      window.localStorage.setItem(LOGGED_OUT_TOKEN_KEY, tokenFingerprint(token));
-    }
-    window.localStorage.setItem(LOGOUT_AT_KEY, String(Date.now()));
-    window.localStorage.removeItem(TOKEN_KEY);
+    accessToken = "";
+    clearLegacyTokenStorage();
     window.localStorage.removeItem(PROFILE_STORAGE_KEY);
-    stripTokenFromUrl();
+    fetch(`${resolveApiBase()}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+      keepalive: true,
+    }).catch(() => {});
   }
 
   function redirectToLogin() {
@@ -85,43 +156,18 @@
     window.location.replace(resolveAuthEntryUrl());
   }
 
-  function clearLogoutState() {
-    window.localStorage.removeItem(LOGGED_OUT_TOKEN_KEY);
-    window.localStorage.removeItem(LOGOUT_AT_KEY);
-  }
-
-  function ensureAuthenticated() {
-    if (!readToken()) {
-      redirectToLogin();
-      return false;
-    }
-    return true;
-  }
-
-  function protectPage() {
-    if (!ensureAuthenticated()) {
-      return;
-    }
-
-    window.addEventListener("pageshow", () => {
-      ensureAuthenticated();
-    });
-
-    window.addEventListener("storage", (event) => {
-      if ([TOKEN_KEY, LOGGED_OUT_TOKEN_KEY, LOGOUT_AT_KEY].includes(event.key)) {
-        ensureAuthenticated();
-      }
-    });
-  }
-
   window.ClientPortalAuth = {
+    authFetch,
     clearAuthState,
-    clearLogoutState,
     ensureAuthenticated,
+    getAccessToken,
     readToken,
     redirectToLogin,
+    refreshAccessToken,
     resolveAuthEntryUrl,
+    setAccessToken,
   };
 
-  protectPage();
+  clearLegacyTokenStorage();
+  refreshAccessToken({ redirect: true }).catch(() => {});
 })();
