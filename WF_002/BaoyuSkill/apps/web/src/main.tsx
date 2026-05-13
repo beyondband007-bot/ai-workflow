@@ -107,6 +107,8 @@ const APP_BASE = import.meta.env.BASE_URL;
 const WF002_PROVIDER: Provider = "kie";
 const WF002_LEGACY_MODEL = "nano-banana-2";
 const WF002_GPT_IMAGE_2_MODEL = "gpt-image-2-text-to-image";
+let accessToken = "";
+let refreshPromise: Promise<string> | null = null;
 
 function toAppPath(path: string) {
   return `${APP_BASE}${path.replace(/^\/+/, "")}`;
@@ -140,58 +142,73 @@ function resolveAuthEntryUrl() {
   return `${window.location.origin}/auth/?mode=login`;
 }
 
-function readAuthToken() {
+function stripTokenFromUrl() {
   const currentUrl = new URL(window.location.href);
-  const tokenFromQuery = currentUrl.searchParams.get("token")?.trim() || "";
-  if (tokenFromQuery) {
-    currentUrl.searchParams.delete("token");
-    window.history.replaceState(null, "", currentUrl.toString());
-
-    if (isLoggedOutToken(tokenFromQuery)) {
-      window.localStorage.removeItem(AUTH_TOKEN_KEY);
-      return "";
-    }
-
-    window.localStorage.setItem(AUTH_TOKEN_KEY, tokenFromQuery);
-    window.localStorage.removeItem(LOGGED_OUT_TOKEN_KEY);
-    window.localStorage.removeItem(LOGOUT_AT_KEY);
-    return tokenFromQuery;
-  }
-
-  const storedToken = window.localStorage.getItem(AUTH_TOKEN_KEY)?.trim() || "";
-  if (isLoggedOutToken(storedToken)) {
-    window.localStorage.removeItem(AUTH_TOKEN_KEY);
-    return "";
-  }
-
-  return storedToken;
-}
-
-function tokenFingerprint(token: string) {
-  let hash = 2166136261;
-  for (let index = 0; index < token.length; index += 1) {
-    hash ^= token.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return `${token.length}:${hash >>> 0}`;
-}
-
-function isLoggedOutToken(token: string) {
-  return Boolean(token && window.localStorage.getItem(LOGGED_OUT_TOKEN_KEY) === tokenFingerprint(token));
-}
-
-function clearAuthState() {
-  const currentUrl = new URL(window.location.href);
-  const token = currentUrl.searchParams.get("token")?.trim() || window.localStorage.getItem(AUTH_TOKEN_KEY)?.trim() || "";
-  if (token) {
-    window.localStorage.setItem(LOGGED_OUT_TOKEN_KEY, tokenFingerprint(token));
-  }
-  window.localStorage.setItem(LOGOUT_AT_KEY, String(Date.now()));
-  window.localStorage.removeItem(AUTH_TOKEN_KEY);
   if (currentUrl.searchParams.has("token")) {
     currentUrl.searchParams.delete("token");
     window.history.replaceState(null, "", currentUrl.toString());
   }
+}
+
+function clearLegacyAuthStorage() {
+  window.localStorage.removeItem(AUTH_TOKEN_KEY);
+  window.localStorage.removeItem(LOGGED_OUT_TOKEN_KEY);
+  window.localStorage.removeItem(LOGOUT_AT_KEY);
+  stripTokenFromUrl();
+}
+
+function readAuthToken() {
+  return accessToken;
+}
+
+async function refreshAccessToken() {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  const authApiBase = resolveAuthApiBase();
+  refreshPromise = fetch(`${authApiBase}/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .then(async (response) => {
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : null;
+
+      if (!response.ok || !data?.access_token) {
+        throw new Error(data?.message || data?.detail || `Auth refresh failed: ${response.status}`);
+      }
+
+      accessToken = String(data.access_token || "");
+      clearLegacyAuthStorage();
+      return accessToken;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
+}
+
+async function getAccessToken() {
+  if (accessToken) {
+    return accessToken;
+  }
+
+  return refreshAccessToken();
+}
+
+function clearAuthState() {
+  accessToken = "";
+  clearLegacyAuthStorage();
+  fetch(`${resolveAuthApiBase()}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+    keepalive: true,
+  }).catch(() => {});
 }
 
 function redirectToLogin() {
@@ -208,18 +225,18 @@ function AuthGate({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function verifyLogin() {
-      const token = readAuthToken();
-      if (!token) {
-        redirectToLogin();
-        return;
-      }
-
-      const authApiBase = resolveAuthApiBase();
-      const meUrl = authApiBase ? `${authApiBase}/me` : "/me";
-
       try {
+        const token = await getAccessToken();
+        if (!token) {
+          redirectToLogin();
+          return;
+        }
+
+        const authApiBase = resolveAuthApiBase();
+        const meUrl = authApiBase ? `${authApiBase}/me` : "/me";
         const response = await fetch(meUrl, {
           method: "GET",
+          credentials: "include",
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -1464,7 +1481,7 @@ function App() {
   }, []);
 
   async function registerWf002Run(promptText: string, ratio: string): Promise<WorkflowBillingMeta> {
-    const token = readAuthToken();
+    const token = await getAccessToken();
     if (!token) {
       throw new Error("未找到登录 token，请重新登录后重试。");
     }
@@ -1477,6 +1494,7 @@ function App() {
     const clientRequestId = buildClientRequestId();
     const response = await fetch(`${authApiBase}/api/v1/workflow-runs/register`, {
       method: "POST",
+      credentials: "include",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -1531,7 +1549,7 @@ function App() {
       return;
     }
 
-    const token = readAuthToken();
+    const token = await getAccessToken();
     if (!token) {
       throw new Error("未找到登录 token，无法完成积分结算。");
     }
@@ -1545,6 +1563,7 @@ function App() {
     try {
       const response = await fetch(`${authApiBase}/api/v1/workflow-runs/callback-auth`, {
         method: "POST",
+        credentials: "include",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",

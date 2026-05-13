@@ -41,14 +41,7 @@
     if (window.ClientPortalAuth) {
       return window.ClientPortalAuth.readToken();
     }
-
-    const urlToken = new URLSearchParams(window.location.search).get("token");
-    if (urlToken) {
-      window.localStorage.setItem(TOKEN_KEY, urlToken);
-      return urlToken;
-    }
-
-    return window.localStorage.getItem(TOKEN_KEY);
+    return "";
   }
 
   function clearAuthState() {
@@ -72,10 +65,11 @@
   }
 
   async function requestJson(path, options = {}) {
-    const token = getToken();
-    const response = await fetch(`${resolveApiBase()}${path}`, {
+    const response = window.ClientPortalAuth
+      ? await window.ClientPortalAuth.authFetch(path, options)
+      : await fetch(`${resolveApiBase()}${path}`, {
       headers: {
-        ...(options.auth === false || !token ? {} : { Authorization: `Bearer ${token}` }),
+        ...(options.auth === false || !getToken() ? {} : { Authorization: `Bearer ${getToken()}` }),
         ...(options.headers || {}),
       },
       ...options,
@@ -316,15 +310,19 @@
   }
 
   async function uploadProfileAvatar(file) {
-    const token = getToken();
     const formData = new FormData();
     formData.append("avatar", file);
 
-    const response = await fetch(`${resolveApiBase()}/api/v1/profile/avatar`, {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
+    const response = window.ClientPortalAuth
+      ? await window.ClientPortalAuth.authFetch("/api/v1/profile/avatar", {
+          method: "POST",
+          body: formData,
+        })
+      : await fetch(`${resolveApiBase()}/api/v1/profile/avatar`, {
+          method: "POST",
+          headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
+          body: formData,
+        });
 
     const text = await response.text();
     const data = text ? JSON.parse(text) : null;
@@ -540,12 +538,8 @@
   }
 
   async function syncCurrentUser() {
-    if (!getToken()) {
-      redirectToLogin();
-      return;
-    }
-
     try {
+      await window.ClientPortalAuth?.ensureAuthenticated();
       const currentUser = await requestJson("/me");
       renderProfile(
         {

@@ -11,6 +11,12 @@ const interiorPreview = document.getElementById("interiorPreview");
 const lightbox = document.getElementById("lightbox");
 const lightboxImage = document.getElementById("lightboxImage");
 const closeLightboxBtn = document.getElementById("closeLightboxBtn");
+const accessModal = document.getElementById("accessModal");
+const contactPhone = document.getElementById("contactPhone");
+const contactWechat = document.getElementById("contactWechat");
+const closeAccessModalBtn = document.getElementById("closeAccessModalBtn");
+const cancelAccessModalBtn = document.getElementById("cancelAccessModalBtn");
+const contactBusinessBtn = document.getElementById("contactBusinessBtn");
 
 const RUNTIME_CONFIG = window.__WF003_CONFIG__ || {};
 const KIE_UPLOAD_URL = RUNTIME_CONFIG.kieUploadUrl || "https://kieai.riftrunnerai.com/api/file-stream-upload";
@@ -22,6 +28,8 @@ const MAX_FILES_PER_GROUP = 5;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const DEFAULT_UPLOAD_CONCURRENCY = 3;
 const WORKFLOW_CODE = "WF-003";
+let accessToken = "";
+let refreshPromise = null;
 
 function resolveApiBase() {
   if (RUNTIME_WEBHOOK_URL) {
@@ -45,13 +53,27 @@ function resolveApiBase() {
   }
 
   if (port === "3001" || port === "3003") {
-    return "";
+    return `${protocol}//${hostname}:3002`;
   }
 
   return "";
 }
 
 const API_BASE = resolveApiBase();
+
+function resolveAuthEntryUrl() {
+  const { protocol, hostname, port } = window.location;
+
+  if (protocol === "file:") {
+    return "http://127.0.0.1:8080/auth/?mode=login";
+  }
+
+  if (port === "3001" || port === "3003") {
+    return `${protocol}//${hostname}:8080/auth/?mode=login`;
+  }
+
+  return `${window.location.origin}/auth/?mode=login`;
+}
 
 const state = {
   main: [],
@@ -191,19 +213,51 @@ function clearAll() {
   renderGroup("interior");
 }
 
-function getToken() {
-  const urlToken = new URLSearchParams(window.location.search).get("token");
-  if (urlToken) {
-    window.localStorage.setItem(TOKEN_KEY, urlToken);
-    return urlToken;
-  }
+function stripTokenFromUrl() {
+  const currentUrl = new URL(window.location.href);
+  if (!currentUrl.searchParams.has("token")) return;
+  currentUrl.searchParams.delete("token");
+  window.history.replaceState(null, "", currentUrl.toString());
+}
 
-  const localToken = window.localStorage.getItem(TOKEN_KEY);
-  if (localToken) {
-    return localToken;
-  }
+function clearLegacyTokenStorage() {
+  window.localStorage.removeItem(TOKEN_KEY);
+  stripTokenFromUrl();
+}
 
-  return null;
+function redirectToLogin() {
+  accessToken = "";
+  clearLegacyTokenStorage();
+  window.location.replace(resolveAuthEntryUrl());
+}
+
+async function refreshAccessToken() {
+  if (accessToken) return accessToken;
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = fetch(buildApiUrl("/auth/refresh"), {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .then(async (response) => {
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : null;
+      if (!response.ok || !data?.access_token) {
+        redirectToLogin();
+        throw new Error(data?.message || data?.error || `身份刷新失败(${response.status})`);
+      }
+      accessToken = data.access_token;
+      clearLegacyTokenStorage();
+      return accessToken;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
 }
 
 function appendFiles(group, files) {
@@ -231,9 +285,10 @@ function buildApiUrl(path) {
   return API_BASE ? `${API_BASE}${path}` : path;
 }
 
-function buildHeaders() {
-  const token = getToken();
+async function buildHeaders() {
+  const token = await refreshAccessToken();
   if (!token) {
+    redirectToLogin();
     throw new Error("缺少身份验证令牌，请从客户端门户打开此页面。");
   }
 
@@ -247,17 +302,24 @@ async function checkAccess() {
   try {
     const response = await fetch(buildApiUrl("/api/v1/wf003/access"), {
       method: "GET",
-      headers: buildHeaders(),
+      credentials: "include",
+      headers: await buildHeaders(),
     });
 
     const text = await response.text();
     const data = text ? JSON.parse(text) : {};
 
     if (!response.ok) {
+      if (response.status === 401) {
+        redirectToLogin();
+      }
       throw new Error(data?.message || data?.error || `权限检查失败 (${response.status})`);
     }
 
     state.hasAccess = !!data?.has_access;
+    if (!state.hasAccess) {
+      showAccessModal(data?.business_contact);
+    }
     return state.hasAccess;
   } catch (error) {
     state.hasAccess = false;
@@ -266,15 +328,23 @@ async function checkAccess() {
   }
 }
 
-function showAccessModal() {
-  const businessContact = RUNTIME_CONFIG.businessContact || {};
-  contactPhone.textContent = businessContact.phone || "--";
-  contactWechat.textContent = businessContact.wechat || "--";
-  accessModal.classList.remove("hidden");
+function showAccessModal(contactOverride) {
+  const businessContact = contactOverride || RUNTIME_CONFIG.businessContact || {};
+  if (contactPhone) {
+    contactPhone.textContent = businessContact.phone || "--";
+  }
+  if (contactWechat) {
+    contactWechat.textContent = businessContact.wechat || "--";
+  }
+  if (accessModal) {
+    accessModal.classList.remove("hidden");
+    return;
+  }
+  setStatus("您暂无 WF-003 访问权限，请联系商务开通。", "error");
 }
 
 function hideAccessModal() {
-  accessModal.classList.add("hidden");
+  accessModal?.classList.add("hidden");
 }
 
 function redirectToBusinessContact() {
@@ -388,7 +458,8 @@ async function submitWorkflow(payload) {
   const requestUrl = RUNTIME_WEBHOOK_URL || buildApiUrl(`/api/v1/workflows/${WORKFLOW_CODE}/json-execute`);
   const response = await fetch(requestUrl, {
     method: "POST",
-    headers: buildHeaders(),
+    credentials: "include",
+    headers: await buildHeaders(),
     body: JSON.stringify(payload),
   });
 
@@ -396,6 +467,9 @@ async function submitWorkflow(payload) {
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      redirectToLogin();
+    }
     throw new Error(data?.message || data?.error || `工作流提交失败 (${response.status}): ${requestUrl}`);
   }
 
@@ -481,4 +555,5 @@ form.addEventListener("submit", async (event) => {
 renderGroup("main");
 renderGroup("interior");
 
+clearLegacyTokenStorage();
 checkAccess();

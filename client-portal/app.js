@@ -188,17 +188,6 @@ function getToken() {
     return window.ClientPortalAuth.readToken();
   }
 
-  const urlToken = new URLSearchParams(window.location.search).get("token");
-  if (urlToken) {
-    window.localStorage.setItem(TOKEN_KEY, urlToken);
-    return urlToken;
-  }
-
-  const localToken = window.localStorage.getItem(TOKEN_KEY);
-  if (localToken) {
-    return localToken;
-  }
-
   return null;
 }
 
@@ -224,7 +213,7 @@ function redirectToLogin() {
 
 function getAuthHeaders() {
   const token = getToken();
-  if (!token) {
+  if (!token && !window.ClientPortalAuth) {
     redirectToLogin();
     throw new Error("请先登录");
   }
@@ -486,20 +475,25 @@ function syncProfileForm() {
 
 async function uploadProfileAvatar(file) {
   const token = getToken();
-  if (!token) {
+  if (!token && !window.ClientPortalAuth) {
     redirectToLogin();
     throw new Error("请先登录");
   }
   const formData = new FormData();
   formData.append("avatar", file);
 
-  const response = await fetch(`${API_BASE}/api/v1/profile/avatar`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
+  const response = window.ClientPortalAuth
+    ? await window.ClientPortalAuth.authFetch("/api/v1/profile/avatar", {
+        method: "POST",
+        body: formData,
+      })
+    : await fetch(`${API_BASE}/api/v1/profile/avatar`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
 
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
@@ -770,14 +764,25 @@ function logout() {
 }
 
 async function requestJson(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.auth === false ? {} : getAuthHeaders()),
-      ...(options.headers || {}),
-    },
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+  const requestOptions = {
     ...options,
-  });
+    headers: {
+      ...headers,
+    },
+  };
+  const response = window.ClientPortalAuth
+    ? await window.ClientPortalAuth.authFetch(path, requestOptions)
+    : await fetch(`${API_BASE}${path}`, {
+        ...requestOptions,
+        headers: {
+          ...headers,
+          ...(options.auth === false ? {} : getAuthHeaders()),
+        },
+      });
 
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
@@ -823,42 +828,46 @@ function syncAccountView(pointAccount) {
   setText("statTotalConsumedPoints", formatNumber(pointAccount.total_consumed_points));
 }
 
+function getWorkflowDisplayName(workflow) {
+  return window.ClientPortalWorkflowLabels?.getName(workflow.workflow_code) || workflow.workflow_name || workflow.workflow_code;
+}
+
+function getWorkflowHint(code) {
+  if (code === "WF-001") return "进入表单页填写提示词，执行完成后展示图片结果。";
+  if (code === "WF-003") return "上传外观图和内饰图，先按预估张数冻结，再按实际完成张数结算。";
+  return "先 register 预冻结，再由工作流 callback 结算。";
+}
+
 function renderWorkflows(workflows) {
   const workflowGrid = document.getElementById("workflowGrid");
   if (!workflowGrid) return;
   workflowGrid.innerHTML = workflows
-    .map(
-      (workflow) => `
+    .map((workflow) => {
+      const pointsText = workflow.base_points
+        ? `${workflow.base_points} 积分 / 次`
+        : (workflow.unit_points ? `${workflow.unit_points} 积分 / 张` : "-");
+
+      return `
         <article class="workflow-card">
           <div class="workflow-header">
             <div>
               <p class="eyebrow">${workflow.workflow_code}</p>
-              <h4>${workflow.workflow_name}</h4>
+              <h4>${getWorkflowDisplayName(workflow)}</h4>
             </div>
             <span class="workflow-status">${workflow.current_status}</span>
           </div>
           <p class="workflow-description">${workflow.description || "-"}</p>
           <div class="workflow-meta">
-            <p>计费模式: <span>${workflow.metering_mode}</span></p>
-            <p>计费口径: <span>${workflow.base_points ? `${workflow.base_points} 积分 / 次` : (workflow.unit_points ? `${workflow.unit_points} 积分 / 张` : '-')}</span></p>
+            <p>计费模式: <span>${workflow.metering_mode || "-"}</span></p>
+            <p>计费口径: <span>${pointsText}</span></p>
           </div>
           <div class="workflow-footer">
-            <p class="status-line">
-              ${
-                workflow.workflow_code === "WF-001"
-                  ? "进入表单页填写提示词，执行完成后展示图片结果。"
-                  : workflow.workflow_code === "WF-003"
-                    ? "上传外观图和内饰图，先按预估张数冻结，再按实际完成张数结算。"
-                    : "先 register 预冻结，再由工作流 callback 结算。"
-              }
-            </p>
-            <button class="primary-button" type="button" data-workflow-code="${workflow.workflow_code}">
-              进入
-            </button>
+            <p class="status-line">${getWorkflowHint(workflow.workflow_code)}</p>
+            <button class="primary-button" type="button" data-workflow-code="${workflow.workflow_code}">进入</button>
           </div>
         </article>
-      `,
-    )
+      `;
+    })
     .join("");
 }
 
@@ -1113,11 +1122,7 @@ function attachWorkflowButtons() {
           return;
         }
 
-        const token = getToken();
         const wf003Url = new URL(resolveWf003PortalUrl());
-        if (token) {
-          wf003Url.searchParams.set("token", token);
-        }
         window.open(wf003Url.toString(), "_blank", "noopener,noreferrer");
         button.disabled = false;
         button.textContent = originalText;
@@ -1125,25 +1130,14 @@ function attachWorkflowButtons() {
       }
 
       if (workflowCode === "WF-001") {
-        const token = getToken();
-        const pageName = "wf001.html";
-        const targetUrl = token
-          ? `./${pageName}?token=${encodeURIComponent(token)}`
-          : `./${pageName}`;
-        window.open(targetUrl, "_blank", "noopener,noreferrer");
+        window.open("./wf001.html", "_blank", "noopener,noreferrer");
         button.disabled = false;
         button.textContent = originalText;
         return;
       }
 
       if (workflowCode === "WF-002") {
-        const token = getToken();
-        if (!token) {
-          throw new Error("Missing auth token. Please log in before opening WF-002.");
-        }
-
         const wf002Url = new URL(resolveWf002PortalUrl());
-        wf002Url.searchParams.set("token", token);
         window.open(wf002Url.toString(), "_blank", "noopener,noreferrer");
         button.disabled = false;
         button.textContent = originalText;
@@ -1228,10 +1222,8 @@ function startAutoRefresh() {
 }
 
 async function bootstrap() {
-  if (!getToken()) {
-    redirectToLogin();
-    return;
-  }
+  await window.ClientPortalAuth?.ensureAuthenticated();
+  const hasWorkflowGrid = Boolean(document.getElementById("workflowGrid"));
 
   // renderApiContracts();
   syncAccountView(fallbackPointAccount);
@@ -1242,33 +1234,39 @@ async function bootstrap() {
   attachStatClicks();
 
   try {
-    const [currentUser, pointAccount, workflows, workflowRuns] = await Promise.all([
+    const [currentUser, pointAccount, workflowRuns, workflows] = await Promise.all([
       requestJson("/me"),
       requestJson("/api/v1/point-accounts/me"),
-      requestJson("/api/v1/workflows"),
       requestJson("/api/v1/workflow-runs"),
+      hasWorkflowGrid ? requestJson("/api/v1/workflows") : Promise.resolve([]),
     ]);
 
     latestWorkflowRuns = workflowRuns;
     syncAccountView(pointAccount);
     seedProfileFromAccount(currentUser);
-    renderWorkflows(workflows);
+    if (hasWorkflowGrid) {
+      renderWorkflows(workflows);
+    }
     renderRecords(workflowRuns);
     renderLedgers(workflowRuns);
     renderConnectionState(`账号 ${pointAccount.username || pointAccount.user_id} 已连接中台`, false);
     attachRecordFilter(workflowRuns);
-    attachWorkflowButtons();
-    attachWf003AccessModalControls();
+    if (hasWorkflowGrid) {
+      attachWorkflowButtons();
+      attachWf003AccessModalControls();
+    }
     attachStatClicks();
     startAutoRefresh();
   } catch (error) {
     if (error.message === "登录已过期，请重新登录" || error.message === "请先登录") {
       return;
     }
-    renderWorkflows([]);
+    if (hasWorkflowGrid) {
+      renderWorkflows([]);
+    }
     renderConnectionState(error.message, true);
     console.error(error);
-    alert(`中台数据加载失败: ${error.message}\n请确认已登录、NestJS 已启动，并且 token 仍然有效。`);
+    alert(`中台数据加载失败: ${error.message}`);
   }
 }
 

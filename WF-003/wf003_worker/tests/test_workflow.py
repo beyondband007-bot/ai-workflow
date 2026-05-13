@@ -43,6 +43,7 @@ def base_body(**overrides):
 @pytest.mark.parametrize(
     ("count", "expected"),
     [
+        (0, []),
         (1, [[1]]),
         (2, [[1, 2]]),
         (3, [[1, 2, 3]]),
@@ -71,9 +72,19 @@ def test_normalize_submission_and_task_count():
     assert [task.type for task in tasks] == ["exterior", "exterior", "exterior", "interior", "interior"]
 
 
+def test_normalize_submission_allows_exterior_only():
+    submission = normalize_submission(base_body(interior_images=[]), settings())
+
+    assert submission.interior_images == []
+    assert submission.interior_groups == []
+    assert submission.expected_tasks == 1
+    tasks = build_task_items(submission)
+    assert [task.type for task in tasks] == ["exterior"]
+
+
 @pytest.mark.parametrize(
     "field",
-    ["car_name", "exterior_images", "interior_images", "feishu_app_id", "feishu_id", "callback_url"],
+    ["car_name", "exterior_images", "feishu_app_id", "feishu_id", "callback_url"],
 )
 def test_normalize_submission_required_fields(field):
     body = base_body()

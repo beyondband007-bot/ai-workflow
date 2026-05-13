@@ -9,7 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { sign } from 'jsonwebtoken';
-import { randomUUID } from 'node:crypto';
+import type { SignOptions } from 'jsonwebtoken';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { basename, extname, resolve } from 'node:path';
 import { Repository } from 'typeorm';
@@ -122,9 +123,73 @@ export class AuthService {
     user.lastLoginAt = new Date();
     await this.usersRepository.save(user);
 
+    return this.createTokenPair(user.id, user.email);
+  }
+
+  async refresh(refreshToken: string) {
+    const tokenHash = this.hashRefreshToken(refreshToken);
+    const [session] = await this.usersRepository.query(
+      `
+        SELECT
+          rt.token_hash,
+          rt.user_id,
+          rt.expires_at,
+          rt.revoked_at,
+          u.email,
+          u.is_active
+        FROM auth_refresh_tokens rt
+        INNER JOIN users u ON u.id = rt.user_id
+        WHERE rt.token_hash = ?
+        LIMIT 1
+      `,
+      [tokenHash],
+    );
+
+    if (!session || session.revoked_at || new Date(session.expires_at).getTime() <= Date.now()) {
+      throw new UnauthorizedException('Refresh token is invalid or expired');
+    }
+
+    if (!session.is_active) {
+      throw new ForbiddenException('Account is disabled');
+    }
+
+    const nextRefreshToken = this.createRefreshToken();
+    const nextRefreshHash = this.hashRefreshToken(nextRefreshToken);
+    const expiresAt = this.createRefreshExpiresAt();
+
+    await this.usersRepository.query(
+      `
+        UPDATE auth_refresh_tokens
+        SET revoked_at = NOW(), replaced_by_token_hash = ?, last_used_at = NOW()
+        WHERE token_hash = ?
+      `,
+      [nextRefreshHash, tokenHash],
+    );
+
+    await this.storeRefreshToken(Number(session.user_id), nextRefreshHash, expiresAt);
+
     return {
-      access_token: this.createAccessToken(user.id, user.email),
+      access_token: this.createAccessToken(Number(session.user_id), String(session.email)),
+      refresh_token: nextRefreshToken,
+      refresh_expires_at: expiresAt,
     };
+  }
+
+  async logout(refreshToken: string) {
+    if (!refreshToken) {
+      return { success: true };
+    }
+
+    await this.usersRepository.query(
+      `
+        UPDATE auth_refresh_tokens
+        SET revoked_at = COALESCE(revoked_at, NOW()), last_used_at = NOW()
+        WHERE token_hash = ?
+      `,
+      [this.hashRefreshToken(refreshToken)],
+    );
+
+    return { success: true };
   }
 
   async getCurrentUser(userId: number) {
@@ -231,6 +296,7 @@ export class AuthService {
 
   private createAccessToken(userId: number, email: string) {
     const secret = this.configService.getOrThrow<string>('JWT_SECRET');
+    const expiresIn = this.configService.get<string>('ACCESS_TOKEN_TTL', '15m') as SignOptions['expiresIn'];
 
     return sign(
       {
@@ -240,8 +306,52 @@ export class AuthService {
       secret,
       {
         algorithm: 'HS256',
-        expiresIn: '1d',
+        expiresIn,
       },
+    );
+  }
+
+  private async createTokenPair(userId: number, email: string) {
+    const refreshToken = this.createRefreshToken();
+    const refreshExpiresAt = this.createRefreshExpiresAt();
+    await this.storeRefreshToken(
+      userId,
+      this.hashRefreshToken(refreshToken),
+      refreshExpiresAt,
+    );
+
+    return {
+      access_token: this.createAccessToken(userId, email),
+      refresh_token: refreshToken,
+      refresh_expires_at: refreshExpiresAt,
+    };
+  }
+
+  private createRefreshToken() {
+    return randomBytes(32).toString('base64url');
+  }
+
+  private hashRefreshToken(token: string) {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private createRefreshExpiresAt() {
+    const days = Number(this.configService.get<number>('REFRESH_TOKEN_DAYS', 30));
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + (Number.isFinite(days) && days > 0 ? days : 30));
+    return expiresAt;
+  }
+
+  private async storeRefreshToken(userId: number, tokenHash: string, expiresAt: Date) {
+    await this.usersRepository.query(
+      `
+        INSERT INTO auth_refresh_tokens (
+          token_hash,
+          user_id,
+          expires_at
+        ) VALUES (?, ?, ?)
+      `,
+      [tokenHash, userId, expiresAt],
     );
   }
 

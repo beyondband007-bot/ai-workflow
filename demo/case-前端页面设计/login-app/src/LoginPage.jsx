@@ -4,59 +4,9 @@ import wikiLogo1 from './logo1.png';
 const API_BASE = process.env.REACT_APP_API_BASE || '';
 const PORTAL_BASE =
   process.env.REACT_APP_PORTAL_BASE || '/portal/index.html';
-const TOKEN_KEY = 'auth_demo_token';
-const LOGGED_OUT_TOKEN_KEY = 'auth_demo_logged_out_token';
-const LOGOUT_AT_KEY = 'auth_demo_logout_at';
-
-function decodeJwtPayload(token) {
-  if (!token || typeof token !== 'string') {
-    return null;
-  }
-
-  const parts = token.split('.');
-  if (parts.length !== 3) {
-    return null;
-  }
-
-  const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
-
-  try {
-    return JSON.parse(window.atob(padded));
-  } catch {
-    return null;
-  }
-}
-
-function isTokenExpired(token) {
-  const payload = decodeJwtPayload(token);
-  if (!payload || typeof payload.exp !== 'number') {
-    return null;
-  }
-
-  return Date.now() >= payload.exp * 1000;
-}
-
-function isLoggedOutToken(token) {
-  return Boolean(token && window.localStorage.getItem(LOGGED_OUT_TOKEN_KEY) === tokenFingerprint(token));
-}
-
-function tokenFingerprint(token) {
-  let hash = 2166136261;
-  for (let index = 0; index < token.length; index += 1) {
-    hash ^= token.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return `${token.length}:${hash >>> 0}`;
-}
-
-function clearLogoutState() {
-  window.localStorage.removeItem(LOGGED_OUT_TOKEN_KEY);
-  window.localStorage.removeItem(LOGOUT_AT_KEY);
-}
-
 async function requestJson(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
@@ -71,9 +21,24 @@ async function requestJson(path, options = {}) {
   return data;
 }
 
-function redirectToPortal(token) {
-  const target = new URL(PORTAL_BASE, window.location.origin);
-  target.searchParams.set('token', token);
+function resolvePostLoginTarget() {
+  const redirect = new URLSearchParams(window.location.search).get('redirect');
+  if (redirect) {
+    try {
+      const target = new URL(redirect, window.location.origin);
+      if (target.origin === window.location.origin) {
+        return target;
+      }
+    } catch {
+      // Fall back to the portal home when the redirect is malformed.
+    }
+  }
+
+  return new URL(PORTAL_BASE, window.location.origin);
+}
+
+function redirectToPortal() {
+  const target = resolvePostLoginTarget();
   window.location.href = target.toString();
 }
 
@@ -295,10 +260,7 @@ export default function LoginPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const fetchCurrentUser = async (
-    token = window.localStorage.getItem(TOKEN_KEY),
-    options = {},
-  ) => {
+  const fetchCurrentUser = async (token, options = {}) => {
     const { silent = false } = options;
     if (!token) {
       setCurrentUser(null);
@@ -317,7 +279,6 @@ export default function LoginPage() {
       }
       return me;
     } catch (error) {
-      window.localStorage.removeItem(TOKEN_KEY);
       setCurrentUser(null);
       if (!silent) {
         setStatus('err');
@@ -328,35 +289,19 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    const token = window.localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      return;
-    }
-
-    if (isLoggedOutToken(token)) {
-      window.localStorage.removeItem(TOKEN_KEY);
-      return;
-    }
-
-    const expired = isTokenExpired(token);
-    if (expired === true) {
-      window.localStorage.removeItem(TOKEN_KEY);
-      return;
-    }
-
-    if (expired === false) {
-      redirectToPortal(token);
-      return;
-    }
-
     let active = true;
-    const autoRedirectIfTokenValid = async () => {
-      const user = await fetchCurrentUser(token, { silent: true });
-      if (active && user) {
-        redirectToPortal(token);
+    const autoRedirectIfRefreshCookieValid = async () => {
+      try {
+        const result = await requestJson('/auth/refresh', { method: 'POST' });
+        const user = await fetchCurrentUser(result.access_token, { silent: true });
+        if (active && user) {
+          redirectToPortal();
+        }
+      } catch {
+        setCurrentUser(null);
       }
     };
-    autoRedirectIfTokenValid();
+    autoRedirectIfRefreshCookieValid();
 
     return () => {
       active = false;
@@ -382,10 +327,8 @@ export default function LoginPage() {
           }),
         });
 
-        clearLogoutState();
-        window.localStorage.setItem(TOKEN_KEY, result.access_token);
         await fetchCurrentUser(result.access_token);
-        redirectToPortal(result.access_token);
+        redirectToPortal();
       } else {
         const result = await requestJson('/register', {
           method: 'POST',

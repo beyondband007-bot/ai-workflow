@@ -36,17 +36,6 @@ function getToken() {
     return window.ClientPortalAuth.readToken();
   }
 
-  const urlToken = new URLSearchParams(window.location.search).get("token");
-  if (urlToken) {
-    window.localStorage.setItem(TOKEN_KEY, urlToken);
-    return urlToken;
-  }
-
-  const localToken = window.localStorage.getItem(TOKEN_KEY);
-  if (localToken) {
-    return localToken;
-  }
-
   return null;
 }
 
@@ -84,11 +73,19 @@ function buildHeaders() {
 }
 
 async function executeWorkflow(payload) {
-  const response = await fetch(`${API_BASE}/api/v1/workflows/WF-002/webhook-execute`, {
+  const requestOptions = {
     method: "POST",
-    headers: buildHeaders(),
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(payload),
-  });
+  };
+  const response = window.ClientPortalAuth
+    ? await window.ClientPortalAuth.authFetch("/api/v1/workflows/WF-002/webhook-execute", requestOptions)
+    : await fetch(`${API_BASE}/api/v1/workflows/WF-002/webhook-execute`, {
+        ...requestOptions,
+        headers: buildHeaders(),
+      });
 
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
@@ -174,11 +171,7 @@ function buildBackLink() {
   if (!backLink) {
     return;
   }
-
-  const token = window.localStorage.getItem(TOKEN_KEY);
-  backLink.href = token
-    ? `./index.html?token=${encodeURIComponent(token)}`
-    : "./index.html";
+  backLink.href = "./index.html";
 }
 
 function bindDemoPrompt() {
@@ -241,12 +234,9 @@ function bindForm() {
   });
 }
 
-function bootstrap() {
+async function bootstrap() {
   try {
-    if (!getToken()) {
-      redirectToLogin();
-      return;
-    }
+    await window.ClientPortalAuth?.ensureAuthenticated();
     buildBackLink();
     bindDemoPrompt();
     bindForm();

@@ -226,9 +226,36 @@
 		</form>
 	</div>
 </div>
-<script src="./auth-state.js?v=20260511f"></script>
+<div class="wf003-access-modal" id="wf003AccessModal" aria-hidden="true">
+	<div class="wf003-access-modal-backdrop" data-wf003-access-close="true"></div>
+	<div class="wf003-access-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="wf003AccessModalTitle">
+		<button class="wf003-access-modal-close" id="wf003AccessModalClose" type="button" aria-label="关闭">×</button>
+		<div class="wf003-access-modal-icon" aria-hidden="true">🔒</div>
+		<div class="wf003-access-modal-head">
+			<h3 id="wf003AccessModalTitle">暂未开通 WF-003 权限</h3>
+		</div>
+		<div class="wf003-access-modal-body">
+			<p class="wf003-access-modal-desc">跨境电商图生图需要先由商务开通权限。请联系商务完成配置后再进入。</p>
+			<div class="wf003-access-contact">
+				<div class="wf003-access-contact-item">
+					<span class="wf003-access-contact-label">电话</span>
+					<strong class="wf003-access-contact-value" id="wf003ContactPhone">--</strong>
+				</div>
+				<div class="wf003-access-contact-item">
+					<span class="wf003-access-contact-label">微信</span>
+					<strong class="wf003-access-contact-value" id="wf003ContactWechat">--</strong>
+				</div>
+			</div>
+			<div class="wf003-access-modal-actions">
+				<button class="secondary-button" id="wf003AccessModalCancel" type="button">稍后再说</button>
+				<button class="primary-button" id="wf003AccessModalConfirm" type="button">联系商务</button>
+			</div>
+		</div>
+	</div>
+</div>
+<script src="./auth-state.js?v=20260513a"></script>
 <script src="./workflow-labels.js?v=20260512a"></script>
-<script src="./app.js?v=20260512d"></script>
+<script src="./app.js?v=20260513a"></script>
 <script>
 (() => {
 	const THEME_KEY = "client_portal_theme";
@@ -260,186 +287,6 @@
 	});
 })();
 </script>
-<script>
-(() => {
-  const API_BASE = (() => {
-    const { protocol, hostname, port } = window.location;
-    if (protocol === "file:") return "http://127.0.0.1:3002";
-    if (port === "3003") return `${protocol}//${hostname}:3002`;
-    return "";
-  })();
 
-  function getToken() {
-    if (window.ClientPortalAuth) return window.ClientPortalAuth.readToken();
-    const urlToken = new URLSearchParams(window.location.search).get("token");
-    if (urlToken) { window.localStorage.setItem("auth_demo_token", urlToken); return urlToken; }
-    return window.localStorage.getItem("auth_demo_token") || "";
-  }
-
-  function getAuthHeaders() {
-    const token = getToken();
-    if (!token) throw new Error("请先登录");
-    return { Authorization: `Bearer ${token}` };
-  }
-
-  async function requestJson(path, options = {}) {
-    const response = await fetch(`${API_BASE}${path}`, {
-      headers: { "Content-Type": "application/json", ...getAuthHeaders(), ...(options.headers || {}) },
-      ...options,
-    });
-    const text = await response.text();
-    const data = text ? JSON.parse(text) : null;
-    if (!response.ok) throw new Error(data?.message || data?.detail || `请求失败: ${response.status}`);
-    return data;
-  }
-
-  function resolveWf003PortalUrl() {
-    const { protocol } = window.location;
-    if (protocol === "file:") return "http://127.0.0.1:8080/portal/wf003/";
-    return `${window.location.origin}/portal/wf003/`;
-  }
-
-  function resolveWf002PortalUrl() {
-    const { protocol, hostname, port } = window.location;
-    if (protocol === "file:") return "http://127.0.0.1:8080/portal/wf002/";
-    if (port === "3003" || port === "8080") return `${protocol}//${hostname}:8080/portal/wf002/`;
-    return `${window.location.origin}/portal/wf002/`;
-  }
-
-  function formatNumber(value) {
-    return Number(value ?? 0).toLocaleString("zh-CN");
-  }
-
-  function renderWorkflows(workflows) {
-    const grid = document.getElementById("workflowGrid");
-    if (!workflows || workflows.length === 0) {
-      grid.innerHTML = `
-        <div class="workflow-empty">
-          <div class="workflow-empty-icon">📦</div>
-          <h4>暂无可用工作流</h4>
-          <p>当前没有可访问的工作流，请联系运营开通权限。</p>
-        </div>
-      `;
-      return;
-    }
-    grid.innerHTML = workflows.map((w) => `
-      <article class="workflow-card">
-        <div class="workflow-header">
-          <div>
-            <p class="eyebrow">${w.workflow_code}</p>
-            <h4>${w.workflow_name}</h4>
-          </div>
-          <span class="workflow-status">${w.current_status}</span>
-        </div>
-        <p class="workflow-description">${w.description || "-"}</p>
-        <div class="workflow-meta">
-          <p>计费模式: <span>${w.metering_mode}</span></p>
-          <p>计费口径: <span>${w.base_points ? `${w.base_points} 积分 / 次` : (w.unit_points ? `${w.unit_points} 积分 / 张` : '-')}</span></p>
-        </div>
-        <div class="workflow-footer">
-          <p class="status-line">${w.workflow_code === "WF-001" ? "进入表单页填写提示词，执行完成后展示图片结果。" : w.workflow_code === "WF-003" ? "上传外观图和内饰图，先按预估张数冻结，再按实际完成张数结算。" : "先 register 预冻结，再由工作流 callback 结算。"}</p>
-          <button class="primary-button" type="button" data-workflow-code="${w.workflow_code}">进入</button>
-        </div>
-      </article>
-    `).join("");
-  }
-
-  function openModal(accessData) {
-    const modal = document.getElementById("wf003AccessModal");
-    const bc = accessData?.business_contact || {};
-    const phoneEl = document.getElementById("wf003ContactPhone");
-    const wechatEl = document.getElementById("wf003ContactWechat");
-    if (phoneEl) phoneEl.textContent = bc.phone || "13800138000";
-    if (wechatEl) wechatEl.textContent = bc.wechat || "商务微信";
-    modal.classList.add("is-open");
-    modal.setAttribute("aria-hidden", "false");
-  }
-
-  function closeModal() {
-    const modal = document.getElementById("wf003AccessModal");
-    modal.classList.remove("is-open");
-    modal.setAttribute("aria-hidden", "true");
-  }
-
-  function attachModalControls() {
-    document.getElementById("wf003AccessModalClose")?.addEventListener("click", closeModal);
-    document.getElementById("wf003AccessModalCancel")?.addEventListener("click", closeModal);
-    document.querySelector("[data-wf003-access-close='true']")?.addEventListener("click", closeModal);
-    document.getElementById("wf003AccessModalConfirm")?.addEventListener("click", () => {
-      closeModal();
-      const phone = document.getElementById("wf003ContactPhone")?.textContent?.trim();
-      if (phone && phone !== "--") window.location.href = `tel:${phone}`;
-      else alert("请联系商务开通 WF-003 权限");
-    });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
-  }
-
-  function attachButtons() {
-    const grid = document.getElementById("workflowGrid");
-    if (!grid) return;
-    grid.addEventListener("click", async (e) => {
-      const button = e.target.closest("[data-workflow-code]");
-      if (!button) return;
-      if (button.dataset.workflowOpening === "true") return;
-      button.dataset.workflowOpening = "true";
-      const code = button.dataset.workflowCode;
-      const originalText = button.textContent;
-      button.disabled = true;
-      button.textContent = "处理中...";
-      try {
-        if (code === "WF-003") {
-          const access = await requestJson("/api/v1/wf003/access");
-          if (!access?.has_access) { openModal(access); button.disabled = false; button.textContent = originalText; return; }
-          const url = new URL(resolveWf003PortalUrl());
-          url.searchParams.set("token", getToken());
-          window.open(url.toString(), "_blank", "noopener,noreferrer");
-          button.disabled = false; button.textContent = originalText; return;
-        }
-        if (code === "WF-001") {
-          const token = getToken();
-          window.open(token ? `./wf001.html?token=${encodeURIComponent(token)}` : "./wf001.html", "_blank", "noopener,noreferrer");
-          button.disabled = false; button.textContent = originalText; return;
-        }
-        if (code === "WF-002") {
-          const token = getToken();
-          if (!token) throw new Error("请先登录");
-          const url = new URL(resolveWf002PortalUrl());
-          url.searchParams.set("token", token);
-          window.open(url.toString(), "_blank", "noopener,noreferrer");
-          button.disabled = false; button.textContent = originalText; return;
-        }
-        const result = await requestJson("/api/v1/workflow-runs/register", {
-          method: "POST",
-          body: JSON.stringify({ workflow_code: code, client_request_id: `portal_${code}_${Date.now()}`, request_payload_summary: { source: "client_portal" } }),
-        });
-        alert(`登记成功
-run_id: ${result.run_id}
-冻结积分: ${result.estimated_frozen_points}`);
-        window.location.reload();
-      } catch (err) {
-        alert(`执行失败: ${err.message}`);
-        button.disabled = false; button.textContent = originalText;
-      } finally {
-        delete button.dataset.workflowOpening;
-      }
-    });
-  }
-
-  async function bootstrap() {
-    if (!getToken()) { window.location.replace("./auth/?mode=login"); return; }
-    attachModalControls();
-    try {
-      const workflows = await requestJson("/api/v1/workflows");
-      renderWorkflows(workflows);
-      attachButtons();
-    } catch (err) {
-      console.error(err);
-      alert(`加载失败: ${err.message}`);
-    }
-  }
-
-  bootstrap();
-})();
-</script>
 </body>
 </html>
