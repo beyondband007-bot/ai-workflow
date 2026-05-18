@@ -24,6 +24,11 @@ FROM ${NGINX_BASE_IMAGE}
 
 COPY deploy/nginx/ai-workflow.docker.conf /etc/nginx/conf.d/default.conf
 COPY demo/fristlog.html /srv/landing/fristlog.html
+COPY demo/favicon.ico /srv/landing/favicon.ico
+COPY demo/logo.png /srv/landing/logo.png
 COPY client-portal /srv/portal
 COPY --from=auth-build /build/auth/build /srv/auth
 COPY --from=wf002-build /build/wf002/apps/web/dist /srv/wf002
+RUN set -eu; \
+    latest_wf002_js="$(find /srv/wf002/assets -maxdepth 1 -type f -name 'index-*.js' | sort | tail -n 1)"; \
+    cp "$latest_wf002_js" /srv/wf002/assets/index-DvQbKf2n.js

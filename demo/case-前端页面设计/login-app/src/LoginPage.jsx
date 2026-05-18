@@ -4,6 +4,8 @@ import wikiLogo1 from './logo1.png';
 const API_BASE = process.env.REACT_APP_API_BASE || '';
 const PORTAL_BASE =
   process.env.REACT_APP_PORTAL_BASE || '/portal/index.html';
+const AUTH_HANDOFF_KEY = '__client_portal_auth_handoff__';
+
 async function requestJson(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     credentials: 'include',
@@ -37,7 +39,25 @@ function resolvePostLoginTarget() {
   return new URL(PORTAL_BASE, window.location.origin);
 }
 
-function redirectToPortal() {
+function writeAuthHandoff(accessToken) {
+  if (!accessToken) {
+    return;
+  }
+
+  const payload = {
+    accessToken,
+    issuedAt: Date.now(),
+  };
+
+  try {
+    window.name = `${AUTH_HANDOFF_KEY}${JSON.stringify(payload)}`;
+  } catch {
+    window.name = '';
+  }
+}
+
+function redirectToPortal(accessToken) {
+  writeAuthHandoff(accessToken);
   const target = resolvePostLoginTarget();
   window.location.href = target.toString();
 }
@@ -295,7 +315,7 @@ export default function LoginPage() {
         const result = await requestJson('/auth/refresh', { method: 'POST' });
         const user = await fetchCurrentUser(result.access_token, { silent: true });
         if (active && user) {
-          redirectToPortal();
+          redirectToPortal(result.access_token);
         }
       } catch {
         setCurrentUser(null);
@@ -328,7 +348,7 @@ export default function LoginPage() {
         });
 
         await fetchCurrentUser(result.access_token);
-        redirectToPortal();
+        redirectToPortal(result.access_token);
       } else {
         const result = await requestJson('/register', {
           method: 'POST',

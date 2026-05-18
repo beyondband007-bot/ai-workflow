@@ -1401,7 +1401,6 @@ function App() {
   const [job, setJob] = useState<GenerationJob | null>(null);
   const [history, setHistory] = useState<GenerationJob[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [historyError, setHistoryError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
@@ -1632,14 +1631,18 @@ function App() {
 
   async function fetchHistory() {
     setIsHistoryLoading(true);
-    setHistoryError(null);
     try {
-      const res = await fetch(toAppPath("/api/generations?limit=20"));
-      if (!res.ok) throw new Error(`读取历史失败：${res.status}`);
+      const res = await fetch(toAppPath("/api/generations?limit=10"));
+      if (!res.ok) {
+        console.warn(`WF-002 history request failed: ${res.status}`);
+        setHistory([]);
+        return;
+      }
       const data = (await res.json()) as HistoryResponse;
       setHistory(data.jobs.filter(isWf002Job));
     } catch (caught) {
-      setHistoryError(caught instanceof Error ? caught.message : String(caught));
+      console.warn("WF-002 history request failed", caught);
+      setHistory([]);
     } finally {
       setIsHistoryLoading(false);
     }
@@ -1801,7 +1804,6 @@ function App() {
     setPreviewCase(null);
     setCurrentInspiration(null);
     setError(null);
-    setHistoryError(null);
   }
 
   function applyCreativeInspiration() {
@@ -1828,7 +1830,6 @@ function App() {
     setJob(null);
     setPreviewCase(null);
     setError(null);
-    setHistoryError(null);
   }
 
   function startNewProject() {
@@ -1922,8 +1923,6 @@ function App() {
               <h2>最近生成</h2>
             </div>
           </div>
-
-          {historyError && <p className="error-message">{historyError}</p>}
 
           {history.length === 0 ? (
             <div className="history-empty">

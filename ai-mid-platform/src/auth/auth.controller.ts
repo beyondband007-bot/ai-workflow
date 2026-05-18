@@ -30,6 +30,7 @@ type UploadedAvatarFile = {
 @Controller()
 export class AuthController {
   private readonly refreshCookieName = 'client_portal_refresh';
+  private readonly accessHandoffCookieName = 'client_portal_access_handoff';
 
   constructor(
     private readonly authService: AuthService,
@@ -60,6 +61,7 @@ export class AuthController {
   ) {
     const result = await this.authService.login(body);
     this.setRefreshCookie(response, request, result.refresh_token, result.refresh_expires_at);
+    this.setAccessHandoffCookie(response, request, result.access_token);
     return {
       access_token: result.access_token,
       token_type: 'bearer',
@@ -75,6 +77,7 @@ export class AuthController {
     const refreshToken = this.readRefreshCookie(request);
     const result = await this.authService.refresh(refreshToken);
     this.setRefreshCookie(response, request, result.refresh_token, result.refresh_expires_at);
+    this.setAccessHandoffCookie(response, request, result.access_token);
     return {
       access_token: result.access_token,
       token_type: 'bearer',
@@ -89,6 +92,7 @@ export class AuthController {
   ) {
     await this.authService.logout(this.readRefreshCookie(request, false));
     this.clearRefreshCookie(response, request);
+    this.clearAccessHandoffCookie(response, request);
     return { success: true };
   }
 
@@ -179,13 +183,39 @@ export class AuthController {
     });
   }
 
+  private setAccessHandoffCookie(
+    response: Response,
+    request: Request,
+    accessToken: string,
+  ) {
+    response.cookie(this.accessHandoffCookieName, accessToken, {
+      httpOnly: false,
+      secure: this.shouldUseSecureCookie(request),
+      sameSite: 'lax',
+      path: '/portal/',
+      maxAge: 60 * 1000,
+    });
+  }
+
+  private clearAccessHandoffCookie(response: Response, request: Request) {
+    response.clearCookie(this.accessHandoffCookieName, {
+      httpOnly: false,
+      secure: this.shouldUseSecureCookie(request),
+      sameSite: 'lax',
+      path: '/portal/',
+    });
+  }
+
   private shouldUseSecureCookie(request: Request) {
     const configured = this.configService.get<string>('REFRESH_COOKIE_SECURE');
     if (configured) {
       return configured.toLowerCase() === 'true';
     }
 
-    const forwardedProto = String(request.headers['x-forwarded-proto'] || '').toLowerCase();
-    return forwardedProto === 'https' || request.secure || process.env.NODE_ENV === 'production';
+    const forwardedProto = String(request.headers['x-forwarded-proto'] || '')
+      .split(',')[0]
+      .trim()
+      .toLowerCase();
+    return forwardedProto === 'https' || request.secure;
   }
 }

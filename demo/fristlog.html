@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>鲸创科技 - 首页</title>
+  <title>鲸创Token积分中台 - 首页</title>
   <link rel="icon" type="image/x-icon" href="./favicon.ico">
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <style>
@@ -96,6 +96,15 @@
       line-height: 1;
     }
 
+    .brand h2 img {
+      width: 200px;
+      min-width: 200px;
+      max-width: 200px;
+      height: auto;
+      display: block;
+      flex-shrink: 0;
+    }
+
     .brand p {
       margin-top: 6px;
       font-size: 10px;
@@ -134,7 +143,7 @@
     }
 
     .hero {
-      min-height: calc(100vh - 132px);
+      min-height: calc(100vh - 60px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -159,16 +168,18 @@
       color: rgba(197, 236, 255, 0.9);
       background: rgba(10, 26, 47, 0.38);
       backdrop-filter: blur(6px);
+      display: none;
     }
 
     .logo-title {
-      font-size: clamp(34px, 4.2vw, 74px);
+      font-size: clamp(30px, 4.2vw, 74px);
       color: #c9f2ff;
       line-height: 1.06;
       letter-spacing: 1px;
       font-weight: 600;
       margin-bottom: 32px;
       text-shadow: 0 0 18px rgba(69, 210, 255, 0.32);
+      text-transform: uppercase;
     }
 
     .sub-logo {
@@ -185,6 +196,7 @@
       margin-bottom: 32px;
       color: #eaf5ff;
       font-weight: 600;
+      text-transform: uppercase;
     }
 
     .en-title {
@@ -196,7 +208,7 @@
     }
 
     .desc {
-      max-width: 600px;
+      max-width: 710px;
       margin: 0 auto;
       color: rgba(255, 255, 255, 0.58);
       font-size: clamp(16px, 1.15vw, 22px);
@@ -245,6 +257,7 @@
       letter-spacing: 2px;
       color: rgba(255, 255, 255, 0.43);
       text-transform: uppercase;
+      display: none;
     }
 
     .arrow {
@@ -253,6 +266,7 @@
       color: rgba(255, 255, 255, 0.5);
       animation: bounce 1.6s infinite ease-in-out;
       display: inline-block;
+      display: none;
     }
 
     @keyframes bounce {
@@ -269,8 +283,16 @@
       .brand h2 {
         font-size: 22px;
       }
+      .brand h2 img {
+        width: 160px;
+        min-width: 160px;
+        max-width: 160px;
+        height: auto;
+        display: block;
+        flex-shrink: 0;
+      }
       .nav-btn {
-        font-size: 14px;
+        font-size: 12px;
         padding: 10px 20px;
       }
       .desc {
@@ -288,16 +310,18 @@
       }
       .nav-actions {
         margin-left: auto;
-      }
-      .hero {
-        min-height: calc(100vh - 170px);
+        display: none;
       }
       .sub-logo {
         letter-spacing: 3px;
         margin-bottom: 22px;
       }
+      .logo-title {
+        margin-bottom: 16px;
+      }
       .main-title {
-        font-size: clamp(30px, 8.2vw, 48px);
+        font-size: clamp(16px, 4.2vw, 32px);
+        margin-bottom: 24px;
       }
       .desc {
         font-size: 15px;
@@ -323,7 +347,7 @@
 
     <header class="nav">
       <div class="brand">
-        <h2>鲸创科技</h2>
+        <h2><img src="./logo.png" alt="logo" /></h2>
       </div>
       <div class="nav-actions">
         <a class="nav-btn" href="/auth/?mode=register">立即注册</a>
@@ -333,10 +357,10 @@
 
     <main class="hero">
       <div class="hero-inner">
-        <div class="badge">jingchuang Technology</div>
-        <h1 class="logo-title">鲸创科技</h1>
-        <h2 class="main-title">精准AI赋能，定义极致增效</h2>
-        <p class="desc">精准AI赋能，定义极致增效，驱动选题创作转化全链路协同，<br />让每次决策更快更准更稳，持续放大品牌增长势能。</p>
+        <div class="badge">Getrue Technology</div>
+        <h1 class="logo-title">鲸创Token积分中台</h1>
+        <h2 class="main-title">一站式聚合管理所有AI应用Token消耗</h2>
+        <p class="desc">统一管控全链路AI应用Token消耗，集中兑换、统一计量、透明对账，让AI创作成本可控、效率翻倍，为业务增长减负提效。</p>
         <div class="actions">
           <a href="/auth/?mode=register" class="btn primary">立刻体验</a>
           <a href="/auth/?mode=login" class="btn secondary">了解详情</a>

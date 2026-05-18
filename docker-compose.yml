@@ -29,7 +29,7 @@ services:
     environment:
       CLIENT_PORTAL_AVATAR_DIR: /app/client-portal/avatar
       WF_003_WEBHOOK_URL: http://wf003-worker:3013/webhook/wf003-kie-submit
-      WF_003_CALLBACK_BASE_URL: http://app:3002
+      WF_003_CALLBACK_BASE_URL: https://jc.geture.cn
       ALIPAY_PRIVATE_KEY_PATH: /run/secrets/payment-keys/app_private_key.pem
       ALIPAY_PUBLIC_KEY_PATH: /run/secrets/payment-keys/alipay_public_key.pem
     depends_on:
@@ -58,7 +58,7 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./client-portal/avatar:/srv/portal/avatar
+      - ./client-portal:/srv/portal:ro
 
   wf002-api:
     image: ${WF002_NODE_BASE_IMAGE:-docker.m.daocloud.io/library/node:24-alpine}
@@ -119,8 +119,6 @@ services:
       WF_003_WEBHOOK_URL: ""
       WF_003_MIDDLE_PLATFORM_URL: http://app:3002/api/v1/workflows/WF-003/json-execute
       CAR_EXPORT_WEBHOOK_URL: ${CAR_EXPORT_WEBHOOK_URL:-}
-    ports:
-      - "3001:3001"
 
 volumes:
   mysql_data:

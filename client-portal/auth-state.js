@@ -1,6 +1,9 @@
 (() => {
   const LEGACY_TOKEN_KEY = "auth_demo_token";
   const PROFILE_STORAGE_KEY = "client_portal_profile";
+  const AUTH_HANDOFF_KEY = "__client_portal_auth_handoff__";
+  const AUTH_HANDOFF_COOKIE_KEY = "client_portal_access_handoff";
+  const AUTH_HANDOFF_MAX_AGE_MS = 60 * 1000;
 
   let accessToken = "";
   let refreshPromise = null;
@@ -55,12 +58,59 @@
     clearLegacyTokenStorage();
   }
 
+  function consumeAuthHandoff() {
+    const handoff = String(window.name || "");
+    if (!handoff.startsWith(AUTH_HANDOFF_KEY)) {
+      return "";
+    }
+
+    window.name = "";
+
+    try {
+      const payload = JSON.parse(handoff.slice(AUTH_HANDOFF_KEY.length));
+      const token = String(payload?.accessToken || "");
+      const issuedAt = Number(payload?.issuedAt || 0);
+      if (!token || !issuedAt || Date.now() - issuedAt > AUTH_HANDOFF_MAX_AGE_MS) {
+        return "";
+      }
+      return token;
+    } catch {
+      return "";
+    }
+  }
+
+  function consumeAuthHandoffCookie() {
+    const cookies = String(document.cookie || "").split(";");
+    for (const part of cookies) {
+      const separatorIndex = part.indexOf("=");
+      if (separatorIndex < 0) {
+        continue;
+      }
+
+      const key = part.slice(0, separatorIndex).trim();
+      if (key !== AUTH_HANDOFF_COOKIE_KEY) {
+        continue;
+      }
+
+      const value = part.slice(separatorIndex + 1).trim();
+      const secureAttribute = window.location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `${AUTH_HANDOFF_COOKIE_KEY}=; Max-Age=0; path=/portal/; SameSite=Lax${secureAttribute}`;
+      return value ? decodeURIComponent(value) : "";
+    }
+
+    return "";
+  }
+
   function readToken() {
     return accessToken;
   }
 
   async function refreshAccessToken(options = {}) {
-    const { redirect = true } = options;
+    const {
+      redirect = true,
+      keepCurrentTokenOnFailure = false,
+    } = options;
+    const currentToken = accessToken;
 
     if (refreshPromise) {
       return refreshPromise;
@@ -85,9 +135,19 @@
         return accessToken;
       })
       .catch((error) => {
-        accessToken = "";
-        clearLegacyTokenStorage();
-        if (redirect) {
+        const shouldKeepCurrentToken =
+          keepCurrentTokenOnFailure &&
+          !redirect &&
+          Boolean(currentToken);
+
+        if (shouldKeepCurrentToken) {
+          accessToken = currentToken;
+        } else {
+          accessToken = "";
+          clearLegacyTokenStorage();
+        }
+
+        if (redirect && !shouldKeepCurrentToken) {
           window.location.replace(resolveAuthEntryUrl());
         }
         throw error;
@@ -169,5 +229,14 @@
   };
 
   clearLegacyTokenStorage();
-  refreshAccessToken({ redirect: true }).catch(() => {});
+  const handoffToken = consumeAuthHandoff() || consumeAuthHandoffCookie();
+  if (handoffToken) {
+    setAccessToken(handoffToken);
+    refreshAccessToken({
+      redirect: false,
+      keepCurrentTokenOnFailure: true,
+    }).catch(() => {});
+  } else {
+    refreshAccessToken({ redirect: true }).catch(() => {});
+  }
 })();

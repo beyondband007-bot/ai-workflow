@@ -20,7 +20,7 @@
 
 当前正式 webhook 地址：
 
-`https://n8n.deepsix.store/webhook/simple-prompt`
+`https://n8n.geture.cn/webhook/simple-prompt`
 
 ## 2. 前端如何手动接
 
@@ -93,7 +93,7 @@ fetch(`${API_BASE}/api/v1/workflows/WF-002/webhook-execute`, {
 当前 `WF_002` 相关配置：
 
 ```env
-WF_002_WEBHOOK_URL=https://n8n.deepsix.store/webhook/simple-prompt
+WF_002_WEBHOOK_URL=https://n8n.geture.cn/webhook/simple-prompt
 WF_002_WEBHOOK_TIMEOUT_MS=90000
 ```
 
@@ -236,7 +236,7 @@ return [{ json: { prompt } }];
 
 中台当前只调用正式地址：
 
-`https://n8n.deepsix.store/webhook/simple-prompt`
+`https://n8n.geture.cn/webhook/simple-prompt`
 
 如果你只在测试模式里验证成功，而正式工作流没激活或没更新，线上还是会失败。
 
@@ -262,7 +262,7 @@ return [{ json: { prompt } }];
 
 ```bash
 curl -ksS --max-time 120 \
-  -X POST 'https://n8n.deepsix.store/webhook/simple-prompt' \
+  -X POST 'https://n8n.geture.cn/webhook/simple-prompt' \
   -H 'Content-Type: application/json' \
   -d '{"prompt":"测试提示词"}'
 ```
@@ -283,7 +283,7 @@ curl -ksS --max-time 120 \
 
 打开：
 
-`https://gzl.wikigood.top/portal/wf002.html?token=你的token`
+`https://jc.geture.cn/portal/wf002.html?token=你的token`
 
 ## 7. 当前验证通过的结果
 

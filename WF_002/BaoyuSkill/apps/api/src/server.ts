@@ -1,7 +1,6 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { Prisma } from "@prisma/client";
 import { aspectRatios, providers, qualities, type Provider, type Quality } from "@baoyu-image-gen/core";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
@@ -30,6 +29,9 @@ const allowedMimeTypes = new Map([
   ["image/webp", ".webp"],
 ]);
 
+type JsonInput = string | number | boolean | null | JsonInput[] | { [key: string]: JsonInput };
+type ProjectDataInput = { [key: string]: JsonInput };
+
 type GenerationFields = {
   prompt: string;
   provider: Provider;
@@ -38,7 +40,7 @@ type GenerationFields = {
   quality: Quality | null;
   imageSize: string | null;
   size: string | null;
-  projectData: Prisma.InputJsonValue | null;
+  projectData: ProjectDataInput | null;
 };
 
 type SavedUpload = {
@@ -72,7 +74,7 @@ function normalizeOptional(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function normalizeProjectData(value: unknown): Prisma.InputJsonValue | null {
+function normalizeProjectData(value: unknown): ProjectDataInput | null {
   const raw = normalizeOptional(value);
   if (!raw) return null;
   if (raw.length > 20000) throw httpError(400, "projectData is too large");
@@ -82,7 +84,7 @@ function normalizeProjectData(value: unknown): Prisma.InputJsonValue | null {
     if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
       throw httpError(400, "projectData must be a JSON object");
     }
-    return parsed as Prisma.InputJsonValue;
+    return parsed as ProjectDataInput;
   } catch (caught) {
     if (caught instanceof Error && "statusCode" in caught) throw caught;
     throw httpError(400, "projectData must be valid JSON");

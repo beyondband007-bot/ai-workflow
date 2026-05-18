@@ -24,6 +24,13 @@ type Wf003UserMetadata = {
   feishu_id: string | null;
 };
 
+type Wf002GenerationJob = {
+  id: string;
+  status: string;
+  outputUrl: string | null;
+  error: string | null;
+};
+
 @Injectable()
 export class WorkflowExecutionService {
   constructor(
@@ -80,15 +87,25 @@ export class WorkflowExecutionService {
       );
     }
 
-    const webhookUrl =
-      this.configService.get<string>('WF_002_WEBHOOK_URL')?.trim() ||
-      'https://n8n.deepsix.store/webhook/simple-prompt';
-    const webhookTimeoutMs = Number(
-      this.configService.get<string>('WF_002_WEBHOOK_TIMEOUT_MS') || '180000',
+    const localApiBaseUrl = (
+      this.configService.get<string>('WF_002_LOCAL_API_BASE_URL')?.trim() ||
+      'http://wf002-api:3001'
+    ).replace(/\/$/, '');
+    const localPublicBaseUrl = (
+      this.configService.get<string>('WF_002_PUBLIC_API_BASE_URL')?.trim() ||
+      `${(
+        this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim() ||
+        'https://jc.geture.cn'
+      ).replace(/\/$/, '')}/portal/wf002`
+    ).replace(/\/$/, '');
+    const executionTimeoutMs = Number(
+      this.configService.get<string>('WF_002_EXECUTION_TIMEOUT_MS') ||
+        this.configService.get<string>('WF_002_WEBHOOK_TIMEOUT_MS') ||
+        '180000',
     );
 
-    if (!webhookUrl) {
-      throw new InternalServerErrorException('WF_002_WEBHOOK_URL is not set');
+    if (!localApiBaseUrl) {
+      throw new InternalServerErrorException('WF_002_LOCAL_API_BASE_URL is not set');
     }
 
     const clientRequestId = `wf002_exec_${Date.now()}`;
@@ -96,9 +113,9 @@ export class WorkflowExecutionService {
       workflow_code: workflowCode,
       prompt_preview: prompt.slice(0, 120),
       aspect_ratio: aspectRatio,
-      executor_type: 'n8n_webhook',
+      executor_type: 'baoyu_skill_local_generator',
       billing_mode: 'fixed_points',
-      webhook_url: webhookUrl,
+      local_api_base_url: localApiBaseUrl,
     };
 
     const registerData = await this.workflowRunsService.register(currentUser, {
@@ -110,68 +127,34 @@ export class WorkflowExecutionService {
     const runId = registerData.run_id;
 
     try {
-      const abortController = new AbortController();
-      const timeoutHandle = setTimeout(() => {
-        abortController.abort();
-      }, webhookTimeoutMs);
-
-      const upstreamResponse = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt,
-          aspect_ratio: aspectRatio,
-          run_id: runId,
-          client_request_id: clientRequestId,
-          workflow_code: workflowCode,
-          user_id: currentUser.userId,
-        }),
-        signal: abortController.signal,
+      const createdJob = await this.createWf002LocalGeneration(localApiBaseUrl, {
+        prompt,
+        aspectRatio,
+        runId,
+        clientRequestId,
+        workflowCode,
+        userId: currentUser.userId,
       });
-      clearTimeout(timeoutHandle);
-
-      const rawText = await upstreamResponse.text();
-      const rawResponse = this.tryParseJson(rawText);
-      const imageUrls = this.extractImageUrls(rawResponse);
-      const upstreamStatus = upstreamResponse.status;
-      const hasResponseBody = rawText.trim().length > 0;
-
-      if (!upstreamResponse.ok) {
-        const upstreamErrorMessage = this.formatUpstreamErrorMessage(
-          rawText,
-          rawResponse,
-          `HTTP ${upstreamStatus}`,
-        );
-        await this.workflowRunsService.callback({
-          run_id: runId,
-          workflow_code: workflowCode,
-          status: 'failed',
-          finished_at: this.formatDateTime(new Date()),
-          result_summary: `WF-002 upstream request failed with status=${upstreamStatus}`,
-          result_urls: [],
-          external_task_id: clientRequestId,
-          error_message: hasResponseBody ? rawText.slice(0, 500) : `HTTP ${upstreamStatus}`,
-        });
-
-        throw new InternalServerErrorException(
-          `WF-002 webhook request failed: HTTP ${upstreamStatus}`,
-        );
-      }
-
-      const callbackSummary = hasResponseBody
-        ? `WF-002 webhook executed successfully, upstream_status=${upstreamStatus}, image_urls=${imageUrls.length}`
-        : `WF-002 webhook executed successfully with empty response body, upstream_status=${upstreamStatus}`;
+      const finalJob = await this.waitForWf002LocalGeneration(
+        localApiBaseUrl,
+        createdJob.id,
+        executionTimeoutMs,
+      );
+      const resultUrl = this.resolveWf002PublicResultUrl(
+        finalJob.outputUrl,
+        localPublicBaseUrl,
+      );
+      const imageUrls = resultUrl ? [resultUrl] : [];
 
       await this.workflowRunsService.callback({
         run_id: runId,
         workflow_code: workflowCode,
         status: 'success',
         finished_at: this.formatDateTime(new Date()),
-        result_summary: callbackSummary,
+        result_summary: `WF-002 BaoyuSkill image generation succeeded, job_id=${finalJob.id}`,
+        result_summary_url: resultUrl || undefined,
         result_urls: imageUrls,
-        external_task_id: clientRequestId,
+        external_task_id: finalJob.id,
       });
 
       const [workflowRun] = await this.dataSource.query(
@@ -208,12 +191,9 @@ export class WorkflowExecutionService {
               result_urls: this.parseJsonArray(workflowRun.result_urls_json),
             }
           : null,
-        message: imageUrls.length
-          ? 'WF-002 已执行完成，并提取到图片地址。'
-          : 'WF-002 已执行完成，但 webhook 未直接返回图片地址。',
-        upstream_status: upstreamStatus,
-        has_response_body: hasResponseBody,
-        raw_response: rawResponse,
+        message: 'WF-002 已通过本地 BaoyuSkill 执行完成。',
+        executor_type: 'baoyu_skill_local_generator',
+        local_job: finalJob,
         image_urls: imageUrls,
       };
     } catch (error) {
@@ -221,7 +201,7 @@ export class WorkflowExecutionService {
         error instanceof Error ? error.message : 'WF-002 execution failed';
       const normalizedMessage =
         error instanceof Error && error.name === 'AbortError'
-          ? `WF-002 webhook timeout after ${webhookTimeoutMs}ms`
+          ? `WF-002 local execution timeout after ${executionTimeoutMs}ms`
           : message;
 
       const [workflowRun] = await this.dataSource.query(
@@ -309,7 +289,7 @@ export class WorkflowExecutionService {
 
     const webhookUrl =
       this.configService.get<string>('WF_003_WEBHOOK_URL')?.trim() ||
-      'https://n8n.deepsix.store/webhook/wf003-kie-submit';
+      'https://n8n.geture.cn/webhook/wf003-kie-submit';
     const callbackBaseUrl =
       this.configService.get<string>('WF_003_CALLBACK_BASE_URL')?.trim() ||
       this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim();
@@ -594,7 +574,7 @@ export class WorkflowExecutionService {
 
     const webhookUrl =
       this.configService.get<string>('WF_003_WEBHOOK_URL')?.trim() ||
-      'https://n8n.deepsix.store/webhook/wf003-kie-submit';
+      'https://n8n.geture.cn/webhook/wf003-kie-submit';
     const callbackBaseUrl =
       this.configService.get<string>('WF_003_CALLBACK_BASE_URL')?.trim() ||
       this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim();
@@ -904,6 +884,131 @@ export class WorkflowExecutionService {
         error instanceof Error ? error.message : 'WF-001 execution failed',
       );
     }
+  }
+
+  private async createWf002LocalGeneration(
+    localApiBaseUrl: string,
+    input: {
+      prompt: string;
+      aspectRatio: string;
+      runId: string;
+      clientRequestId: string;
+      workflowCode: string;
+      userId: number;
+    },
+  ): Promise<Wf002GenerationJob> {
+    const response = await fetch(`${localApiBaseUrl}/api/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: input.prompt,
+        provider: 'kie',
+        model: this.configService.get<string>('KIE_IMAGE_MODEL') || 'nano-banana-2',
+        aspectRatio: input.aspectRatio,
+        quality: '2k',
+        projectData: JSON.stringify({
+          source: 'ai-mid-platform',
+          workflow_code: input.workflowCode,
+          run_id: input.runId,
+          client_request_id: input.clientRequestId,
+          user_id: input.userId,
+          executor_type: 'baoyu_skill_local_generator',
+        }),
+      }),
+    });
+
+    const rawText = await response.text();
+    const parsed = this.tryParseJson(rawText) as
+      | { job?: Wf002GenerationJob }
+      | string
+      | null;
+
+    if (!response.ok) {
+      throw new InternalServerErrorException(
+        `WF-002 BaoyuSkill create failed: ${this.formatUpstreamErrorMessage(
+          rawText,
+          parsed,
+          `HTTP ${response.status}`,
+        )}`,
+      );
+    }
+
+    if (!parsed || typeof parsed !== 'object' || !parsed.job?.id) {
+      throw new InternalServerErrorException(
+        'WF-002 BaoyuSkill create response did not include job.id',
+      );
+    }
+
+    return parsed.job;
+  }
+
+  private async waitForWf002LocalGeneration(
+    localApiBaseUrl: string,
+    jobId: string,
+    timeoutMs: number,
+  ): Promise<Wf002GenerationJob> {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const response = await fetch(
+        `${localApiBaseUrl}/api/generations/${encodeURIComponent(jobId)}`,
+      );
+      const rawText = await response.text();
+      const parsed = this.tryParseJson(rawText) as Wf002GenerationJob | string | null;
+
+      if (!response.ok) {
+        throw new InternalServerErrorException(
+          `WF-002 BaoyuSkill poll failed: ${this.formatUpstreamErrorMessage(
+            rawText,
+            parsed,
+            `HTTP ${response.status}`,
+          )}`,
+        );
+      }
+
+      if (!parsed || typeof parsed !== 'object' || !parsed.id) {
+        throw new InternalServerErrorException(
+          'WF-002 BaoyuSkill poll response did not include job.id',
+        );
+      }
+
+      if (parsed.status === 'succeeded') {
+        return parsed;
+      }
+
+      if (parsed.status === 'failed') {
+        throw new InternalServerErrorException(
+          `WF-002 BaoyuSkill generation failed: ${parsed.error || 'unknown error'}`,
+        );
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+
+    throw new InternalServerErrorException(
+      `WF-002 BaoyuSkill timeout after ${timeoutMs}ms`,
+    );
+  }
+
+  private resolveWf002PublicResultUrl(
+    outputUrl: string | null,
+    localPublicBaseUrl: string,
+  ) {
+    if (!outputUrl) {
+      return null;
+    }
+
+    if (/^https?:\/\//i.test(outputUrl)) {
+      return outputUrl;
+    }
+
+    const normalizedOutputPath = outputUrl.startsWith('/')
+      ? outputUrl
+      : `/${outputUrl}`;
+
+    return `${localPublicBaseUrl}${normalizedOutputPath}`;
   }
 
   private resolveWorkflowDirectory(scriptPath: string) {

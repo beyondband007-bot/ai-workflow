@@ -6,7 +6,7 @@
 
 主站与服务：
 
-- `gzl.wikigood.top` -> Docker `web/app/db`
+- `jc.geture.cn` -> Docker `web/app/db`
 - `mycar.deepsix.store` -> `wf003-car-export.service`
 
 更新 `dev` 分支：
@@ -28,7 +28,7 @@ docker compose \
 
 systemctl status wf003-car-export.service
 
-curl -ksS https://gzl.wikigood.top/health/db
+curl -ksS https://jc.geture.cn/health/db
 curl -ksS https://mycar.deepsix.store/ | head
 ```
 
