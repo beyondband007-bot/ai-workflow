@@ -29,7 +29,7 @@ $env:CAR_EXPORT_WEBHOOK_URL="你的 n8n webhook 地址"
 如果不显式设置环境变量，服务默认转发到正式版地址：
 
 ```text
-https://n8n.geture.cn/webhook/bda7b6ac-10b6-4467-b6fd-83dd68c0bbd9
+https://n8n.getrueai.com/webhook/bda7b6ac-10b6-4467-b6fd-83dd68c0bbd9
 ```
 
 配置工作流 API 基地址：
@@ -41,7 +41,7 @@ $env:WORKFLOW_API_BASE="https://你的工作流后端域名"
 例如：
 
 ```text
-https://n8n.geture.cn
+https://n8n.getrueai.com
 ```
 
 如果你的 WF-003 后端部署在 n8n，还可以显式配置提交 webhook 路径：
@@ -59,13 +59,13 @@ $env:WORKFLOW_SUBMIT_PATH="/webhook/wf003-kie-submit"
 按当前仓库里的 n8n 导出文件，默认会转发到：
 
 ```text
-https://n8n.geture.cn/webhook/wf003-kie-submit
+https://n8n.getrueai.com/webhook/wf003-kie-submit
 ```
 
 如果你已经直接配置了完整的 n8n 提交地址，也可以只设置：
 
 ```powershell
-$env:WF_003_WEBHOOK_URL="https://n8n.geture.cn/webhook/wf003-kie-submit"
+$env:WF_003_WEBHOOK_URL="https://n8n.getrueai.com/webhook/wf003-kie-submit"
 ```
 
 当前版本在同时配置 `WF_003_MIDDLE_PLATFORM_URL` 和 `WF_003_WEBHOOK_URL` 时会优先走中台。生产环境建议走中台，否则会绕过积分注册，n8n 的 `Notify Middle Platform` 回调可能因为找不到 `run_id` 而报 404。

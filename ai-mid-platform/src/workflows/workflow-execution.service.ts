@@ -95,7 +95,7 @@ export class WorkflowExecutionService {
       this.configService.get<string>('WF_002_PUBLIC_API_BASE_URL')?.trim() ||
       `${(
         this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim() ||
-        'https://jc.geture.cn'
+        'https://www.getrueai.com'
       ).replace(/\/$/, '')}/portal/wf002`
     ).replace(/\/$/, '');
     const executionTimeoutMs = Number(
@@ -289,7 +289,7 @@ export class WorkflowExecutionService {
 
     const webhookUrl =
       this.configService.get<string>('WF_003_WEBHOOK_URL')?.trim() ||
-      'https://n8n.geture.cn/webhook/wf003-kie-submit';
+      'https://n8n.getrueai.com/webhook/wf003-kie-submit';
     const callbackBaseUrl =
       this.configService.get<string>('WF_003_CALLBACK_BASE_URL')?.trim() ||
       this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim();
@@ -574,7 +574,7 @@ export class WorkflowExecutionService {
 
     const webhookUrl =
       this.configService.get<string>('WF_003_WEBHOOK_URL')?.trim() ||
-      'https://n8n.geture.cn/webhook/wf003-kie-submit';
+      'https://n8n.getrueai.com/webhook/wf003-kie-submit';
     const callbackBaseUrl =
       this.configService.get<string>('WF_003_CALLBACK_BASE_URL')?.trim() ||
       this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim();
@@ -794,6 +794,16 @@ export class WorkflowExecutionService {
     const scriptPath = this.configService.get<string>('WF_001_SCRIPT_PATH');
     const mockMode =
       this.configService.get<string>('WF_001_MOCK_MODE') || 'success';
+    const taskTimeoutSeconds = Number.parseInt(
+      this.configService.get<string>('WF_001_TASK_TIMEOUT_SECONDS') || '900',
+      10,
+    );
+    const executionTimeoutMs =
+      (Number.isFinite(taskTimeoutSeconds) && taskTimeoutSeconds > 0
+        ? taskTimeoutSeconds
+        : 900) *
+        1000 +
+      60000;
 
     if (!scriptPath) {
       throw new InternalServerErrorException('WF_001_SCRIPT_PATH is not set');
@@ -821,6 +831,12 @@ export class WorkflowExecutionService {
       aspectRatio,
       '--mock-mode',
       mockMode,
+      '--timeout',
+      String(
+        Number.isFinite(taskTimeoutSeconds) && taskTimeoutSeconds > 0
+          ? taskTimeoutSeconds
+          : 900,
+      ),
     ];
 
     if (payload.image?.trim()) {
@@ -839,7 +855,7 @@ export class WorkflowExecutionService {
           CALLBACK_SIGNING_SECRET:
             this.configService.get<string>('CALLBACK_SIGNING_SECRET') || '',
         },
-        timeout: 600000,
+        timeout: executionTimeoutMs,
       });
 
       const [workflowRun] = await this.dataSource.query(

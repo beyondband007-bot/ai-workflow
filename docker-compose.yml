@@ -29,7 +29,7 @@ services:
     environment:
       CLIENT_PORTAL_AVATAR_DIR: /app/client-portal/avatar
       WF_003_WEBHOOK_URL: http://wf003-worker:3013/webhook/wf003-kie-submit
-      WF_003_CALLBACK_BASE_URL: https://jc.geture.cn
+      WF_003_CALLBACK_BASE_URL: https://www.getrueai.com
       ALIPAY_PRIVATE_KEY_PATH: /run/secrets/payment-keys/app_private_key.pem
       ALIPAY_PUBLIC_KEY_PATH: /run/secrets/payment-keys/alipay_public_key.pem
     depends_on:

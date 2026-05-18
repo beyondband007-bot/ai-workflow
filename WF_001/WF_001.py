@@ -332,7 +332,12 @@ def parse_args() -> argparse.Namespace:
         help="Output aspect ratio",
     )
     parser.add_argument("--poll-interval", type=int, default=5, help="Task poll interval seconds")
-    parser.add_argument("--timeout", type=int, default=300, help="Task timeout seconds")
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=int(os.getenv("WF_001_TASK_TIMEOUT_SECONDS", "900")),
+        help="Task timeout seconds",
+    )
     parser.add_argument("--no-image", action="store_true", help="Skip image prompt")
     parser.add_argument("--user-id", default="suppertest", help="Middleware user_id")
     parser.add_argument(

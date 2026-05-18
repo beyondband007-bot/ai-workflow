@@ -1081,7 +1081,7 @@ export class WorkflowRunsService implements OnModuleInit, OnModuleDestroy {
         String(submission.callback_url ?? '').trim(),
       )
         ? String(submission.callback_url ?? '').trim()
-        : 'https://jc.geture.cn/api/v1/workflow-runs/wf003-callback';
+        : 'https://www.getrueai.com/api/v1/workflow-runs/wf003-callback';
 
       const exteriorImages = (tasks as Array<Record<string, unknown>>)
         .filter(
