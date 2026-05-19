@@ -83,6 +83,7 @@ export class AuthService {
       email,
       username,
       passwordHash,
+      role: 'normal',
     });
 
     const savedUser = await this.usersRepository.save(user);
@@ -387,6 +388,7 @@ export class AuthService {
       avatar_img: user.avatarImg,
       phone: user.phone,
       address: user.address,
+      role: user.role || 'normal',
       feishu_app_id: binding.feishu_app_id,
       feishu_id: binding.feishu_id,
       is_active: Boolean(user.isActive),

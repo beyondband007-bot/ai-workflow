@@ -28,10 +28,13 @@ services:
       - .env.docker
     environment:
       CLIENT_PORTAL_AVATAR_DIR: /app/client-portal/avatar
-      WF_003_WEBHOOK_URL: http://wf003-worker:3013/webhook/wf003-kie-submit
-      WF_003_CALLBACK_BASE_URL: https://www.getrueai.com
+      RECHARGE_VOUCHER_DIR: /app/client-portal/recharge-vouchers
+      INITIAL_ADMIN_USERNAMES: ${INITIAL_ADMIN_USERNAMES:-admin1,dafei}
       ALIPAY_PRIVATE_KEY_PATH: /run/secrets/payment-keys/app_private_key.pem
       ALIPAY_PUBLIC_KEY_PATH: /run/secrets/payment-keys/alipay_public_key.pem
+      WECHAT_PAY_API_V3_KEY_PATH: /run/secrets/payment-keys/wechatpay_apiv3_key.pem
+      WECHAT_PAY_PRIVATE_KEY_PATH: /run/secrets/payment-keys/wechatpay_apiclient_key.pem
+      WECHAT_PAY_PLATFORM_PUBLIC_KEY_PATH: /run/secrets/payment-keys/wechatpay_platform_public_key.pem
     depends_on:
       - db
       - wf003-worker
@@ -39,6 +42,7 @@ services:
       - "3002:3002"
     volumes:
       - ./client-portal/avatar:/app/client-portal/avatar
+      - ./client-portal/recharge-vouchers:/app/client-portal/recharge-vouchers
       - ./secrets/payment-keys:/run/secrets/payment-keys:ro
 
   web:

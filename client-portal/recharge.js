@@ -3,10 +3,12 @@ const POINTS_PER_YUAN = 100;
 const RECHARGE_RECORDS_KEY = "client_portal_recharge_records";
 const RECHARGE_TOKEN_KEY = "auth_demo_token";
 const ALIPAY_POLL_INTERVAL_MS = 5000;
+const ORDER_CODE_EXPIRES_MS = 3 * 60 * 1000;
 const TOAST_VISIBLE_MS = 2000;
 let copyToastTimer = 0;
 let activeAlipayOrder = null;
 let alipayPollTimer = 0;
+let orderCountdownTimer = 0;
 let alipaySyncPromise = null;
 
 const emptyRechargeAccount = {
@@ -78,10 +80,11 @@ function redirectRechargeLogin() {
 }
 
 async function rechargeApiRequest(path, options = {}) {
+  const isFormDataBody = typeof FormData !== "undefined" && options.body instanceof FormData;
   const requestOptions = {
     ...options,
     headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.body && !isFormDataBody ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {}),
     },
   };
@@ -160,6 +163,78 @@ function validateRechargeAmount(amount) {
     return "充值金额需为 100 元的整数倍";
   }
   return "";
+}
+
+function escapeRechargeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatRechargeRecordTime(value) {
+  if (!value) {
+    return "-";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+  return date.toLocaleString("zh-CN", { hour12: false });
+}
+
+function getRechargeProviderLabel(provider, fallback) {
+  if (provider === "wechat") {
+    return "微信支付";
+  }
+  if (provider === "alipay") {
+    return "支付宝";
+  }
+  if (provider === "offline_transfer") {
+    return "线下转账";
+  }
+  return fallback || "-";
+}
+
+function getRechargeStatusLabel(status, fallback) {
+  const labels = {
+    CREATED: "已创建",
+    QR_READY: "待支付",
+    WAITING_PAYMENT: "待支付",
+    SCANNED: "已扫码",
+    USERPAYING: "已扫码",
+    PAID: "已支付",
+    EXPIRED: "订单超时",
+    CLOSED: "已关闭",
+    CANCELED: "已取消",
+    REFUNDED: "已退款",
+    AMOUNT_MISMATCH: "金额异常",
+    PENDING_REVIEW: "待审核",
+    REVIEWING: "审核中",
+    REJECTED: "审核失败",
+  };
+  return labels[status] || fallback || status || "-";
+}
+
+function getRechargeStatusClass(status) {
+  if (status === "PAID") {
+    return "status-success";
+  }
+  if (["REJECTED", "AMOUNT_MISMATCH", "CLOSED", "CANCELED", "EXPIRED"].includes(status)) {
+    return "status-error";
+  }
+  return "status-running";
+}
+
+async function fetchRechargeRecords() {
+  try {
+    return await rechargeApiRequest("/api/v1/recharge-orders");
+  } catch (error) {
+    console.warn("failed to fetch recharge records", error);
+    return getStoredRechargeRecords();
+  }
 }
 
 function getStoredRechargeRecords() {
@@ -258,30 +333,32 @@ function renderAmountGrid(gridId, inputId, previewId) {
   syncActive();
 }
 
-function renderRechargeRecords() {
+async function renderRechargeRecords() {
   const body = document.getElementById("rechargeRecordsBody");
   if (!body) {
     return;
   }
-  const records = getStoredRechargeRecords();
+  const records = await fetchRechargeRecords();
   body.innerHTML = records.length
     ? records.map((record) => `
       <tr>
-        <td>${record.orderNo}</td>
-        <td>${record.method}</td>
-        <td>￥${rechargeFormatNumber(record.amount)}</td>
+        <td>${escapeRechargeHtml(record.outTradeNo || record.orderNo)}</td>
+        <td>${escapeRechargeHtml(getRechargeProviderLabel(record.provider, record.method))}</td>
+        <td>￥${rechargeFormatNumber(record.totalAmount ?? record.amount, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td>${rechargeFormatNumber(record.points)}</td>
-        <td><span class="status-pill ${record.status === "已支付" ? "status-success" : "status-running"}">${record.status}</span></td>
-        <td>${record.createdAt}</td>
+        <td><span class="status-pill ${getRechargeStatusClass(record.status)}">${escapeRechargeHtml(getRechargeStatusLabel(record.status, record.status))}</span></td>
+        <td>${escapeRechargeHtml(formatRechargeRecordTime(record.createdAt))}</td>
+        <td class="recharge-record-note">${escapeRechargeHtml(record.reviewNote || record.statusMessage || "-")}</td>
       </tr>
     `).join("")
-    : '<tr><td colspan="6">暂无充值记录</td></tr>';
+    : '<tr><td colspan="7">暂无充值记录</td></tr>';
 }
 
 function closeAlipayModal() {
   const modal = document.getElementById("alipayModal");
   modal?.classList.remove("is-open");
   modal?.setAttribute("aria-hidden", "true");
+  stopOrderCountdown();
 }
 
 function stopAlipayPolling() {
@@ -291,23 +368,78 @@ function stopAlipayPolling() {
   }
 }
 
+function stopOrderCountdown() {
+  if (orderCountdownTimer) {
+    window.clearInterval(orderCountdownTimer);
+    orderCountdownTimer = 0;
+  }
+}
+
+function formatCountdown(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function updateOrderCountdown() {
+  if (!activeAlipayOrder?.expiresAt) {
+    return;
+  }
+  const remaining = activeAlipayOrder.expiresAt - Date.now();
+  rechargeSetText("alipayCountdown", formatCountdown(remaining));
+  if (remaining <= 0) {
+    stopAlipayPolling();
+    closeAlipayModal();
+    activeAlipayOrder = null;
+    showPaymentStatusModal({
+      title: "订单码已超时",
+      label: "订单提醒",
+      message: "订单码有效期已结束，请重新创建充值订单",
+      tone: "warning",
+    });
+  }
+}
+
+function startOrderCountdown() {
+  stopOrderCountdown();
+  updateOrderCountdown();
+  orderCountdownTimer = window.setInterval(updateOrderCountdown, 1000);
+}
+
+function setQrScannedState(scanned) {
+  document.getElementById("alipayQrMask")?.setAttribute("aria-hidden", String(!scanned));
+  document.querySelector(".alipay-qr-frame")?.classList.toggle("is-scanned", scanned);
+}
+
 function openAlipayModal(order) {
   stopAlipayPolling();
   activeAlipayOrder = {
     ...order,
     completed: false,
+    expiresAt: Date.now() + ORDER_CODE_EXPIRES_MS,
   };
+  const isWechatPay = order.provider === "wechat";
+  rechargeSetText("alipayModalEyebrow", isWechatPay ? "Wechat Pay Order Code" : "Alipay Order Code");
+  rechargeSetText("alipayModalTitle", isWechatPay ? "微信支付订单码" : "支付宝订单码");
   rechargeSetText("alipayModalAmount", `￥${rechargeFormatNumber(order.amount)}`);
   rechargeSetText("alipayModalPoints", `${rechargeFormatNumber(order.points)} 积分`);
   rechargeSetText("alipayModalOrderNo", order.orderNo);
+  document
+    .getElementById("alipayModalClose")
+    ?.setAttribute("aria-label", isWechatPay ? "关闭微信支付订单码" : "关闭支付宝订单码");
   const qrImage = document.getElementById("alipayQrImage");
   if (qrImage) {
     qrImage.src = order.qrCodeDataUrl || "";
+    qrImage.alt = isWechatPay ? "微信支付订单码" : "支付宝订单码";
   }
+  setQrScannedState(false);
+  rechargeSetText("alipayCountdown", "03:00");
 
   const modal = document.getElementById("alipayModal");
   modal?.classList.add("is-open");
   modal?.setAttribute("aria-hidden", "false");
+  startOrderCountdown();
   startAlipayPolling();
 }
 
@@ -328,6 +460,9 @@ function getAlipayCloseMessage(order) {
   if (order.status === "CLOSED") {
     return order.statusMessage || "支付失败：交易已关闭";
   }
+  if (order.status === "EXPIRED") {
+    return order.statusMessage || "订单超时";
+  }
   if (order.status === "CANCELED") {
     return order.statusMessage || "已取消订单";
   }
@@ -337,6 +472,35 @@ function getAlipayCloseMessage(order) {
   return "订单码已关闭，暂未检测到支付";
 }
 
+function closePaymentStatusModal() {
+  const modal = document.getElementById("paymentStatusModal");
+  modal?.classList.remove("is-open", "is-success", "is-warning", "is-error");
+  modal?.setAttribute("aria-hidden", "true");
+}
+
+function showPaymentStatusModal({ title = "订单状态", label = "订单提醒", message = "", tone = "success" } = {}) {
+  const modal = document.getElementById("paymentStatusModal");
+  if (!modal) {
+    showCopyToast(message || title);
+    return;
+  }
+
+  modal.classList.remove("is-success", "is-warning", "is-error");
+  modal.classList.add(`is-${tone}`);
+  rechargeSetText("paymentStatusTitle", title);
+  rechargeSetText("paymentStatusLabel", label);
+  rechargeSetText("paymentStatusMessage", message || title);
+  rechargeSetText("paymentStatusIcon", tone === "success" ? "✓" : "!");
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function openRechargeRecordsTab() {
+  const recordsTab = document.querySelector('.recharge-tab[data-tab="records"]');
+  recordsTab?.click();
+  closePaymentStatusModal();
+}
+
 function addPaidRechargeRecord(order) {
   const records = getStoredRechargeRecords();
   if (records.some((record) => record.orderNo === order.outTradeNo)) {
@@ -344,7 +508,7 @@ function addPaidRechargeRecord(order) {
   }
   addRechargeRecord({
     orderNo: order.outTradeNo,
-    method: "支付宝",
+    method: order.provider === "wechat" ? "微信支付" : "支付宝",
     amount: Number(order.totalAmount),
     points: Number(order.points),
     status: "已支付",
@@ -358,11 +522,17 @@ async function handlePaidAlipayOrder(order) {
   }
   activeAlipayOrder.completed = true;
   stopAlipayPolling();
-  addPaidRechargeRecord(order);
+  stopOrderCountdown();
+  await renderRechargeRecords();
   await renderRechargeSummary();
   closeAlipayModal();
   activeAlipayOrder = null;
-  showCopyToast("订单支付成功，积分已到账");
+  showPaymentStatusModal({
+    title: "充值成功",
+    label: "本次成功充值",
+    message: `${rechargeFormatNumber(order.points)} 积分`,
+    tone: "success",
+  });
 }
 
 async function syncActiveAlipayOrder({ source = "poll" } = {}) {
@@ -383,11 +553,20 @@ async function syncActiveAlipayOrder({ source = "poll" } = {}) {
     if (order.status === "PAID") {
       await handlePaidAlipayOrder(order);
     } else {
-      if (["CLOSED", "CANCELED", "AMOUNT_MISMATCH", "REFUNDED"].includes(order.status)) {
+      if (["SCANNED", "USERPAYING"].includes(order.status)) {
+        setQrScannedState(true);
+      }
+      if (["CLOSED", "EXPIRED", "CANCELED", "AMOUNT_MISMATCH", "REFUNDED"].includes(order.status)) {
         stopAlipayPolling();
+        stopOrderCountdown();
         closeAlipayModal();
         activeAlipayOrder = null;
-        showCopyToast(getAlipayCloseMessage(order));
+        showPaymentStatusModal({
+          title: "订单已关闭",
+          label: "订单提醒",
+          message: getAlipayCloseMessage(order),
+          tone: "warning",
+        });
       }
     }
     return order;
@@ -398,7 +577,12 @@ async function syncActiveAlipayOrder({ source = "poll" } = {}) {
   } catch (error) {
     console.warn("failed to sync alipay order", error);
     if (source !== "poll") {
-      showCopyToast(error.message || "支付确认失败");
+      showPaymentStatusModal({
+        title: "支付确认失败",
+        label: "订单提醒",
+        message: error.message || "支付确认失败",
+        tone: "error",
+      });
     }
     return null;
   } finally {
@@ -419,7 +603,12 @@ async function requestCloseAlipayModal() {
   }
   closeAlipayModal();
   activeAlipayOrder = null;
-  showCopyToast(getAlipayCloseMessage(order));
+  showPaymentStatusModal({
+    title: "订单已关闭",
+    label: "订单提醒",
+    message: getAlipayCloseMessage(order),
+    tone: "warning",
+  });
 }
 
 function bindRechargeTabs() {
@@ -468,10 +657,7 @@ function bindRechargeForms() {
     }
     showRechargeError("onlineRechargeError", "");
     const payment = document.querySelector('input[name="onlinePayment"]:checked')?.value;
-    if (payment === "wechat") {
-      showCopyToast("暂未开通微信支付");
-      return;
-    }
+    const provider = payment === "wechat" ? "wechat" : "alipay";
 
     const submitButton = onlineForm.querySelector(".recharge-submit");
     submitButton.disabled = true;
@@ -482,7 +668,7 @@ function bindRechargeForms() {
         method: "POST",
         body: JSON.stringify({
           amount,
-          provider: "alipay",
+          provider,
         }),
       });
       const qrResult = await rechargeApiRequest(`/api/v1/recharge-orders/${created.order.outTradeNo}/qrcode`, {
@@ -495,6 +681,7 @@ function bindRechargeForms() {
         orderToken: created.orderToken,
         amount: Number(created.order.totalAmount),
         points: Number(created.order.points),
+        provider: created.order.provider || provider,
         qrCodeDataUrl: qrResult.qrCodeDataUrl,
       });
     } catch (error) {
@@ -506,7 +693,7 @@ function bindRechargeForms() {
     }
   });
 
-  offlineForm?.addEventListener("submit", (event) => {
+  offlineForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const amount = normalizeRechargeAmount(offlineAmountInput?.value);
     const amountError = validateRechargeAmount(amount);
@@ -519,15 +706,43 @@ function bindRechargeForms() {
       return;
     }
     showRechargeError("offlineRechargeError", "");
-    addRechargeRecord({
-      orderNo: `OF${Date.now()}`,
-      method: "对公转账",
-      amount,
-      points: getRechargePoints(amount),
-      status: "审核中",
-      createdAt: new Date().toLocaleString("zh-CN", { hour12: false }),
-    });
-    window.alert("线下充值申请已提交，运营审核通过后积分将自动入账。");
+
+    const submitButton = offlineForm.querySelector(".recharge-submit");
+    submitButton.disabled = true;
+    submitButton.textContent = "提交中...";
+
+    try {
+      const formData = new FormData();
+      formData.append("amount", String(amount));
+      formData.append("voucher", voucherInput.files[0]);
+      const result = await rechargeApiRequest("/api/v1/offline-recharge-orders", {
+        method: "POST",
+        body: formData,
+      });
+      voucherInput.value = "";
+      if (voucherName) {
+        voucherName.textContent = "请选择付款截图或 PDF";
+      }
+      await renderRechargeRecords();
+      showPaymentStatusModal({
+        title: "提交成功",
+        label: "线下转账申请",
+        message: `订单 ${result?.order?.outTradeNo || ""} 已进入审核`,
+        tone: "success",
+      });
+    } catch (error) {
+      console.warn("failed to submit offline recharge order", error);
+      showRechargeError("offlineRechargeError", error.message || "提交线下充值申请失败");
+      showPaymentStatusModal({
+        title: "提交失败",
+        label: "线下转账申请",
+        message: error.message || "提交线下充值申请失败",
+        tone: "error",
+      });
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = "提交审核";
+    }
   });
 
   voucherInput?.addEventListener("change", () => {
@@ -544,7 +759,14 @@ function bindRechargeForms() {
 function bindAlipayModal() {
   document.getElementById("alipayModalClose")?.addEventListener("click", requestCloseAlipayModal);
   document.querySelector("[data-alipay-close]")?.addEventListener("click", requestCloseAlipayModal);
-  window.addEventListener("beforeunload", stopAlipayPolling);
+  document.getElementById("paymentStatusClose")?.addEventListener("click", closePaymentStatusModal);
+  document.getElementById("paymentStatusDismiss")?.addEventListener("click", closePaymentStatusModal);
+  document.querySelector("[data-payment-status-close]")?.addEventListener("click", closePaymentStatusModal);
+  document.getElementById("paymentStatusRecords")?.addEventListener("click", openRechargeRecordsTab);
+  window.addEventListener("beforeunload", () => {
+    stopAlipayPolling();
+    stopOrderCountdown();
+  });
 }
 
 function fallbackCopyText(value) {

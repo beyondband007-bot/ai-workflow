@@ -95,7 +95,7 @@ export class WorkflowExecutionService {
       this.configService.get<string>('WF_002_PUBLIC_API_BASE_URL')?.trim() ||
       `${(
         this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim() ||
-        'https://www.getrueai.com'
+        'https://www.facemini.com'
       ).replace(/\/$/, '')}/portal/wf002`
     ).replace(/\/$/, '');
     const executionTimeoutMs = Number(
@@ -289,7 +289,7 @@ export class WorkflowExecutionService {
 
     const webhookUrl =
       this.configService.get<string>('WF_003_WEBHOOK_URL')?.trim() ||
-      'https://n8n.getrueai.com/webhook/wf003-kie-submit';
+      'https://n8n.facemini.com/webhook/wf003-kie-submit';
     const callbackBaseUrl =
       this.configService.get<string>('WF_003_CALLBACK_BASE_URL')?.trim() ||
       this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim();
@@ -574,7 +574,7 @@ export class WorkflowExecutionService {
 
     const webhookUrl =
       this.configService.get<string>('WF_003_WEBHOOK_URL')?.trim() ||
-      'https://n8n.getrueai.com/webhook/wf003-kie-submit';
+      'https://n8n.facemini.com/webhook/wf003-kie-submit';
     const callbackBaseUrl =
       this.configService.get<string>('WF_003_CALLBACK_BASE_URL')?.trim() ||
       this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim();

@@ -6,8 +6,8 @@
 
 主站与服务：
 
-- `www.getrueai.com` -> Docker `web/app/db`
-- `mycar.deepsix.store` -> `wf003-car-export.service`
+- `www.facemini.com` -> Docker `web/app/db`
+- `www.facemini.com/portal/wf003/` -> `wf003-car-export.service`
 
 更新 `dev` 分支：
 
@@ -28,8 +28,8 @@ docker compose \
 
 systemctl status wf003-car-export.service
 
-curl -ksS https://www.getrueai.com/health/db
-curl -ksS https://mycar.deepsix.store/ | head
+curl -ksS https://www.facemini.com/health/db
+curl -ksS https://www.facemini.com/portal/wf003/ | head
 ```
 
 服务器本地配置文件：

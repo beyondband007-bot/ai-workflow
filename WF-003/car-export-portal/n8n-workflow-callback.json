@@ -1,5 +1,5 @@
 ﻿{
-  "name": "WF003 JSON Callback-0428",
+  "name": "WF003 JSON Callback",
   "nodes": [
     {
       "parameters": {
@@ -13,24 +13,24 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -5152,
+        -6160,
         4864
       ],
-      "id": "e29bdd21-340a-4e19-9269-f9e791d7a80d",
+      "id": "0049bf8b-a6f4-465f-8dba-c36436d3b806",
       "name": "Webhook Submit",
       "webhookId": "ba1b95f0-8853-4c2b-a3d6-5def2dde4bb3"
     },
     {
       "parameters": {
-        "jsCode": "const src = $input.first().json;\nconst body = src.body ?? src;\n\nconst exterior = Array.isArray(body.exterior_images) ? body.exterior_images.filter(Boolean) : [];\nconst interior = Array.isArray(body.interior_images) ? body.interior_images.filter(Boolean) : [];\n\nif (!body.car_name) {\n  throw new Error('car_name is required');\n}\n\nif (exterior.length === 0) {\n  throw new Error('exterior_images is required');\n}\n\nconst buildInteriorGroups = (images) => {\n  const groups = [];\n  let remaining = [...images];\n\n  while (remaining.length > 0) {\n    if (remaining.length <= 3) {\n      groups.push(remaining);\n      break;\n    }\n\n    if (remaining.length === 4) {\n      groups.push(remaining.slice(0, 2), remaining.slice(2, 4));\n      break;\n    }\n\n    if (remaining.length === 5) {\n      groups.push(remaining.slice(0, 3), remaining.slice(3, 5));\n      break;\n    }\n\n    groups.push(remaining.slice(0, 3));\n    remaining = remaining.slice(3);\n  }\n\n  return groups;\n};\n\nconst submissionId = body.run_id || `wf003_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\nconst interiorGroups = buildInteriorGroups(interior);\nconst expectedTasks = exterior.length + interiorGroups.length;\nconst feishuAppId = typeof body.feishu_app_id === 'string' ? body.feishu_app_id.trim() : '';\nconst feishuId = typeof body.feishu_id === 'string' ? body.feishu_id.trim() : '';\nconst fallbackStateApiBase = 'https://www.getrueai.com';\nconst callbackUrl = (typeof body.callback_url === 'string' ? body.callback_url.trim() : '') || `${fallbackStateApiBase}/api/v1/workflow-runs/wf003-callback`;\nconst callbackToken = (typeof body.callback_token === 'string' ? body.callback_token.trim() : '') || 'wf003_local_callback_9f3c7a1d';\nconst stateApiBase = /^https?:\\/\\//i.test(callbackUrl)\n  ? callbackUrl.replace(/\\/api\\/v1\\/workflow-runs\\/wf003-callback\\/?$/i, '')\n  : fallbackStateApiBase;\nconst submitWebhookUrl = typeof src.webhookUrl === 'string' ? src.webhookUrl.trim() : '';\n\nreturn [{\n  json: {\n    submissionId,\n    run_id: body.run_id || submissionId,\n    workflow_code: body.workflow_code || 'WF-003',\n    client_request_id: body.client_request_id || '',\n    user_id: String(body.user_id ?? '').trim(),\n    callback_url: callbackUrl,\n    callback_token: callbackToken,\n    stateApiBase,\n    submitWebhookUrl,\n    car_name: body.car_name,\n    logo: body.logo || '',\n    token: body.token || '',\n    source: body.source || '',\n    submitted_at: body.submitted_at || new Date().toISOString(),\n    feishu_app_id: feishuAppId,\n    feishu_id: feishuId,\n    exterior_images: exterior,\n    interior_images: interior,\n    interior_groups: interiorGroups,\n    expectedTasks\n  }\n}];"
+        "jsCode": "const src = $input.first().json;\nconst body = src.body ?? src;\n\nconst exterior = Array.isArray(body.exterior_images) ? body.exterior_images.filter(Boolean) : [];\nconst interior = Array.isArray(body.interior_images) ? body.interior_images.filter(Boolean) : [];\n\nif (!body.car_name) {\n  throw new Error('car_name is required');\n}\n\nif (exterior.length === 0) {\n  throw new Error('exterior_images is required');\n}\n\nconst buildInteriorGroups = (images) => {\n  const groups = [];\n  let remaining = [...images];\n\n  while (remaining.length > 0) {\n    if (remaining.length <= 3) {\n      groups.push(remaining);\n      break;\n    }\n\n    if (remaining.length === 4) {\n      groups.push(remaining.slice(0, 2), remaining.slice(2, 4));\n      break;\n    }\n\n    if (remaining.length === 5) {\n      groups.push(remaining.slice(0, 3), remaining.slice(3, 5));\n      break;\n    }\n\n    groups.push(remaining.slice(0, 3));\n    remaining = remaining.slice(3);\n  }\n\n  return groups;\n};\n\nconst submissionId = body.run_id || `wf003_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\nconst interiorGroups = buildInteriorGroups(interior);\nconst expectedTasks = exterior.length + interiorGroups.length;\nconst feishuAppId = typeof body.feishu_app_id === 'string' ? body.feishu_app_id.trim() : '';\nconst feishuId = typeof body.feishu_id === 'string' ? body.feishu_id.trim() : '';\nconst fallbackStateApiBase = 'https://www.facemini.com';\nconst callbackUrl = (typeof body.callback_url === 'string' ? body.callback_url.trim() : '') || `${fallbackStateApiBase}/api/v1/workflow-runs/wf003-callback`;\nconst callbackToken = (typeof body.callback_token === 'string' ? body.callback_token.trim() : '') || 'wf003_local_callback_9f3c7a1d';\nconst stateApiBase = /^https?:\\/\\//i.test(callbackUrl)\n  ? callbackUrl.replace(/\\/api\\/v1\\/workflow-runs\\/wf003-callback\\/?$/i, '')\n  : fallbackStateApiBase;\nconst submitWebhookUrl = typeof src.webhookUrl === 'string' ? src.webhookUrl.trim() : '';\n\nreturn [{\n  json: {\n    submissionId,\n    run_id: body.run_id || submissionId,\n    workflow_code: body.workflow_code || 'WF-003',\n    client_request_id: body.client_request_id || '',\n    user_id: String(body.user_id ?? '').trim(),\n    callback_url: callbackUrl,\n    callback_token: callbackToken,\n    stateApiBase,\n    submitWebhookUrl,\n    car_name: body.car_name,\n    logo: body.logo || '',\n    token: body.token || '',\n    source: body.source || '',\n    submitted_at: body.submitted_at || new Date().toISOString(),\n    feishu_app_id: feishuAppId,\n    feishu_id: feishuId,\n    exterior_images: exterior,\n    interior_images: interior,\n    interior_groups: interiorGroups,\n    expectedTasks\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4928,
+        -5936,
         4864
       ],
-      "id": "be0e11dc-d0bd-4950-b979-e159c32cf303",
+      "id": "40ca1f2e-fac1-4510-ad92-66f833a3348d",
       "name": "Normalize Submission"
     },
     {
@@ -40,10 +40,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4704,
+        -5712,
         4864
       ],
-      "id": "e86492d2-d7d8-4efe-b9d7-f228c11f7e55",
+      "id": "0836bffe-2f1f-447c-8002-c2af8649feee",
       "name": "Build Task Items"
     },
     {
@@ -53,23 +53,23 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -4480,
+        -5488,
         4864
       ],
-      "id": "0f71036d-90d7-4fc7-91c9-68b8a1d95a8a",
+      "id": "3b40f610-d16c-4b79-8849-16fd0d5f01db",
       "name": "Loop Tasks"
     },
     {
       "parameters": {
-        "jsCode": "const item = $json;\nconst submitWebhookUrl = typeof item.submitWebhookUrl === 'string' ? item.submitWebhookUrl.trim() : '';\nconst callbackUrl = submitWebhookUrl\n  ? submitWebhookUrl.replace(/wf003-kie-submit\\/?$/i, 'wf003-kie-callback')\n  : 'https://n8n.getrueai.com/webhook/wf003-kie-callback';\nconst callbackUrlWithState = `${callbackUrl}?stateApiBase=${encodeURIComponent(item.stateApiBase || 'https://www.getrueai.com')}&workflowCallbackToken=${encodeURIComponent(item.callback_token || 'wf003_local_callback_9f3c7a1d')}`;\n\nconst commonMeta = {\n  submissionId: item.submissionId,\n  run_id: item.run_id,\n  workflow_code: item.workflow_code,\n  client_request_id: item.client_request_id,\n  user_id: item.user_id || '',\n  callback_url: item.callback_url,\n  callback_token: item.callback_token,\n  stateApiBase: item.stateApiBase,\n  car_name: item.car_name,\n  logo: item.logo,\n  feishu_app_id: item.feishu_app_id || '',\n  feishu_id: item.feishu_id || '',\n  expectedTasks: item.expectedTasks\n};\n\nif (item.type === 'exterior') {\n  return [{\n    json: {\n      ...commonMeta,\n      type: item.type,\n      index: item.index,\n      imageUrl: item.imageUrl,\n      requestBody: {\n        model: 'nano-banana-2',\n        callBackUrl: callbackUrlWithState,\n        input: {\n          prompt: 'Generate one output image for each uploaded car exterior reference image. If multiple exterior reference images are provided, every single uploaded exterior image must be processed, and none of them can be skipped or omitted. Maintain a strict one-to-one mapping: one reference image = one generated image. Keep the car body completely unchanged in each image, including body shape, proportions, paint color, trim, wheels, headlights, taillights, windows, mirrors, and all exterior design details. Do not alter the vehicle appearance in any way. Change the scene to a premium pure white luxury automotive showroom with a seamless curved white backdrop, polished white reflective floor, subtle architectural layering, soft ambient reflections, hidden linear ceiling lights, diffused studio lighting, and a clean high-end exhibition atmosphere. The showroom should feel elegant, modern, minimal, premium, and suitable for commercial car advertising, while still keeping the background clean and not distracting from the car. Do not alter the style of the product logo. Add the logo from the second reference image to the license plate area. Also add the same logo in the top-left corner of each generated image. Do not generate multiple angles from one reference. Generate exactly one result for each uploaded reference image. Preserve the original viewing angle and composition of each reference image. Photorealistic, professional automotive photography, ultra-detailed, premium commercial quality. Output size: 1024x1024.',\n          image_input: [item.imageUrl, item.logo],\n          aspect_ratio: '1:1',\n          resolution: '1K',\n          output_format: 'jpg'\n        }\n      }\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...commonMeta,\n    type: item.type,\n    groupIndex: item.groupIndex,\n    imageUrls: item.imageUrls,\n    requestBody: {\n      model: 'nano-banana-2',\n      callBackUrl: callbackUrlWithState,\n      input: {\n        prompt: 'Strictly use the uploaded interior reference images to create collage outputs. Do not change the original camera angle. Do not generate new scenes. Do not crop one image into multiple close-up panels. Each panel must correspond to a different uploaded original image. Each uploaded image can be used only once, and all uploaded images must be used. If 1 to 3 images are uploaded, generate 1 collage. If 4 images are uploaded, generate 2 collages in a 2 plus 2 grouping. If 5 images are uploaded, generate 2 collages in a 3 plus 2 grouping. Use a clean and tidy grid or side-by-side layout with clear separation between panels. Keep the original images complete and sharp, without stretching or overlap. Professional automotive interior collage style. Output size: 1024x1024.',\n        image_input: item.imageUrls,\n        aspect_ratio: '1:1',\n        resolution: '1K',\n        output_format: 'jpg'\n      }\n    }\n  }\n}];"
+        "jsCode": "const item = $json;\nconst submitWebhookUrl = typeof item.submitWebhookUrl === 'string' ? item.submitWebhookUrl.trim() : '';\nconst callbackUrl = submitWebhookUrl\n  ? submitWebhookUrl.replace(/wf003-kie-submit\\/?$/i, 'wf003-kie-callback')\n  : 'https://n8n.facemini.com/webhook/wf003-kie-callback';\nconst callbackUrlWithState = `${callbackUrl}?stateApiBase=${encodeURIComponent(item.stateApiBase || 'https://www.facemini.com')}&workflowCallbackToken=${encodeURIComponent(item.callback_token || 'wf003_local_callback_9f3c7a1d')}`;\n\nconst commonMeta = {\n  submissionId: item.submissionId,\n  run_id: item.run_id,\n  workflow_code: item.workflow_code,\n  client_request_id: item.client_request_id,\n  user_id: item.user_id || '',\n  callback_url: item.callback_url,\n  callback_token: item.callback_token,\n  stateApiBase: item.stateApiBase,\n  car_name: item.car_name,\n  logo: item.logo,\n  feishu_app_id: item.feishu_app_id || '',\n  feishu_id: item.feishu_id || '',\n  expectedTasks: item.expectedTasks\n};\n\nif (item.type === 'exterior') {\n  return [{\n    json: {\n      ...commonMeta,\n      type: item.type,\n      index: item.index,\n      imageUrl: item.imageUrl,\n      requestBody: {\n        model: 'nano-banana-2',\n        callBackUrl: callbackUrlWithState,\n        input: {\n          prompt: 'Generate one output image for each uploaded car exterior reference image. If multiple exterior reference images are provided, every single uploaded exterior image must be processed, and none of them can be skipped or omitted. Maintain a strict one-to-one mapping: one reference image = one generated image. Keep the car body completely unchanged in each image, including body shape, proportions, paint color, trim, wheels, headlights, taillights, windows, mirrors, and all exterior design details. Do not alter the vehicle appearance in any way. Change the scene to a premium pure white luxury automotive showroom with a seamless curved white backdrop, polished white reflective floor, subtle architectural layering, soft ambient reflections, hidden linear ceiling lights, diffused studio lighting, and a clean high-end exhibition atmosphere. The showroom should feel elegant, modern, minimal, premium, and suitable for commercial car advertising, while still keeping the background clean and not distracting from the car. Do not alter the style of the product logo. Add the logo from the second reference image to the license plate area. Also add the same logo in the top-left corner of each generated image. Do not generate multiple angles from one reference. Generate exactly one result for each uploaded reference image. Preserve the original viewing angle and composition of each reference image. Photorealistic, professional automotive photography, ultra-detailed, premium commercial quality. Output size: 1024x1024.',\n          image_input: [item.imageUrl, item.logo],\n          aspect_ratio: '1:1',\n          resolution: '1K',\n          output_format: 'jpg'\n        }\n      }\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...commonMeta,\n    type: item.type,\n    groupIndex: item.groupIndex,\n    imageUrls: item.imageUrls,\n    requestBody: {\n      model: 'nano-banana-2',\n      callBackUrl: callbackUrlWithState,\n      input: {\n        prompt: 'Strictly use the uploaded interior reference images to create collage outputs. Do not change the original camera angle. Do not generate new scenes. Do not crop one image into multiple close-up panels. Each panel must correspond to a different uploaded original image. Each uploaded image can be used only once, and all uploaded images must be used. If 1 to 3 images are uploaded, generate 1 collage. If 4 images are uploaded, generate 2 collages in a 2 plus 2 grouping. If 5 images are uploaded, generate 2 collages in a 3 plus 2 grouping. Use a clean and tidy grid or side-by-side layout with clear separation between panels. Keep the original images complete and sharp, without stretching or overlap. Professional automotive interior collage style. Output size: 1024x1024.',\n        image_input: item.imageUrls,\n        aspect_ratio: '1:1',\n        resolution: '1K',\n        output_format: 'jpg'\n      }\n    }\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4240,
+        -5248,
         4864
       ],
-      "id": "b343e74d-86ec-4dd8-8cbb-a2b0aa35db25",
+      "id": "d363e578-76bf-4656-8827-2f65a8fb8256",
       "name": "Prepare Kie Task Payload"
     },
     {
@@ -93,16 +93,16 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -4000,
+        -5008,
         4864
       ],
-      "id": "c5037cab-d27b-4057-bd7d-f08076b3ed46",
+      "id": "a6504fd5-5f11-4256-8ccc-35af184f1ace",
       "name": "Create Kie Task"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ (($('Prepare Kie Task Payload').item.json.stateApiBase || 'https://www.getrueai.com')).replace(/\\/$/, '') + '/api/v1/workflow-runs/wf003-state/register-task' }}",
+        "url": "={{ (($('Prepare Kie Task Payload').item.json.stateApiBase || 'https://www.facemini.com')).replace(/\\/$/, '') + '/api/v1/workflow-runs/wf003-state/register-task' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -120,10 +120,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -3760,
+        -4768,
         4864
       ],
-      "id": "5dbd1340-925f-497e-a7b0-43f5c7bdb2d8",
+      "id": "39d6e9f9-b146-4830-bdbf-f124879a8562",
       "name": "Save Submitted Task"
     },
     {
@@ -133,10 +133,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4240,
+        -5248,
         4704
       ],
-      "id": "a75018c7-3d6f-429d-8b39-36618ab8e246",
+      "id": "b48005dc-1059-4d43-b035-10666a417ff4",
       "name": "Respond Submit"
     },
     {
@@ -151,30 +151,30 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -5152,
-        5456
+        -6160,
+        5520
       ],
-      "id": "6eca6164-194d-4517-935d-c8cbb2452a8d",
+      "id": "3461af0b-b4ed-43a8-8679-70d9f7cd3cd8",
       "name": "Webhook Callback",
       "webhookId": "ee5d39d8-5a71-4bf8-9d55-6dd3b0c80f53"
     },
     {
       "parameters": {
-        "jsCode": "const src = $input.first().json;\nconst body = src.body ?? src;\nconst data = body.data || {};\nconst query = src.query || {};\n\nlet resultJson = {};\ntry {\n  if (typeof data.resultJson === 'string') {\n    resultJson = JSON.parse(data.resultJson);\n  } else if (data.resultJson && typeof data.resultJson === 'object') {\n    resultJson = data.resultJson;\n  }\n} catch (error) {\n  resultJson = {};\n}\n\nconst resultUrls = Array.isArray(resultJson.resultUrls) ? resultJson.resultUrls : [];\nconst resultUrl = resultUrls[0] || body.resultUrl || data.resultUrl || null;\nconst taskId = data.taskId || body.taskId || body.id || null;\nconst rawState = String(data.state || body.state || '').toLowerCase();\nconst failCode = data.failCode || body.failCode || null;\nconst failMsg = data.failMsg || body.failMsg || body.msg || null;\n\nif (!taskId) {\n  throw new Error('Callback contains no taskId');\n}\n\nlet state = rawState || 'unknown';\nif (resultUrl) {\n  state = 'success';\n} else if (['failed', 'fail', 'error'].includes(state)) {\n  state = 'failed';\n}\n\nreturn [{\n  json: {\n    taskId,\n    state,\n    rawState,\n    resultUrl,\n    failCode,\n    failMsg,\n    stateApiBase: typeof query.stateApiBase === 'string' && query.stateApiBase.trim() ? query.stateApiBase.trim() : 'https://www.getrueai.com',\n    workflowCallbackToken: typeof query.workflowCallbackToken === 'string' && query.workflowCallbackToken.trim() ? query.workflowCallbackToken.trim() : 'wf003_local_callback_9f3c7a1d',\n    body\n  }\n}];"
+        "jsCode": "const src = $input.first().json;\nconst body = src.body ?? src;\nconst data = body.data || {};\nconst query = src.query || {};\n\nlet resultJson = {};\ntry {\n  if (typeof data.resultJson === 'string') {\n    resultJson = JSON.parse(data.resultJson);\n  } else if (data.resultJson && typeof data.resultJson === 'object') {\n    resultJson = data.resultJson;\n  }\n} catch (error) {\n  resultJson = {};\n}\n\nconst resultUrls = Array.isArray(resultJson.resultUrls) ? resultJson.resultUrls : [];\nconst resultUrl = resultUrls[0] || body.resultUrl || data.resultUrl || null;\nconst taskId = data.taskId || body.taskId || body.id || null;\nconst rawState = String(data.state || body.state || '').toLowerCase();\nconst failCode = data.failCode || body.failCode || null;\nconst failMsg = data.failMsg || body.failMsg || body.msg || null;\n\nif (!taskId) {\n  throw new Error('Callback contains no taskId');\n}\n\nlet state = rawState || 'unknown';\nif (resultUrl) {\n  state = 'success';\n} else if (['failed', 'fail', 'error'].includes(state)) {\n  state = 'failed';\n}\n\nreturn [{\n  json: {\n    taskId,\n    state,\n    rawState,\n    resultUrl,\n    failCode,\n    failMsg,\n    stateApiBase: typeof query.stateApiBase === 'string' && query.stateApiBase.trim() ? query.stateApiBase.trim() : 'https://www.facemini.com',\n    workflowCallbackToken: typeof query.workflowCallbackToken === 'string' && query.workflowCallbackToken.trim() ? query.workflowCallbackToken.trim() : 'wf003_local_callback_9f3c7a1d',\n    body\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4928,
-        5456
+        -5936,
+        5520
       ],
-      "id": "3f00c9da-232b-4270-bf34-814011ae06d1",
+      "id": "6300b08e-7cc8-47b1-82d1-dc789e765ba4",
       "name": "Parse Kie Callback"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ (($('Parse Kie Callback').first().json.stateApiBase || 'https://www.getrueai.com')).replace(/\\/$/, '') + '/api/v1/workflow-runs/wf003-state/update-submission-state' }}",
+        "url": "={{ (($('Parse Kie Callback').first().json.stateApiBase || 'https://www.facemini.com')).replace(/\\/$/, '') + '/api/v1/workflow-runs/wf003-state/update-submission-state' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -192,10 +192,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -4704,
-        5456
+        -5712,
+        5520
       ],
-      "id": "c66289e5-e675-49ff-8ca2-c996a1dcab1e",
+      "id": "8111f031-e935-42c8-b938-da5f3ce89556",
       "name": "Update Submission State"
     },
     {
@@ -226,10 +226,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -4480,
-        5456
+        -5488,
+        5520
       ],
-      "id": "364d6ed7-3528-4a9f-b79f-f3cb64782822",
+      "id": "7acf643d-4c1a-4216-af6f-71e663e37b02",
       "name": "If Ready To Finalize"
     },
     {
@@ -239,16 +239,16 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4240,
-        5344
+        -5248,
+        5408
       ],
-      "id": "eb99ab88-f322-4629-96da-70b299b7f4b7",
+      "id": "e297a641-aae2-40c1-85ea-f99fb0c33e05",
       "name": "Callback Ack Finalizing"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ (($('Parse Kie Callback').first().json.stateApiBase || 'https://www.getrueai.com')).replace(/\\/$/, '') + '/api/v1/workflow-runs/wf003-state/build-final-assets' }}",
+        "url": "={{ (($('Parse Kie Callback').first().json.stateApiBase || 'https://www.facemini.com')).replace(/\\/$/, '') + '/api/v1/workflow-runs/wf003-state/build-final-assets' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -266,10 +266,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -3760,
-        5344
+        -4768,
+        5408
       ],
-      "id": "baacc782-0a91-4086-96e2-a8d7d28183d9",
+      "id": "0286b699-8667-4f92-9509-d87ae10b6094",
       "name": "Build Final Assets"
     },
     {
@@ -283,10 +283,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        -4000,
-        5344
+        -5008,
+        5408
       ],
-      "id": "c0d9291f-06dd-4719-8a39-ad27753443fc",
+      "id": "aa6a3dce-5890-49ba-95d0-9e9029bc45e2",
       "name": "Respond Callback Finalizing"
     },
     {
@@ -310,10 +310,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -4000,
-        5216
+        -5008,
+        5088
       ],
-      "id": "e1c1e2d1-0b75-4d26-9ed6-46525d36200e",
+      "id": "88400944-c5e6-4a28-95a9-35bc5e8abaad",
       "name": "Notify Middle Platform"
     },
     {
@@ -323,10 +323,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4000,
-        5424
+        -5008,
+        5248
       ],
-      "id": "38f9a426-9ec3-4cd8-9789-328069b04a95",
+      "id": "6dc051cf-5f81-4f19-975b-4d15e93e32ea",
       "name": "Build Feishu Upload Items"
     },
     {
@@ -336,10 +336,10 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -3760,
-        5344
+        -4768,
+        5248
       ],
-      "id": "4a54d3ec-9f46-4728-a48a-b3c46cdcdd18",
+      "id": "164afbf8-9257-4b88-839c-fc5cc1370fa5",
       "name": "Loop Upload Items"
     },
     {
@@ -349,10 +349,10 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        -3520,
-        5456
+        -4528,
+        5520
       ],
-      "id": "96591298-98ce-4abf-aa81-3ed32385dd66",
+      "id": "3e3441ce-ee3b-41cf-a0bf-515dca2b743c",
       "name": "Wait Upload",
       "webhookId": "8abcb67b-a6dc-423b-9f82-882be970268a"
     },
@@ -369,22 +369,22 @@
       "type": "@luka-cat-mimi/n8n-nodes-feishu.feishuNode",
       "typeVersion": 1,
       "position": [
-        -3280,
-        5456
+        -4288,
+        5520
       ],
-      "id": "0e75921d-ede1-49b8-8906-3971c58fb6d3",
+      "id": "c84ef61a-aa0b-4969-aa1a-e3785e048297",
       "name": "Upload Asset By Url",
       "webhookId": "be026a93-6215-4770-9f8f-bf09965b130c",
       "retryOnFail": true,
       "maxTries": 4,
       "waitBetweenTries": 5000,
-      "continueOnFail": true,
       "credentials": {
         "feishuNodeCredentialsApi": {
           "id": "N7gKoO8Uf5UsrEV5",
           "name": "郑AI应用生成工作流凭证"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -393,10 +393,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3040,
-        5456
+        -4048,
+        5520
       ],
-      "id": "1a04d3cf-a2bb-4036-b661-d04bfe9f69db",
+      "id": "b921b68c-d891-4d2c-832a-ca170a29b42e",
       "name": "Extract File Token"
     },
     {
@@ -406,10 +406,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3520,
+        -4528,
         5232
       ],
-      "id": "b84c9762-3ccf-447d-94d6-3c7b74e75753",
+      "id": "970c7e57-daaf-4a44-bbce-ff65d837ec34",
       "name": "Collect Attachments"
     },
     {
@@ -424,10 +424,10 @@
       "type": "@luka-cat-mimi/n8n-nodes-feishu.feishuNode",
       "typeVersion": 1,
       "position": [
-        -3280,
+        -4288,
         5232
       ],
-      "id": "cb321289-3152-466c-a322-5c40c1465f13",
+      "id": "5366f24d-db4a-495e-881c-ce5897879bcb",
       "name": "Create Bitable Record",
       "webhookId": "8e779bf0-6d5b-474e-8788-02fb9aca3d10",
       "executeOnce": false,
@@ -445,10 +445,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3040,
+        -4048,
         5232
       ],
-      "id": "e4735b31-fc09-4462-b073-c92aae075f69",
+      "id": "77af86e6-92dd-4e90-af58-57b744cc6fcc",
       "name": "Callback Final Response"
     },
     {
@@ -458,10 +458,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -4240,
-        5568
+        -5248,
+        5632
       ],
-      "id": "c4340e4e-b38e-43f8-9e55-705dc19e54b5",
+      "id": "004d49c5-39d8-4269-b6f4-0484da6364ab",
       "name": "Callback Ack Pending"
     },
     {
@@ -475,10 +475,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        -4000,
-        5568
+        -5008,
+        5632
       ],
-      "id": "2f9a40f1-f5f9-4a88-b07b-42a279e43029",
+      "id": "73025338-a2c6-4036-ba8c-cb1a0145ee8f",
       "name": "Respond Callback Pending"
     }
   ],
@@ -630,17 +630,6 @@
         ]
       ]
     },
-    "Respond Callback Finalizing": {
-      "main": [
-        [
-          {
-            "node": "Build Final Assets",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Build Final Assets": {
       "main": [
         [
@@ -651,6 +640,17 @@
           },
           {
             "node": "Build Feishu Upload Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Callback Finalizing": {
+      "main": [
+        [
+          {
+            "node": "Build Final Assets",
             "type": "main",
             "index": 0
           }
@@ -758,7 +758,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "b2414b2f-8615-479d-8265-acec7c620c5a",
+  "versionId": "dfb9c16f-114a-4bca-be61-7725047a35e8",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "106341ccce29d1bd2cb94863cad0cd0a668a99fecc7ebe35dfd2c9e27d67c5ef"

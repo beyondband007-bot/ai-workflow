@@ -62,9 +62,11 @@ const TOKEN_KEY = "auth_demo_token";
 const PROFILE_STORAGE_KEY = "client_portal_profile";
 const STATIC_ASSET_VERSION = "20260428a";
 const DEFAULT_AVATAR_SRC = `./logo.png?v=${STATIC_ASSET_VERSION}`;
+const AUTO_REFRESH_INTERVAL_MS = 20000;
 let latestWorkflowRuns = [];
 let latestRecordFilter = "all";
 let refreshTimer = null;
+let refreshInFlight = false;
 let profileState = null;
 let pendingAvatarDataUrl = "";
 let pendingAvatarFile = null;
@@ -1201,24 +1203,50 @@ async function refreshDashboardData() {
   syncAccountView(pointAccount);
   renderRecords(workflowRuns, latestRecordFilter);
   renderLedgers(workflowRuns);
+  syncAutoRefresh(hasRunningOrders(workflowRuns));
+}
+
+function hasRunningOrders(workflowRuns = latestWorkflowRuns) {
+  return Array.isArray(workflowRuns) && workflowRuns.some((run) => run?.status === "running");
 }
 
 function startAutoRefresh() {
   if (refreshTimer) {
-    window.clearInterval(refreshTimer);
+    return;
   }
 
   refreshTimer = window.setInterval(async () => {
-    if (document.hidden) {
+    if (document.hidden || refreshInFlight) {
       return;
     }
 
     try {
+      refreshInFlight = true;
       await refreshDashboardData();
     } catch (error) {
       console.error("refresh dashboard failed", error);
+    } finally {
+      refreshInFlight = false;
     }
-  }, 10000);
+  }, AUTO_REFRESH_INTERVAL_MS);
+}
+
+function stopAutoRefresh() {
+  if (!refreshTimer) {
+    return;
+  }
+
+  window.clearInterval(refreshTimer);
+  refreshTimer = null;
+}
+
+function syncAutoRefresh(hasRunning) {
+  if (hasRunning) {
+    syncAutoRefresh(hasRunningOrders(workflowRuns));
+    return;
+  }
+
+  stopAutoRefresh();
 }
 
 async function bootstrap() {

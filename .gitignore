@@ -58,6 +58,7 @@ demo/.git/
 
 # Payment and service secrets
 client-portal/keys/
+client-portal/recharge-vouchers/
 secrets/
 *.pem
 

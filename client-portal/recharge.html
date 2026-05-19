@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>超级Token聚合器 - 充值中心</title>
 <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20260428a">
-<link rel="stylesheet" href="./styles.css?v=20260512a" />
+<link rel="stylesheet" href="./styles.css?v=20260519b" />
 </head>
 <body data-page="recharge">
 <div class="ambient ambient-a"></div>
@@ -348,6 +348,7 @@
                   <th>到账积分</th>
                   <th>状态</th>
                   <th>时间</th>
+                  <th>备注</th>
                 </tr>
               </thead>
               <tbody id="rechargeRecordsBody"></tbody>
@@ -366,22 +367,49 @@
   <div class="alipay-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="alipayModalTitle">
     <div class="alipay-modal-head">
       <div>
-        <p class="eyebrow">Alipay Order Code</p>
+        <p class="eyebrow" id="alipayModalEyebrow">Alipay Order Code</p>
         <h3 id="alipayModalTitle">支付宝订单码</h3>
       </div>
       <button class="profile-modal-close" id="alipayModalClose" type="button" aria-label="关闭支付宝订单码">×</button>
     </div>
-    <div class="alipay-order-summary">
-      <span>订单金额</span>
-      <strong id="alipayModalAmount">￥0</strong>
-      <small id="alipayModalPoints">0 积分</small>
-    </div>
     <div class="alipay-qr-frame">
       <img id="alipayQrImage" src="" alt="支付宝订单码" />
+      <div class="alipay-qr-mask" id="alipayQrMask" aria-hidden="true">已扫码</div>
     </div>
-    <div class="alipay-order-meta">
-      <span>订单号</span>
-      <strong id="alipayModalOrderNo">-</strong>
+    <div class="alipay-order-summary">
+      <div class="alipay-order-row">
+        <span>订单号</span>
+        <strong id="alipayModalOrderNo">-</strong>
+      </div>
+      <div class="alipay-order-row">
+        <span>支付金额</span>
+        <strong class="alipay-order-amount" id="alipayModalAmount">￥0</strong>
+      </div>
+      <div class="alipay-order-row">
+        <span>到账积分</span>
+        <small id="alipayModalPoints">0 积分</small>
+      </div>
+    </div>
+    <div class="alipay-order-countdown">
+      <span>订单码有效期</span>
+      <strong id="alipayCountdown">03:00</strong>
+    </div>
+  </div>
+</div>
+
+<div class="payment-status-modal" id="paymentStatusModal" aria-hidden="true">
+  <div class="payment-status-backdrop" data-payment-status-close="true"></div>
+  <div class="payment-status-dialog" role="dialog" aria-modal="true" aria-labelledby="paymentStatusTitle">
+    <button class="profile-modal-close" id="paymentStatusClose" type="button" aria-label="关闭订单状态提醒">×</button>
+    <div class="payment-status-icon" id="paymentStatusIcon" aria-hidden="true">✓</div>
+    <h3 id="paymentStatusTitle">订单状态</h3>
+    <div class="payment-status-summary">
+      <span id="paymentStatusLabel">订单提醒</span>
+      <strong id="paymentStatusMessage">-</strong>
+    </div>
+    <div class="payment-status-actions">
+      <button class="primary-button" id="paymentStatusRecords" type="button">查看充值记录</button>
+      <button class="secondary-button" id="paymentStatusDismiss" type="button">关闭</button>
     </div>
   </div>
 </div>
@@ -429,6 +457,6 @@
 
 <script src="./auth-state.js?v=20260513a"></script>
 <script src="./portal-shell.js?v=20260513a"></script>
-<script src="./recharge.js?v=20260513a"></script>
+<script src="./recharge.js?v=20260519b"></script>
 </body>
 </html>

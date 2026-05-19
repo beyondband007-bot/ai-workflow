@@ -28,7 +28,9 @@ function resolveAuthEntryUrl() {
 
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = "auth_demo_token";
+const AUTO_REFRESH_INTERVAL_MS = 20000;
 let refreshTimer = null;
+let refreshInFlight = false;
 
 const ledgerQuery = {
   startTime: "",
@@ -433,6 +435,18 @@ async function refreshLedgerList() {
   renderPaginationUi();
 }
 
+async function hasRunningOrders() {
+  const params = new URLSearchParams();
+  params.set("page", "1");
+  params.set("page_size", "1");
+  params.set("status", "running");
+
+  const result = await requestJson(`/api/v1/workflow-runs/query?${params.toString()}`);
+  const total = Number(result?.total ?? 0);
+  const rows = Array.isArray(result?.items) ? result.items : [];
+  return total > 0 || rows.some((row) => row?.status === "running");
+}
+
 function attachLedgerControls() {
   const startTimeInput = document.getElementById("ledgerStartTime");
   const endTimeInput = document.getElementById("ledgerEndTime");
@@ -452,7 +466,7 @@ function attachLedgerControls() {
       ledgerQuery.ledgerType = typeSelect?.value || "all";
       ledgerQuery.keyword = (keywordInput?.value || "").trim();
       ledgerPagination.page = 1;
-      await refreshLedgerList();
+      await refreshData();
     });
   }
 
@@ -468,7 +482,7 @@ function attachLedgerControls() {
       ledgerQuery.ledgerType = "all";
       ledgerQuery.keyword = "";
       ledgerPagination.page = 1;
-      await refreshLedgerList();
+      await refreshData();
     });
   }
 
@@ -477,7 +491,7 @@ function attachLedgerControls() {
     pageSizeSelect.addEventListener("change", async (event) => {
       ledgerPagination.pageSize = Number(event.target.value) || 20;
       ledgerPagination.page = 1;
-      await refreshLedgerList();
+      await refreshData();
     });
   }
 
@@ -488,7 +502,7 @@ function attachLedgerControls() {
       }
 
       ledgerPagination.page -= 1;
-      await refreshLedgerList();
+      await refreshData();
     });
   }
 
@@ -500,7 +514,7 @@ function attachLedgerControls() {
       }
 
       ledgerPagination.page += 1;
-      await refreshLedgerList();
+      await refreshData();
     });
   }
 
@@ -517,7 +531,7 @@ function attachLedgerControls() {
       }
 
       ledgerPagination.page = targetPage;
-      await refreshLedgerList();
+      await refreshData();
     });
   }
 }
@@ -532,30 +546,53 @@ function attachLogoutButton() {
 }
 
 async function refreshData() {
-  const [pointAccount] = await Promise.all([
+  const [pointAccount, , hasRunning] = await Promise.all([
     requestJson("/api/v1/point-accounts/me"),
     refreshLedgerList(),
+    hasRunningOrders(),
   ]);
 
   syncAccountView(pointAccount);
+  syncAutoRefresh(hasRunning);
 }
 
 function startAutoRefresh() {
   if (refreshTimer) {
-    window.clearInterval(refreshTimer);
+    return;
   }
 
   refreshTimer = window.setInterval(async () => {
-    if (document.hidden) {
+    if (document.hidden || refreshInFlight) {
       return;
     }
 
     try {
+      refreshInFlight = true;
       await refreshData();
     } catch (error) {
       console.error("refresh ledgers failed", error);
+    } finally {
+      refreshInFlight = false;
     }
-  }, 10000);
+  }, AUTO_REFRESH_INTERVAL_MS);
+}
+
+function stopAutoRefresh() {
+  if (!refreshTimer) {
+    return;
+  }
+
+  window.clearInterval(refreshTimer);
+  refreshTimer = null;
+}
+
+function syncAutoRefresh(hasRunning) {
+  if (hasRunning) {
+    startAutoRefresh();
+    return;
+  }
+
+  stopAutoRefresh();
 }
 
 async function bootstrap() {
@@ -569,7 +606,6 @@ async function bootstrap() {
 
   try {
     await refreshData();
-    startAutoRefresh();
   } catch (error) {
     if (error.message === "登录已过期，请重新登录" || error.message === "请先登录") {
       return;

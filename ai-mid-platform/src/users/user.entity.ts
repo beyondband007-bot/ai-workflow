@@ -23,6 +23,9 @@ export class User {
   @Column('varchar', { length: 255, nullable: true })
   address: string | null;
 
+  @Column('varchar', { length: 32, default: 'normal' })
+  role: string;
+
   @Column({ name: 'password_hash', length: 255 })
   passwordHash: string;
 

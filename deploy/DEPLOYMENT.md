@@ -149,7 +149,7 @@ PORT=3003
 # 走中台（推荐）——中台会处理积分冻结/结算
 WF_003_MIDDLE_PLATFORM_URL=http://127.0.0.1:3002/api/v1/workflows/WF-003/json-execute
 # 直连 n8n webhook（绕过中台积分结算，仅测试用）
-# WF_003_WEBHOOK_URL=https://n8n.getrueai.com/webhook/wf003-kie-submit
+# WF_003_WEBHOOK_URL=https://n8n.facemini.com/webhook/wf003-kie-submit
 # 备选：base + path（WORKFLOW_SUBMIT_PATH 默认值为 /webhook/wf003-kie-submit）
 # WORKFLOW_API_BASE=http://127.0.0.1:3002
 # WORKFLOW_SUBMIT_PATH=/webhook/wf003-kie-submit
@@ -181,7 +181,7 @@ cp /srv/ai-workflow/ai-mid-platform/.env.wf003.example /srv/ai-workflow/ai-mid-p
 `WF-002` 相关关键项：
 
 ```env
-WF_002_WEBHOOK_URL=https://n8n.getrueai.com/webhook/simple-prompt
+WF_002_WEBHOOK_URL=https://n8n.facemini.com/webhook/simple-prompt
 WF_002_WEBHOOK_TIMEOUT_MS=90000
 ```
 
@@ -196,7 +196,7 @@ WF_002_WEBHOOK_TIMEOUT_MS=90000
 `WF-003` 相关关键项：
 
 ```env
-WF_003_WEBHOOK_URL=https://n8n.getrueai.com/webhook/wf003-kie-submit
+WF_003_WEBHOOK_URL=https://n8n.facemini.com/webhook/wf003-kie-submit
 WF_003_CALLBACK_BASE_URL=https://你的中台公网域名
 MIDDLE_PLATFORM_PUBLIC_BASE_URL=https://你的中台公网域名
 ```

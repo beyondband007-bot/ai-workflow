@@ -975,8 +975,8 @@ body[data-theme="dark"] .profile-menu-item.danger:hover {
 	position: relative;
 	z-index: 1;
 	display: grid;
-	gap: 18px;
-	width: min(100%, 390px);
+	gap: 24px;
+	width: min(100%, 360px);
 	padding: 22px;
 	border: 1px solid rgba(25, 197, 107, 0.18);
 	border-radius: 16px;
@@ -989,6 +989,7 @@ body[data-theme="dark"] .profile-menu-item.danger:hover {
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
+	margin-bottom: 16px;
 }
 
 .alipay-modal-head h3 {
@@ -998,30 +999,56 @@ body[data-theme="dark"] .profile-menu-item.danger:hover {
 
 .alipay-order-summary {
 	display: grid;
-	gap: 6px;
+	gap: 10px;
 	padding: 14px 16px;
 	border-radius: 12px;
 	background: rgba(25, 197, 107, 0.08);
 	border: 1px solid rgba(25, 197, 107, 0.14);
 }
 
+.alipay-order-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 14px;
+	min-width: 0;
+}
+
 .alipay-order-summary span,
 .alipay-order-summary small,
-.alipay-order-meta span {
+.alipay-order-countdown span {
 	color: var(--muted);
 	font-weight: 700;
 }
 
+.alipay-order-summary strong,
+.alipay-order-summary small {
+	min-width: 0;
+	text-align: right;
+	word-break: break-all;
+}
+
 .alipay-order-summary strong {
+	color: var(--text);
+	font-size: 13px;
+	line-height: 1.3;
+}
+
+.alipay-order-summary .alipay-order-amount {
 	color: var(--teal);
-	font-size: 28px;
+	font-size: 24px;
 	line-height: 1;
 }
 
 .alipay-qr-frame {
+	position: relative;
 	display: grid;
 	place-items: center;
+	width: 230px;
+	height: 230px;
+	margin: 0 auto;
 	padding: 16px;
+	box-sizing: border-box;
 	border-radius: 16px;
 	background: #ffffff;
 	border: 1px solid rgba(17, 24, 39, 0.08);
@@ -1035,15 +1062,140 @@ body[data-theme="dark"] .profile-menu-item.danger:hover {
 	object-fit: contain;
 }
 
-.alipay-order-meta {
+.alipay-qr-mask {
+	position: absolute;
+	inset: 16px;
 	display: grid;
-	gap: 6px;
+	place-items: center;
+	border-radius: 10px;
+	color: #ecfffb;
+	background: rgba(2, 8, 14, 0.72);
+	font-size: 24px;
+	font-weight: 900;
+	letter-spacing: 0.08em;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 180ms ease;
+}
+
+.alipay-qr-frame.is-scanned .alipay-qr-mask {
+	opacity: 1;
+}
+
+.alipay-order-countdown {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	font-size: 13px;
+}
+
+.alipay-order-countdown strong {
+	color: var(--teal);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.04em;
+}
+
+.payment-status-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 26;
+	display: grid;
+	place-items: center;
+	padding: 24px;
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.payment-status-modal.is-open {
+	opacity: 1;
+	visibility: visible;
+	pointer-events: auto;
+}
+
+.payment-status-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(15, 23, 42, 0.28);
+	backdrop-filter: blur(8px);
+}
+
+.payment-status-dialog {
+	position: relative;
+	z-index: 1;
+	display: grid;
+	gap: 18px;
+	width: min(100%, 430px);
+	padding: 28px;
+	border: 1px solid rgba(25, 197, 107, 0.18);
+	border-radius: 18px;
+	background: rgba(255, 255, 255, 0.98);
+	box-shadow: 0 28px 64px rgba(15, 23, 42, 0.2);
 	text-align: center;
 }
 
-.alipay-order-meta strong {
-	font-size: 13px;
-	word-break: break-all;
+.payment-status-dialog .profile-modal-close {
+	position: absolute;
+	top: 16px;
+	right: 16px;
+}
+
+.payment-status-icon {
+	width: 56px;
+	height: 56px;
+	display: grid;
+	place-items: center;
+	justify-self: center;
+	border: 2px solid var(--teal);
+	border-radius: 50%;
+	color: var(--teal);
+	font-size: 30px;
+	font-weight: 800;
+}
+
+.payment-status-modal.is-warning .payment-status-icon,
+.payment-status-modal.is-error .payment-status-icon {
+	border-color: #ffb86b;
+	color: #ffb86b;
+}
+
+.payment-status-modal.is-error .payment-status-icon {
+	border-color: #ff7c65;
+	color: #ff7c65;
+}
+
+.payment-status-dialog h3 {
+	margin: 8px 0 0;
+	font-size: 24px;
+}
+
+.payment-status-summary {
+	display: grid;
+	gap: 10px;
+	padding: 18px;
+	border-radius: 14px;
+	background: rgba(25, 197, 107, 0.08);
+	border: 1px solid rgba(25, 197, 107, 0.12);
+}
+
+.payment-status-summary span {
+	color: var(--muted);
+	font-weight: 700;
+}
+
+.payment-status-summary strong {
+	color: var(--text);
+	font-size: 20px;
+	line-height: 1.35;
+	word-break: break-word;
+}
+
+.payment-status-actions {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
 }
 
 .profile-modal-backdrop {
@@ -1133,6 +1285,21 @@ body[data-theme="dark"] .alipay-qr-frame {
 	background: #f7fffc;
 	border-color: rgba(114, 255, 214, 0.18);
 	box-shadow: inset 0 0 0 6px rgba(79, 165, 116, 0.1);
+}
+
+body[data-theme="dark"] .payment-status-backdrop {
+	background: rgba(2, 8, 14, 0.6);
+}
+
+body[data-theme="dark"] .payment-status-dialog {
+	border-color: rgba(74, 228, 198, 0.18);
+	background: rgba(8, 20, 34, 0.98);
+	box-shadow: 0 28px 68px rgba(2, 8, 14, 0.58);
+}
+
+body[data-theme="dark"] .payment-status-summary {
+	background: rgba(114, 255, 214, 0.08);
+	border-color: rgba(114, 255, 214, 0.16);
 }
 
 body[data-theme="dark"] .profile-modal-close,
@@ -2980,6 +3147,17 @@ tbody tr td:last-child {
 	background: rgba(255, 124, 101, 0.24);
 }
 
+.status-error {
+	color: #fff4f2;
+	background: rgba(255, 124, 101, 0.24);
+}
+
+.recharge-record-note {
+	max-width: 260px;
+	white-space: normal;
+	color: var(--text-muted);
+}
+
 .account-stack,
 .rule-list,
 .ledger-list,
@@ -4767,6 +4945,355 @@ body[data-theme="light"] .contact-field textarea {
 	color: var(--text);
 }
 
+body[data-page="recharge-review"] {
+	height: auto;
+	min-height: 100vh;
+	overflow-y: auto;
+}
+
+.review-main {
+	margin: 0 auto;
+	max-width: 1480px;
+	padding: 32px;
+	width: 100%;
+}
+
+.review-main[hidden] {
+	display: none;
+}
+
+body[data-page="recharge-review"] .surface-card {
+	background:
+		radial-gradient(circle at top right, rgba(79, 165, 116, 0.1), transparent 28%),
+		linear-gradient(180deg, rgba(8, 21, 36, 0.94), rgba(7, 17, 30, 0.88));
+	border-color: rgba(74, 228, 198, 0.18);
+	border-radius: 8px;
+	box-shadow: 0 24px 60px rgba(2, 8, 14, 0.36);
+	padding: 24px;
+}
+
+.review-header {
+	align-items: flex-start;
+	display: grid;
+	gap: 20px;
+	grid-template-columns: minmax(0, 1fr) auto;
+	margin-bottom: 22px;
+}
+
+.review-access-main {
+	display: grid;
+	min-height: 100vh;
+	place-items: center;
+}
+
+.review-access-card {
+	display: grid;
+	gap: 14px;
+	max-width: 520px;
+	text-align: center;
+}
+
+.review-access-card h2 {
+	color: var(--text);
+	font-size: 26px;
+	letter-spacing: 0;
+	margin: 0;
+}
+
+.review-access-card p {
+	color: var(--muted);
+	line-height: 1.7;
+	margin: 0;
+}
+
+.review-access-card .secondary-button {
+	justify-self: center;
+	margin-top: 8px;
+}
+
+.review-header h2 {
+	color: var(--text);
+	font-size: 28px;
+	letter-spacing: 0;
+	line-height: 1.22;
+	margin: 6px 0 10px;
+}
+
+.review-header p {
+	color: var(--muted);
+	line-height: 1.7;
+	margin: 0;
+}
+
+.review-toolbar {
+	align-items: center;
+	display: flex;
+	gap: 12px;
+	justify-content: flex-end;
+	position: relative;
+	z-index: 5;
+}
+
+.review-select {
+	min-width: 150px;
+	position: relative;
+}
+
+.review-select-trigger {
+	align-items: center;
+	background: rgba(74, 228, 198, 0.08);
+	border: 1px solid rgba(74, 228, 198, 0.18);
+	border-radius: 8px;
+	color: var(--text);
+	cursor: pointer;
+	display: flex;
+	font: inherit;
+	gap: 12px;
+	height: 44px;
+	justify-content: space-between;
+	min-width: 150px;
+	outline: none;
+	padding: 0 14px;
+	transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.review-select-trigger:hover,
+.review-select.is-open .review-select-trigger,
+.review-select-trigger:focus-visible {
+	background: rgba(79, 165, 116, 0.12);
+	border-color: rgba(79, 165, 116, 0.32);
+	box-shadow: 0 0 0 3px rgba(79, 165, 116, 0.12);
+}
+
+.review-select-arrow {
+	border-bottom: 2px solid currentColor;
+	border-right: 2px solid currentColor;
+	height: 8px;
+	margin-top: -4px;
+	opacity: 0.78;
+	transform: rotate(45deg);
+	transition: transform 160ms ease;
+	width: 8px;
+}
+
+.review-select.is-open .review-select-arrow {
+	margin-top: 4px;
+	transform: rotate(225deg);
+}
+
+.review-select-menu {
+	background:
+		linear-gradient(180deg, rgba(12, 31, 48, 0.98), rgba(8, 22, 36, 0.98));
+	border: 1px solid rgba(74, 228, 198, 0.18);
+	border-radius: 8px;
+	box-shadow: 0 18px 40px rgba(2, 8, 14, 0.38);
+	display: grid;
+	gap: 4px;
+	left: 0;
+	opacity: 0;
+	padding: 6px;
+	pointer-events: none;
+	position: absolute;
+	right: 0;
+	top: calc(100% + 8px);
+	transform: translateY(-4px);
+	transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.review-select.is-open .review-select-menu {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateY(0);
+}
+
+.review-select-option {
+	background: transparent;
+	border: 0;
+	border-radius: 6px;
+	color: var(--muted);
+	cursor: pointer;
+	font: inherit;
+	padding: 10px 12px;
+	text-align: left;
+	transition: background-color 140ms ease, color 140ms ease;
+}
+
+.review-select-option:hover,
+.review-select-option.is-active {
+	background: rgba(79, 165, 116, 0.18);
+	color: var(--text);
+}
+
+.review-list {
+	display: grid;
+	gap: 14px;
+	margin-top: 14px;
+}
+
+.review-order-card {
+	background:
+		radial-gradient(circle at top right, rgba(74, 228, 198, 0.07), transparent 26%),
+		linear-gradient(180deg, rgba(10, 26, 42, 0.96), rgba(8, 21, 34, 0.92));
+	border: 1px solid rgba(74, 228, 198, 0.14);
+	border-radius: 8px;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+	padding: 18px;
+}
+
+.review-order-top {
+	align-items: center;
+	display: flex;
+	gap: 16px;
+	justify-content: space-between;
+	margin-bottom: 16px;
+}
+
+.review-order-top h3 {
+	color: var(--text);
+	font-size: 18px;
+	font-weight: 750;
+	letter-spacing: 0;
+	margin: 0;
+	word-break: break-all;
+}
+
+.review-order-meta {
+	display: grid;
+	gap: 14px 20px;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.review-order-meta span {
+	color: var(--muted);
+	display: block;
+	font-size: 12px;
+	margin-bottom: 5px;
+}
+
+.review-order-meta strong,
+.review-order-meta a {
+	color: var(--text);
+	font-size: 14px;
+	font-weight: 650;
+	text-decoration: none;
+	word-break: break-all;
+}
+
+.review-order-meta a {
+	color: #6ee7b7;
+	text-decoration: underline;
+	text-decoration-color: rgba(110, 231, 183, 0.36);
+	text-underline-offset: 3px;
+}
+
+.review-order-form {
+	align-items: stretch;
+	display: grid;
+	gap: 12px;
+	grid-template-columns: minmax(220px, 0.9fr) minmax(260px, 1.25fr) 96px 96px;
+	margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.review-order-form input,
+.review-order-form textarea {
+	background: rgba(3, 14, 24, 0.74);
+	border: 1px solid rgba(74, 228, 198, 0.16);
+	border-radius: 8px;
+	color: var(--text);
+	font: inherit;
+	height: 48px;
+	outline: none;
+	padding: 11px 14px;
+	transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.review-order-form textarea {
+	line-height: 1.5;
+	resize: vertical;
+}
+
+.review-order-form input:focus,
+.review-order-form textarea:focus {
+	background: rgba(3, 14, 24, 0.9);
+	border-color: rgba(79, 165, 116, 0.42);
+	box-shadow: 0 0 0 3px rgba(79, 165, 116, 0.12);
+}
+
+.review-order-form .primary-button,
+.review-order-form .secondary-button {
+	min-height: 44px;
+	padding: 0 18px;
+}
+
+.review-empty,
+.review-denied {
+	background: rgba(74, 228, 198, 0.06);
+	border: 1px solid rgba(74, 228, 198, 0.14);
+	border-radius: 8px;
+	color: var(--muted);
+	padding: 30px;
+	text-align: center;
+}
+
+.review-message {
+	align-items: center;
+	display: flex;
+	inset: 0;
+	justify-content: center;
+	opacity: 0;
+	padding: 24px;
+	pointer-events: none;
+	position: fixed;
+	transition: opacity 160ms ease, visibility 160ms ease;
+	visibility: hidden;
+	z-index: 60;
+}
+
+.review-message.is-open {
+	opacity: 1;
+	visibility: visible;
+}
+
+.review-message-dialog {
+	background:
+		radial-gradient(circle at top left, rgba(79, 165, 116, 0.16), transparent 34%),
+		linear-gradient(180deg, rgba(8, 21, 36, 0.98), rgba(7, 17, 30, 0.96));
+	border: 1px solid rgba(74, 228, 198, 0.22);
+	border-radius: 8px;
+	box-shadow: 0 24px 58px rgba(2, 8, 14, 0.46);
+	color: var(--text);
+	font-weight: 700;
+	line-height: 1.6;
+	max-width: min(420px, calc(100vw - 48px));
+	padding: 18px 22px;
+	text-align: center;
+}
+
+body[data-page="recharge-review"][data-theme="light"] .surface-card,
+body[data-page="recharge-review"][data-theme="light"] .review-order-card {
+	background: rgba(255, 255, 255, 0.92);
+	box-shadow: 0 18px 46px rgba(15, 23, 42, 0.08);
+}
+
+body[data-page="recharge-review"][data-theme="light"] .review-select-trigger,
+body[data-page="recharge-review"][data-theme="light"] .review-order-form input,
+body[data-page="recharge-review"][data-theme="light"] .review-order-form textarea {
+	background: rgba(255, 255, 255, 0.84);
+	color: var(--text);
+}
+
+body[data-page="recharge-review"][data-theme="light"] .review-select-menu {
+	background: rgba(255, 255, 255, 0.98);
+	box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+body[data-page="recharge-review"][data-theme="light"] .review-message-dialog {
+	background: rgba(255, 255, 255, 0.98);
+	box-shadow: 0 24px 58px rgba(15, 23, 42, 0.16);
+}
+
 @media (max-width: 1080px) {
 	.contact-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4779,6 +5306,46 @@ body[data-theme="light"] .contact-field textarea {
 	}
 
 	.contact-form-row {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 900px) {
+	.review-header {
+		grid-template-columns: 1fr;
+	}
+
+	.review-header .secondary-button {
+		max-width: 100px;
+	}
+
+	.review-select,
+	.review-select-trigger {
+		width: 100%;
+	}
+
+	.review-order-top h3 {
+		font-size: 15px;
+	}
+
+	.review-order-meta,
+	.review-order-form {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+@media (max-width: 640px) {
+	.review-main {
+		padding: 16px;
+	}
+
+	body[data-page="recharge-review"] .surface-card,
+	.review-order-card {
+		padding: 16px;
+	}
+
+	.review-order-meta,
+	.review-order-form {
 		grid-template-columns: 1fr;
 	}
 }

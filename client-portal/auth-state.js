@@ -4,6 +4,8 @@
   const AUTH_HANDOFF_KEY = "__client_portal_auth_handoff__";
   const AUTH_HANDOFF_COOKIE_KEY = "client_portal_access_handoff";
   const AUTH_HANDOFF_MAX_AGE_MS = 60 * 1000;
+  const LOGOUT_MARKER_KEY = "auth_demo_logout_at";
+  const LOGOUT_REFRESH_BLOCK_MS = 30 * 1000;
 
   let accessToken = "";
   let refreshPromise = null;
@@ -49,13 +51,27 @@
   function clearLegacyTokenStorage() {
     window.localStorage.removeItem(LEGACY_TOKEN_KEY);
     window.localStorage.removeItem("auth_demo_logged_out_token");
-    window.localStorage.removeItem("auth_demo_logout_at");
     stripTokenFromUrl();
+  }
+
+  function clearAuthHandoffCookie() {
+    const secureAttribute = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${AUTH_HANDOFF_COOKIE_KEY}=; Max-Age=0; path=/portal/; SameSite=Lax${secureAttribute}`;
+  }
+
+  function markLoggedOut() {
+    window.localStorage.setItem(LOGOUT_MARKER_KEY, String(Date.now()));
+  }
+
+  function isRecentlyLoggedOut() {
+    const logoutAt = Number(window.localStorage.getItem(LOGOUT_MARKER_KEY) || 0);
+    return Boolean(logoutAt && Date.now() - logoutAt < LOGOUT_REFRESH_BLOCK_MS);
   }
 
   function setAccessToken(token) {
     accessToken = String(token || "");
     clearLegacyTokenStorage();
+    window.localStorage.removeItem(LOGOUT_MARKER_KEY);
   }
 
   function consumeAuthHandoff() {
@@ -93,8 +109,7 @@
       }
 
       const value = part.slice(separatorIndex + 1).trim();
-      const secureAttribute = window.location.protocol === "https:" ? "; Secure" : "";
-      document.cookie = `${AUTH_HANDOFF_COOKIE_KEY}=; Max-Age=0; path=/portal/; SameSite=Lax${secureAttribute}`;
+      clearAuthHandoffCookie();
       return value ? decodeURIComponent(value) : "";
     }
 
@@ -203,6 +218,8 @@
   function clearAuthState() {
     accessToken = "";
     clearLegacyTokenStorage();
+    clearAuthHandoffCookie();
+    markLoggedOut();
     window.localStorage.removeItem(PROFILE_STORAGE_KEY);
     fetch(`${resolveApiBase()}/auth/logout`, {
       method: "POST",
@@ -236,6 +253,9 @@
       redirect: false,
       keepCurrentTokenOnFailure: true,
     }).catch(() => {});
+  } else if (isRecentlyLoggedOut()) {
+    accessToken = "";
+    window.location.replace(resolveAuthEntryUrl());
   } else {
     refreshAccessToken({ redirect: true }).catch(() => {});
   }

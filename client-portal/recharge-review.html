@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>超级Token聚合器 - 线下充值审核</title>
+<link rel="icon" type="image/x-icon" href="./favicon.ico?v=20260428a">
+<link rel="stylesheet" href="./styles.css?v=20260519e" />
+</head>
+<body data-page="recharge-review" data-theme="dark">
+<div class="ambient ambient-a"></div>
+<div class="ambient ambient-b"></div>
+
+<main class="review-main" id="reviewMain" hidden>
+  <section class="surface-card">
+    <div class="review-header">
+      <div>
+        <p class="eyebrow">Offline Recharge Review</p>
+        <h2>线下充值审核</h2>
+        <p>审核通过时必须填写唯一交易单号；重复交易单号会自动判定审核失败。</p>
+      </div>
+      <div class="review-toolbar">
+        <div class="review-select" id="reviewStatusFilter" data-value="pending">
+          <button class="review-select-trigger" id="reviewStatusTrigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+            <span id="reviewStatusLabel">待审核</span>
+            <span class="review-select-arrow" aria-hidden="true"></span>
+          </button>
+          <div class="review-select-menu" id="reviewStatusMenu" role="listbox" aria-label="订单状态筛选">
+            <button class="review-select-option is-active" type="button" role="option" data-value="pending" aria-selected="true">待审核</button>
+            <button class="review-select-option" type="button" role="option" data-value="approved" aria-selected="false">已通过</button>
+            <button class="review-select-option" type="button" role="option" data-value="rejected" aria-selected="false">已拒绝</button>
+            <button class="review-select-option" type="button" role="option" data-value="all" aria-selected="false">全部订单</button>
+          </div>
+        </div>
+        <button class="secondary-button" id="reviewRefreshButton" type="button">刷新</button>
+      </div>
+    </div>
+    <div class="review-list" id="reviewList"></div>
+  </section>
+</main>
+
+<main class="review-main review-access-main" id="reviewDeniedPage" hidden>
+  <section class="surface-card review-access-card">
+    <p class="eyebrow">Access Control</p>
+    <h2>无权限访问</h2>
+    <p id="reviewDeniedText">当前账号没有线下充值审核权限。</p>
+    <a class="secondary-button" href="./index.html">返回首页</a>
+  </section>
+</main>
+
+<div class="review-message" id="reviewMessage" role="status" aria-live="polite" aria-hidden="true">
+  <div class="review-message-dialog" id="reviewMessageText"></div>
+</div>
+
+<script src="./auth-state.js?v=20260519e"></script>
+<script src="./recharge-review.js?v=20260519e"></script>
+</body>
+</html>

@@ -28,7 +28,9 @@ function resolveAuthEntryUrl() {
 
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = "auth_demo_token";
+const AUTO_REFRESH_INTERVAL_MS = 20000;
 let refreshTimer = null;
+let refreshInFlight = false;
 
 const recordQuery = {
   startTime: "",
@@ -337,6 +339,18 @@ async function refreshRecordList() {
   renderRecords(rows);
 }
 
+async function hasRunningOrders() {
+  const params = new URLSearchParams();
+  params.set("page", "1");
+  params.set("page_size", "1");
+  params.set("status", "running");
+
+  const result = await requestJson(`/api/v1/workflow-runs/query?${params.toString()}`);
+  const total = Number(result?.total ?? 0);
+  const rows = Array.isArray(result?.items) ? result.items : [];
+  return total > 0 || rows.some((row) => row?.status === "running");
+}
+
 function attachRecordControls() {
   const startTimeInput = document.getElementById("recordStartTime");
   const endTimeInput = document.getElementById("recordEndTime");
@@ -356,7 +370,7 @@ function attachRecordControls() {
       recordQuery.status = statusSelect?.value || "all";
       recordQuery.orderNo = (orderNoInput?.value || "").trim();
       recordPagination.page = 1;
-      await refreshRecordList();
+      await refreshData();
     });
   }
 
@@ -372,7 +386,7 @@ function attachRecordControls() {
       recordQuery.status = "all";
       recordQuery.orderNo = "";
       recordPagination.page = 1;
-      await refreshRecordList();
+      await refreshData();
     });
   }
 
@@ -381,7 +395,7 @@ function attachRecordControls() {
     pageSizeSelect.addEventListener("change", async (event) => {
       recordPagination.pageSize = Number(event.target.value) || 20;
       recordPagination.page = 1;
-      await refreshRecordList();
+      await refreshData();
     });
   }
 
@@ -392,7 +406,7 @@ function attachRecordControls() {
       }
 
       recordPagination.page -= 1;
-      await refreshRecordList();
+      await refreshData();
     });
   }
 
@@ -404,7 +418,7 @@ function attachRecordControls() {
       }
 
       recordPagination.page += 1;
-      await refreshRecordList();
+      await refreshData();
     });
   }
 
@@ -421,7 +435,7 @@ function attachRecordControls() {
       }
 
       recordPagination.page = targetPage;
-      await refreshRecordList();
+      await refreshData();
     });
   }
 }
@@ -436,30 +450,53 @@ function attachLogoutButton() {
 }
 
 async function refreshData() {
-  const [pointAccount] = await Promise.all([
+  const [pointAccount, , hasRunning] = await Promise.all([
     requestJson("/api/v1/point-accounts/me"),
     refreshRecordList(),
+    hasRunningOrders(),
   ]);
 
   syncAccountView(pointAccount);
+  syncAutoRefresh(hasRunning);
 }
 
 function startAutoRefresh() {
   if (refreshTimer) {
-    window.clearInterval(refreshTimer);
+    return;
   }
 
   refreshTimer = window.setInterval(async () => {
-    if (document.hidden) {
+    if (document.hidden || refreshInFlight) {
       return;
     }
 
     try {
+      refreshInFlight = true;
       await refreshData();
     } catch (error) {
       console.error("refresh records failed", error);
+    } finally {
+      refreshInFlight = false;
     }
-  }, 10000);
+  }, AUTO_REFRESH_INTERVAL_MS);
+}
+
+function stopAutoRefresh() {
+  if (!refreshTimer) {
+    return;
+  }
+
+  window.clearInterval(refreshTimer);
+  refreshTimer = null;
+}
+
+function syncAutoRefresh(hasRunning) {
+  if (hasRunning) {
+    startAutoRefresh();
+    return;
+  }
+
+  stopAutoRefresh();
 }
 
 async function bootstrap() {
@@ -472,7 +509,6 @@ async function bootstrap() {
 
   try {
     await refreshData();
-    startAutoRefresh();
   } catch (error) {
     if (error.message === "登录已过期，请重新登录" || error.message === "请先登录") {
       return;
