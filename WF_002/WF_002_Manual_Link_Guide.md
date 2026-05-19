@@ -283,7 +283,7 @@ curl -ksS --max-time 120 \
 
 打开：
 
-`https://www.facemini.com/portal/wf002.html?token=你的token`
+`https://token.facemini.com/portal/wf002.html?token=你的token`
 
 ## 7. 当前验证通过的结果
 

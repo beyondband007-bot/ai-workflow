@@ -95,7 +95,7 @@ export class WorkflowExecutionService {
       this.configService.get<string>('WF_002_PUBLIC_API_BASE_URL')?.trim() ||
       `${(
         this.configService.get<string>('MIDDLE_PLATFORM_PUBLIC_BASE_URL')?.trim() ||
-        'https://www.facemini.com'
+        'https://token.facemini.com'
       ).replace(/\/$/, '')}/portal/wf002`
     ).replace(/\/$/, '');
     const executionTimeoutMs = Number(
