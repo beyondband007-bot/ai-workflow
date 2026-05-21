@@ -484,9 +484,10 @@ export default function LoginPage() {
       gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
       gap: 14,
       marginBottom: 22,
+      textAlign: 'center',
     },
     leftCard: {
-      padding: '16px 14px',
+      padding: '20px 14px',
       borderRadius: 16,
       border: '1px solid ' + LINE,
       background: 'rgba(8, 22, 34, 0.72)',
@@ -990,34 +991,25 @@ export default function LoginPage() {
                 <img src={wikiLogo1} alt="logo1" style={S.leftLogoImg} />
               </div>
               <h1 style={S.leftTitle}>
-                鲸创AI 超级Token聚合中台
+                Facemini AI 积分聚合中台
               </h1>
               <p style={S.leftSub}>
-                助力企业降本增效。深度整合资源，优化运营流程，以创新管理模式全方位助力企业降低运营成本；同时通过技术赋能提升效率，实现企业可持续的降本增效与高质量发展。
+                Facemini AI 积分聚合中台，统一管理 AI 工作流智能体的积分购买、余额查询、消耗记录与额度分发，让每一次 AI 能力调用都清晰可查、灵活可控，帮助企业与个人更高效地管理AI使用成本。
               </p>
               <div className="lp-left-cards" style={S.leftCards}>
                 <div style={S.leftCard}>
                   <div style={S.leftCardValue}>
-                    整合
-                  </div>
-                  <div style={S.leftCardLabel}>
-                    融合资源 协同运作
+                    集中计量
                   </div>
                 </div>
                 <div style={S.leftCard}>
                   <div style={S.leftCardValue}>
-                    创新
-                  </div>
-                  <div style={S.leftCardLabel}>
-                    变革模式 优化管理
+                    透明记录
                   </div>
                 </div>
                 <div style={S.leftCard}>
                   <div style={S.leftCardValue}>
-                    赋能
-                  </div>
-                  <div style={S.leftCardLabel}>
-                    注入技术 提升效率
+                    灵活管理
                   </div>
                 </div>
               </div>

@@ -1729,7 +1729,7 @@ function App() {
           });
         } catch (settleCaught) {
           const settleMessage = settleCaught instanceof Error ? settleCaught.message : String(settleCaught);
-          setError(`${baseMessage}；并且积分回滚失败：${settleMessage}`);
+          setError(`${baseMessage}；并且积分退回失败：${settleMessage}`);
           return;
         }
       }
@@ -1907,7 +1907,7 @@ function App() {
             <img className="brand-logo" src={`${toAppPath("/logo.png")}?v=${BRAND_ASSET_VERSION}`} alt="" />
           </div>
           <div>
-            <strong>GETRUE 图片大师</strong>
+            <strong>Facemini 图片大师</strong>
             <span>神经视觉工作台</span>
           </div>
         </div>
@@ -1976,7 +1976,7 @@ function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">模型</p>
-            <h1>GETRUE 图片大师</h1>
+            <h1>Facemini 图片大师</h1>
           </div>
           <nav className="top-tabs" aria-label="工作区">
             <span className="is-active">创作</span>

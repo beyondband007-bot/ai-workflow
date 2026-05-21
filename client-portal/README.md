@@ -305,7 +305,7 @@
 | `actual_completed_count` | number \| null | 实际完成数量 |
 | `estimated_frozen_points` | number | 预冻结积分 |
 | `final_charge_points` | number | 最终扣费 |
-| `refund_points` | number | 回滚积分 |
+| `refund_points` | number | 退回积分 |
 | `result_summary` | string | 结果摘要 |
 | `result_summary_url` | string | 结果摘要地址 |
 
@@ -318,7 +318,7 @@
 
 `POST /api/v1/workflow-runs/callback`
 
-用途：工作流执行结束后主动回写中台，完成正式扣费或失败回滚。
+用途：工作流执行结束后主动回写中台，完成正式扣费或失败退回。
 
 #### 请求字段
 
@@ -360,7 +360,7 @@
 | `status` | string | 回写后的执行状态 |
 | `billing_status` | string | `charged` / `rollback` |
 | `final_charge_points` | number | 最终扣费 |
-| `refund_points` | number | 回滚积分 |
+| `refund_points` | number | 退回积分 |
 
 #### 返回示例
 

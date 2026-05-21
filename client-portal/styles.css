@@ -213,7 +213,7 @@ body::after {
 }
 
 .brand-block h1 {
-	font-size: clamp(20px, 1.1vw, 24px);
+	font-size: clamp(15px, 0.85vw, 20px);
 	line-height: 1.1;
 	white-space: nowrap;
 }
@@ -1069,7 +1069,7 @@ body[data-theme="dark"] .profile-menu-item.danger:hover {
 	place-items: center;
 	border-radius: 10px;
 	color: #ecfffb;
-	background: rgba(2, 8, 14, 0.72);
+	background: rgba(2, 8, 14, 0.95);
 	font-size: 24px;
 	font-weight: 900;
 	letter-spacing: 0.08em;

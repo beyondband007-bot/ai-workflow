@@ -147,7 +147,7 @@ function formatLedgerRemark(entry) {
     return `${workflowName} 正式扣费 ${formatNumber(points)} 积分`;
   }
   if (entry.ledger_type === "rollback") {
-    return `${workflowName} 回滚 ${formatNumber(points)} 积分`;
+    return `${workflowName} 退回 ${formatNumber(points)} 积分`;
   }
   return entry.remark || "-";
 }
@@ -953,7 +953,7 @@ function buildLedgerRowsFromRuns(workflowRuns) {
         change_points: Number(record.refund_points),
         workflow_code: record.workflow_code,
         workflow_name: workflowName,
-        remark: `${record.workflow_code} 回滚 ${record.refund_points} 积分`,
+        remark: `${record.workflow_code} 退回 ${record.refund_points} 积分`,
         ledger_type: "rollback",
         created_at: record.finished_at,
       });

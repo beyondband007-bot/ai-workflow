@@ -222,7 +222,7 @@ function bindForm() {
       renderResult(result);
     } catch (error) {
       setText("runStatusValue", "失败");
-      setText("billingStatusValue", "回滚中");
+      setText("billingStatusValue", "退回中");
       setText("summaryText", error.message);
       renderGallery([]);
       renderRawResponse({ error: error.message });

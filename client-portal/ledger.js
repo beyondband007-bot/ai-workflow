@@ -48,7 +48,7 @@ const ledgerPagination = {
 const ledgerTypeTextMap = {
   freeze: "冻结",
   charge: "扣费",
-  rollback: "回滚",
+  rollback: "退回",
 };
 
 const fallbackPointAccount = {
@@ -261,7 +261,7 @@ function formatLedgerRemark(row) {
     return `${workflowName} 正式扣费 ${formatNumber(points)} 积分`;
   }
   if (row.ledger_type === "rollback") {
-    return `${workflowName} 回滚 ${formatNumber(points)} 积分`;
+    return `${workflowName} 退回 ${formatNumber(points)} 积分`;
   }
   return row.remark || "-";
 }
@@ -311,7 +311,7 @@ function buildLedgerRowsFromRuns(runs = []) {
         workflow_code: workflowCode,
         workflow_name: workflowName,
         run_id: runId,
-        remark: `${workflowCode} 回滚 ${refundPoints} 积分`,
+        remark: `${workflowCode} 退回 ${refundPoints} 积分`,
         created_at: run.finished_at || run.created_at || null,
       });
     }

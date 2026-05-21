@@ -427,7 +427,7 @@ function bindForm() {
       renderResult(result);
     } catch (error) {
       setText("runStatusValue", "失败");
-      setText("billingStatusValue", "回滚中");
+      setText("billingStatusValue", "退回中");
       setText("summaryText", error.message);
       renderGallery([]);
       window.alert(`WF-001 执行失败：${error.message}`);
