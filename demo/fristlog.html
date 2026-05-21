@@ -90,19 +90,15 @@
       letter-spacing: 1px;
     }
 
-    .brand h2 {
+    .brand a {
+      color: #f4fbff;
       font-size: 28px;
-      font-weight: 700;
+      font-weight: 800;
       line-height: 1;
-    }
-
-    .brand h2 img {
-      width: 200px;
-      min-width: 200px;
-      max-width: 200px;
-      height: auto;
-      display: block;
-      flex-shrink: 0;
+      letter-spacing: 0.2px;
+      text-decoration: none;
+      text-shadow: 0 0 18px rgba(97, 240, 232, 0.18);
+      display: inline-block;
     }
 
     .brand p {
@@ -172,14 +168,13 @@
     }
 
     .logo-title {
-      font-size: clamp(30px, 4.2vw, 74px);
+      font-size: clamp(24px, 4.2vw, 56px);
       color: #c9f2ff;
       line-height: 1.06;
       letter-spacing: 1px;
       font-weight: 600;
       margin-bottom: 32px;
       text-shadow: 0 0 18px rgba(69, 210, 255, 0.32);
-      text-transform: uppercase;
     }
 
     .sub-logo {
@@ -190,7 +185,7 @@
     }
 
     .main-title {
-      font-size: clamp(30px, 3.8vw, 60px);
+      font-size: clamp(24px, 3.2vw, 42px);
       letter-spacing: 1px;
       line-height: 1.18;
       margin-bottom: 32px;
@@ -211,7 +206,7 @@
       max-width: 710px;
       margin: 0 auto;
       color: rgba(255, 255, 255, 0.58);
-      font-size: clamp(16px, 1.15vw, 22px);
+      font-size: clamp(15px, 1.0vw, 18px);
       line-height: 1.72;
     }
 
@@ -280,16 +275,8 @@
     }
 
     @media (max-width: 1200px) {
-      .brand h2 {
+      .brand a {
         font-size: 22px;
-      }
-      .brand h2 img {
-        width: 160px;
-        min-width: 160px;
-        max-width: 160px;
-        height: auto;
-        display: block;
-        flex-shrink: 0;
       }
       .nav-btn {
         font-size: 12px;
@@ -329,7 +316,7 @@
       }
       .btn {
         min-width: 144px;
-        font-size: 16px;
+        font-size: 14px;
         padding: 12px 20px;
       }
       .discover {
@@ -347,7 +334,7 @@
 
     <header class="nav">
       <div class="brand">
-        <h2><img src="./logo.png" alt="logo" /></h2>
+        <a href="/" aria-label="Facemini.com 首页">Facemini.com</a>
       </div>
       <div class="nav-actions">
         <a class="nav-btn" href="/auth/?mode=register">立即注册</a>

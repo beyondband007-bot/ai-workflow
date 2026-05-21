@@ -1,5 +1,4 @@
 ﻿import { useEffect, useRef, useState } from 'react';
-import wikiLogo1 from './logo1.png';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '';
 const PORTAL_BASE =
@@ -432,6 +431,18 @@ export default function LoginPage() {
       pointerEvents: 'none',
       zIndex: 0,
     },
+    topBrand: {
+      position: 'fixed',
+      top: 28,
+      left: 32,
+      zIndex: 4,
+      color: '#f4fbff',
+      fontSize: 26,
+      fontWeight: 800,
+      letterSpacing: 0.2,
+      textDecoration: 'none',
+      textShadow: '0 0 18px rgba(97, 240, 232, 0.18)',
+    },
     shell: {
       position: 'relative',
       zIndex: 2,
@@ -445,23 +456,6 @@ export default function LoginPage() {
       padding: '36px 34px 30px',
       display: 'flex',
       alignItems: 'center',
-    },
-    leftBadge: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 10,
-      borderRadius: 999,
-      border: '1px solid ' + LINE,
-      background: 'rgba(255, 255, 255, 0.92)',
-      color: 'rgba(134, 169, 173, 0.95)',
-      padding: '8px 14px',
-      fontSize: 12,
-      letterSpacing: '0.14em',
-      textTransform: 'uppercase',
-      marginBottom: 10,
-    },
-    leftLogoImg: {
-      width: 120,
     },
     leftTitle: {
       margin: 0,
@@ -485,9 +479,10 @@ export default function LoginPage() {
       gap: 14,
       marginBottom: 22,
       textAlign: 'center',
+      maxWidth: 360,
     },
     leftCard: {
-      padding: '20px 14px',
+      padding: '12px 14px',
       borderRadius: 16,
       border: '1px solid ' + LINE,
       background: 'rgba(8, 22, 34, 0.72)',
@@ -500,7 +495,7 @@ export default function LoginPage() {
       letterSpacing: '0.05em',
     },
     leftCardValue: {
-      fontSize: 20,
+      fontSize: 14,
       fontWeight: 800,
       color: '#e6f7f3',
       lineHeight: 1,
@@ -983,13 +978,13 @@ export default function LoginPage() {
         <div className="fx-noise" />
         <div style={S.glowTop} />
         <IndexFxBackground />
+        <a href="/" style={S.topBrand} aria-label="Facemini.com 首页">
+          Facemini.com
+        </a>
 
         <div className="lp-shell" style={S.shell}>
           <section className="lp-left" style={S.left}>
             <div>
-              <div style={S.leftBadge}>
-                <img src={wikiLogo1} alt="logo1" style={S.leftLogoImg} />
-              </div>
               <h1 style={S.leftTitle}>
                 Facemini AI 积分聚合中台
               </h1>
