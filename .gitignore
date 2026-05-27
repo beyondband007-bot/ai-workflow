@@ -3,6 +3,7 @@
 Thumbs.db
 .vscode/
 .idea/
+.claude/
 
 # Python
 __pycache__/
@@ -53,6 +54,7 @@ demo/.git/
 # Docker / local overrides
 .env
 .env.docker
+.env*.bak*
 .env.local
 .env.*.local
 
